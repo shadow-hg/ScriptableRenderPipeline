@@ -118,6 +118,7 @@ namespace UnityEngine.Rendering
 
             if (toRemove >= 0)
             {
+                components[toRemove].Dispose();
                 components.RemoveAt(toRemove);
                 isDirty = true;
             }
