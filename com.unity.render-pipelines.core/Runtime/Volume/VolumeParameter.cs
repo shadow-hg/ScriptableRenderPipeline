@@ -15,19 +15,13 @@ namespace UnityEngine.Rendering
     /// The base class for all parameters types stored in a <see cref="VolumeComponent"/>.
     /// </summary>
     /// <seealso cref="VolumeParameter{T}"/>
-    public abstract class VolumeParameter : IDisposable
+    public abstract class VolumeParameter
     {
         /// <summary>
         /// A beautified string for debugger output. This is set on a <c>DebuggerDisplay</c> on every
         /// parameter types.
         /// </summary>
         public const string k_DebuggerDisplay = "{m_Value} ({m_OverrideState})";
-
-        /// <summary>
-        /// Track whether Dispose has been called. It should be used to guard every Dispose(bool) override.
-        /// </summary>
-        /// <value>true when the Dispose() method have already been called</value>
-        protected bool disposed { private set; get; } = false;
 
         /// <summary>
         /// The current override state for this parameter. The Volume system considers overriden parameters
@@ -111,21 +105,9 @@ namespace UnityEngine.Rendering
         }
 
         /// <summary>
-        /// Releases all the allocated resources.
-        /// </summary>
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
         /// Override this method to free all allocated resources
         /// </summary>
-        /// <param name="disposing"><c>true</c> if you should dispose managed resources, <c>false</c> otherwise.</param>
-        protected virtual void Dispose(bool disposing) => disposed = true;
-
-        ~VolumeParameter() => Dispose(false);
+        public virtual void Release() {}
     }
 
     /// <summary>

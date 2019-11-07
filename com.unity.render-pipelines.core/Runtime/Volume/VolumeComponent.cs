@@ -54,7 +54,7 @@ namespace UnityEngine.Rendering
     /// </code>
     /// </example>
     [Serializable]
-    public class VolumeComponent : ScriptableObject, IDisposable
+    public class VolumeComponent : ScriptableObject
     {
         /// <summary>
         /// The active state of the set of parameters defined in this class. You can use this to
@@ -210,14 +210,15 @@ namespace UnityEngine.Rendering
             }
         }
 
+        void OnDestroy() => Release();
+
         /// <summary>
         /// Releases all the allocated resources.
         /// </summary>
-        public void Dispose()
+        public void Release()
         {
-            Debug.Log("Dispose !");
             for (int i = 0; i < parameters.Count; i++)
-                parameters[i].Dispose();
+                parameters[i].Release();
         }
     }
 }

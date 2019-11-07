@@ -14,7 +14,7 @@ namespace UnityEngine.Rendering
     /// A wrapper around <c>AnimationCurve</c> to automatically bake it into a texture.
     /// </summary>
     [Serializable]
-    public class TextureCurve : IDisposable
+    public class TextureCurve
     {
         const int k_Precision = 128; // Edit LutBuilder3D if you change this value
         const float k_Step = 1f / k_Precision;
@@ -60,6 +60,7 @@ namespace UnityEngine.Rendering
         /// <param name="zeroValue">The default value to use when the curve doesn't have any key.</param>
         /// <param name="loop">Should the curve automatically loop in the given <paramref name="bounds"/>?</param>
         /// <param name="bounds">The boundaries of the curve.</param>
+
         public TextureCurve(AnimationCurve baseCurve, float zeroValue, bool loop, in Vector2 bounds)
             : this(baseCurve.keys, zeroValue, loop, bounds) { }
 
@@ -72,7 +73,7 @@ namespace UnityEngine.Rendering
         /// <param name="bounds">The boundaries of the curve.</param>
         public TextureCurve(Keyframe[] keys, float zeroValue, bool loop, in Vector2 bounds)
         {
-            Debug.Log("Allocated resources !");
+            Debug.Log("Created texture curve !");
             m_Curve = new AnimationCurve(keys);
             m_ZeroValue = zeroValue;
             m_Loop = loop;
@@ -82,33 +83,11 @@ namespace UnityEngine.Rendering
         }
 
         /// <summary>
-        /// Finalizer.
-        /// </summary>
-        ~TextureCurve() => ReleaseUnityResources();
-
-        /// <summary>
         /// Cleans up the internal texture resource.
         /// </summary>
-        public void Dispose()
+        public void Release()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposed)
-                return;
-
-            if (disposing)
-                ReleaseUnityResources();
-
-            disposed = true;
-        }
-
-        void ReleaseUnityResources()
-        {
-            Debug.Log("Destroy resources !");
+            Debug.Log("Destroy colr curve !");
             CoreUtils.Destroy(m_Texture);
             m_Texture = null;
         }
@@ -267,15 +246,9 @@ namespace UnityEngine.Rendering
         public TextureCurveParameter(TextureCurve value, bool overrideState = false)
             : base(value, overrideState) { }
 
-        protected override void Dispose(bool disposing)
+        public override void Release()
         {
-            if (disposed)
-                return;
-
-            if (disposing)
-                value.Dispose();
-
-            base.Dispose(disposing);
+            m_Value.Release();
         }
 
         // TODO: TextureCurve interpolation
