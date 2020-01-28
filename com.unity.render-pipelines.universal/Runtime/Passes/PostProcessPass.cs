@@ -256,7 +256,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 {
                     BlitDstDiscardContent(cmd, GetDestination());
 
-                    cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), GetSource());
+                    cmd.SetGlobalTexture(ShaderConstants._BlitTex, GetSource());
                     Vector4 scaleBias = new Vector4(1, 1, 0, 0);
                     Vector4 scaleBiasRT = new Vector4(1, 1, 0, 0);
                     m_Materials.stopNaNMaterialProperty.SetVector(ShaderConstants._BlitScaleBias,   scaleBias);
@@ -342,7 +342,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                     m_Materials.uber.EnableKeyword(ShaderKeywordStrings.LinearToSRGBConversion);
 
                 // Done with Uber, blit it
-                cmd.SetGlobalTexture("_BlitTex", GetSource());
+                cmd.SetGlobalTexture(ShaderConstants._BlitTex, GetSource());
 
                 var colorLoadAction = RenderBufferLoadAction.DontCare;
                 if (m_Destination == RenderTargetHandle.CameraTarget && !cameraData.isDefaultViewport)
@@ -539,11 +539,11 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.SetGlobalTexture(ShaderConstants._HalfCoCTexture, ShaderConstants._HalfCoCTexture);
             cmd.SetRenderTarget(new RenderTargetIdentifier(ShaderConstants._PongTexture, 0, CubemapFace.Unknown, -1),
                                 RenderBufferLoadAction.Load, RenderBufferStoreAction.Store);
-            cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), ShaderConstants._PingTexture);
+            cmd.SetGlobalTexture(ShaderConstants._BlitTex, ShaderConstants._PingTexture);
             cmd.DrawProcedural(Matrix4x4.identity, material, 2, MeshTopology.Quads, 4, 1, null);
             cmd.SetRenderTarget(new RenderTargetIdentifier(ShaderConstants._PingTexture, 0, CubemapFace.Unknown, -1),
                                 RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-            cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), ShaderConstants._PongTexture);
+            cmd.SetGlobalTexture(ShaderConstants._BlitTex, ShaderConstants._PongTexture);
             cmd.DrawProcedural(Matrix4x4.identity, material, 3, MeshTopology.Quads, 4, 1, null);
 
             // Composite
@@ -551,7 +551,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.SetGlobalTexture(ShaderConstants._FullCoCTexture, ShaderConstants._FullCoCTexture);
             cmd.SetRenderTarget(new RenderTargetIdentifier(destination, 0, CubemapFace.Unknown, -1),
                                 RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-            cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), source);
+            cmd.SetGlobalTexture(ShaderConstants._BlitTex, source);
             cmd.DrawProcedural(Matrix4x4.identity, material, 4, MeshTopology.Quads, 4, 1, null);
 
             // Cleanup
@@ -647,7 +647,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.SetGlobalVector(ShaderConstants._BlitScaleBias, scaleBias);
             cmd.SetGlobalVector(ShaderConstants._BlitScaleBiasRt, scaleBiasRT);
 
-            cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), source);
+            cmd.SetGlobalTexture(ShaderConstants._BlitTex, source);
             // Compute CoC
             cmd.SetRenderTarget(new RenderTargetIdentifier(ShaderConstants._FullCoCTexture, 0, CubemapFace.Unknown, -1),
                                 RenderBufferLoadAction.Load, RenderBufferStoreAction.Store);
@@ -661,20 +661,20 @@ namespace UnityEngine.Rendering.Universal.Internal
             // Bokeh blur
             cmd.SetRenderTarget(new RenderTargetIdentifier(ShaderConstants._PongTexture, 0, CubemapFace.Unknown, -1),
                                 RenderBufferLoadAction.Load, RenderBufferStoreAction.Store);
-            cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), ShaderConstants._PingTexture);
+            cmd.SetGlobalTexture(ShaderConstants._BlitTex, ShaderConstants._PingTexture);
             cmd.DrawProcedural(Matrix4x4.identity, material, 2, MeshTopology.Quads, 4, 1, null);
 
             // Post-filtering
             cmd.SetRenderTarget(new RenderTargetIdentifier(ShaderConstants._PingTexture, 0, CubemapFace.Unknown, -1),
                                 RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-            cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), ShaderConstants._PongTexture);
+            cmd.SetGlobalTexture(ShaderConstants._BlitTex, ShaderConstants._PongTexture);
             cmd.DrawProcedural(Matrix4x4.identity, material, 3, MeshTopology.Quads, 4, 1, null);
 
             // Composite
             cmd.SetGlobalTexture(ShaderConstants._DofTexture, ShaderConstants._PingTexture);
             cmd.SetRenderTarget(new RenderTargetIdentifier(destination, 0, CubemapFace.Unknown, -1),
                                 RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-            cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), source);
+            cmd.SetGlobalTexture(ShaderConstants._BlitTex, source);
             cmd.DrawProcedural(Matrix4x4.identity, material, 4, MeshTopology.Quads, 4, 1, null);
 
             // Cleanup
@@ -714,7 +714,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.SetGlobalVector(ShaderConstants._BlitScaleBiasRt, scaleBiasRT);
             cmd.SetRenderTarget(new RenderTargetIdentifier(destination, 0, CubemapFace.Unknown, -1),
                                 RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-            cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), source);
+            cmd.SetGlobalTexture(ShaderConstants._BlitTex, source);
             cmd.DrawProcedural(Matrix4x4.identity, material, (int)m_MotionBlur.quality.value, MeshTopology.Quads, 4, 1, null);
 
             m_PrevViewProjM = viewProj;
@@ -752,7 +752,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             cmd.SetRenderTarget(new RenderTargetIdentifier(destination, 0, CubemapFace.Unknown, -1),
                                 RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-            cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), source);
+            cmd.SetGlobalTexture(ShaderConstants._BlitTex, source);
             cmd.DrawProcedural(Matrix4x4.identity, material, 0, MeshTopology.Quads, 4, 1, null);
         }
 
@@ -842,7 +842,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             cmd.SetRenderTarget(new RenderTargetIdentifier(ShaderConstants._BloomMipDown[0], 0, CubemapFace.Unknown, -1),
                                 RenderBufferLoadAction.Load, RenderBufferStoreAction.Store);
-            cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), source);
+            cmd.SetGlobalTexture(ShaderConstants._BlitTex, source);
             cmd.DrawProcedural(Matrix4x4.identity, bloomMaterial, 0, MeshTopology.Quads, 4, 1, null);
 
             // Downsample - gaussian pyramid
@@ -865,12 +865,12 @@ namespace UnityEngine.Rendering.Universal.Internal
                 //   Second pass does 9-tap gaussian using a 5-tap filter + bilinear filtering
                 // 1st Pass
                 cmd.SetRenderTarget(new RenderTargetIdentifier(mipUp, 0, CubemapFace.Unknown, -1), RenderBufferLoadAction.Load, RenderBufferStoreAction.Store);
-                cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), lastDown);
+                cmd.SetGlobalTexture(ShaderConstants._BlitTex, lastDown);
                 cmd.DrawProcedural(Matrix4x4.identity, bloomMaterial, 1, MeshTopology.Quads, 4, 1, null);
 
                 // 2nd Pass
                 cmd.SetRenderTarget(new RenderTargetIdentifier(mipDown, 0, CubemapFace.Unknown, -1), RenderBufferLoadAction.Load, RenderBufferStoreAction.Store);
-                cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), mipUp);
+                cmd.SetGlobalTexture(ShaderConstants._BlitTex, mipUp);
                 cmd.DrawProcedural(Matrix4x4.identity, bloomMaterial, 2, MeshTopology.Quads, 4, 1, null);
 
                 lastDown = mipDown;
@@ -886,7 +886,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 cmd.SetGlobalTexture(ShaderConstants._MainTexLowMip, lowMip);
 
                 cmd.SetRenderTarget(new RenderTargetIdentifier(dst, 0, CubemapFace.Unknown, -1), RenderBufferLoadAction.Load, RenderBufferStoreAction.Store);
-                cmd.SetGlobalTexture(Shader.PropertyToID("_BlitTex"), highMip);
+                cmd.SetGlobalTexture(ShaderConstants._BlitTex, highMip);
                 cmd.DrawProcedural(Matrix4x4.identity, bloomMaterial, 3, MeshTopology.Quads, 4, 1, null);
             }
 
@@ -1104,11 +1104,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             var colorLoadAction = cameraData.isDefaultViewport ? RenderBufferLoadAction.DontCare : RenderBufferLoadAction.Load;
 
-
-            // Note: We need to get the cameraData.targetTexture as this will get the targetTexture of the camera stack.
-            // Overlay cameras need to output to the target described in the base camera while doing camera stack.
-            RenderTargetIdentifier cameraTarget = (cameraData.targetTexture != null) ? new RenderTargetIdentifier(cameraData.targetTexture) : cameraData.xrPass.renderTarget;
-            cameraTarget = (m_Destination == RenderTargetHandle.CameraTarget) ? cameraTarget : m_Destination.Identifier();
+            RenderTargetIdentifier cameraTarget = (m_Destination == RenderTargetHandle.CameraTarget) ? cameraData.xrPass.renderTarget : m_Destination.Identifier();
 
             bool isRenderToBackBufferTarget = cameraTarget == cameraData.xrPass.renderTarget && !cameraData.xrPass.renderTargetIsRenderTexture;
             // We f-flip if
@@ -1230,7 +1226,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             public static readonly int _UserLut            = Shader.PropertyToID("_UserLut");
             public static readonly int _BlitScaleBias      = Shader.PropertyToID("_BlitScaleBias");
             public static readonly int _BlitScaleBiasRt    = Shader.PropertyToID("_BlitScaleBiasRt");
-
+            public static readonly int _BlitTex            = Shader.PropertyToID("_BlitTex");
             public static int[] _BloomMipUp;
             public static int[] _BloomMipDown;
         }

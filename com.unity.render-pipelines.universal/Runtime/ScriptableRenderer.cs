@@ -231,8 +231,6 @@ namespace UnityEngine.Rendering.Universal
         {
         }
 
-        /// <summary>
-        }
         internal void UpdateGPUViewProjectionMatricies(CommandBuffer cmd, ref CameraData cameraData, bool isRenderToTexture)
         {
             // if contains only 1 view, setup view proj
@@ -602,7 +600,7 @@ namespace UnityEngine.Rendering.Universal
 
                 RenderTargetIdentifier passColorAttachment = renderPass.colorAttachment;
                 RenderTargetIdentifier passDepthAttachment = renderPass.depthAttachment;
-                TextureDimension passColorDimension = renderPass.dimension;
+                TextureDimension       passColorDimension  = renderPass.dimension;
                 int passColorDepthSlice = -1;
 
                 // When render pass doesn't call ConfigureTarget we assume it's expected to render to camera target

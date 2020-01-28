@@ -15,13 +15,12 @@ namespace UnityEngine.Rendering.Universal.Internal
         /// <inheritdoc/>
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
+            CommandBuffer cmd = CommandBufferPool.Get();
+
             // Setup Legacy XR buffer states
             if (renderingData.cameraData.xrPass.hasMultiXrView)
             {
-                CommandBuffer cmd = CommandBufferPool.Get();
-
                 // Setup legacy XR stereo buffer
-                Debug.Assert(renderingData.cameraData.xrPass.viewCount == 2, "View Count must be 2, other view count is not implemented yet!");
                 renderingData.cameraData.camera.SetStereoProjectionMatrix(Camera.StereoscopicEye.Left, renderingData.cameraData.xrPass.GetProjMatrix(0));
                 renderingData.cameraData.camera.SetStereoViewMatrix(Camera.StereoscopicEye.Left, renderingData.cameraData.xrPass.GetViewMatrix(0));
                 renderingData.cameraData.camera.SetStereoProjectionMatrix(Camera.StereoscopicEye.Right, renderingData.cameraData.xrPass.GetProjMatrix(1));
@@ -38,18 +37,27 @@ namespace UnityEngine.Rendering.Universal.Internal
                 // Disable Legacy XR path
                 cmd.SetSinglePassStereo(SinglePassStereoMode.None);
                 context.ExecuteCommandBuffer(cmd);
-                // We must submit/flush context before calling into camera legacy stereo calls
-                context.Submit();
-
-                // Reset legacy XR stereo buffer
-                renderingData.cameraData.camera.ResetStereoProjectionMatrices();
-                renderingData.cameraData.camera.ResetStereoViewMatrices();
-                CommandBufferPool.Release(cmd);
             }
             else
             {
+                renderingData.cameraData.camera.SetStereoProjectionMatrix(Camera.StereoscopicEye.Left, renderingData.cameraData.xrPass.GetProjMatrix(0));
+                renderingData.cameraData.camera.SetStereoViewMatrix(Camera.StereoscopicEye.Left, renderingData.cameraData.xrPass.GetViewMatrix(0));
+
+                // Use legacy stereo none mode for legacy multi pass
+                cmd.SetSinglePassStereo(SinglePassStereoMode.None);
+                context.ExecuteCommandBuffer(cmd);
+
+                // Calling into build in skybox pass
                 context.DrawSkybox(renderingData.cameraData.camera);
             }
+            CommandBufferPool.Release(cmd);
+
+            // We must submit/flush context before calling into camera legacy stereo calls
+            // XRTODO: verify this context.Submit();
+
+            // Reset legacy XR stereo buffer
+            renderingData.cameraData.camera.ResetStereoProjectionMatrices();
+            renderingData.cameraData.camera.ResetStereoViewMatrices();
         }
     }
 }

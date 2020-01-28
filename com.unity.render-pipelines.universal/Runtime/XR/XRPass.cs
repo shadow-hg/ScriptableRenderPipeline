@@ -3,9 +3,6 @@
 // XRPass holds the render target information and a list of XRView.
 // When a pass has 2+ views, single-pass will be active.
 // To avoid allocating every frame, XRView is a struct and XRPass is pooled.
-//XRTODO: remove this
-//#define ENABLE_VR
-//#define ENABLE_XR_MODULE
 using System;
 using System.Collections.Generic;
 
@@ -171,7 +168,7 @@ namespace UnityEngine.Rendering.Universal
             AddViewInternal(new XRView(proj, view, vp, textureArraySlice));
         }
 
-//#if ENABLE_VR && ENABLE_XR_MODULE
+#if ENABLE_VR && ENABLE_XR_MODULE
         internal static XRPass Create(XRDisplaySubsystem.XRRenderPass xrRenderPass, int multipassId, ScriptableCullingParameters cullingParameters, Material occlusionMeshMaterial)
         {
             XRPass passInfo = GenericPool<XRPass>.Get();
@@ -208,7 +205,7 @@ namespace UnityEngine.Rendering.Universal
         {
             AddViewInternal(new XRView(xrSdkRenderPass, xrSdkRenderParameter));
         }
-//#endif
+#endif
 
         internal static void Release(XRPass xrPass)
         {
@@ -266,15 +263,6 @@ namespace UnityEngine.Rendering.Universal
                 return;
 
             StopSinglePass(cmd, renderContext);
-
-            //// Legacy VR - push to XR headset and/or display mirror
-            //if (camera.stereoEnabled)
-            //{
-            //    if (legacyMultipassEnabled)
-            //        renderContext.StereoEndRender(camera, legacyMultipassEye, legacyMultipassEye == 1);
-            //    else
-            //        renderContext.StereoEndRender(camera);
-            //}
 
             // Callback for custom mirror view
             if (customMirrorView != null)

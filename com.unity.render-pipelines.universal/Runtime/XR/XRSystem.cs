@@ -2,9 +2,6 @@
 // - XRDisplaySubsystem from the XR SDK
 // - the 'legacy' C++ stereo rendering path and XRSettings
 // - custom XR layout (only internal for now)
-// XRTODO: remove this
-//#define ENABLE_VR
-//#define ENABLE_XR_MODULE
 
 using System;
 using System.Collections.Generic;
@@ -172,9 +169,11 @@ namespace UnityEngine.Rendering.Universal
                     multipassId = 0,
                     cullingPassId = 0,
                     cullingParameters = cullingParams,
-                    renderTarget = camera.targetTexture,
+                    // Note: We need to get the cameraData.targetTexture as this will get the targetTexture of the camera stack.
+                    // Overlay cameras need to output to the target described in the base camera while doing camera stack.
+                    renderTarget = cameraData.targetTexture,
                     renderTargetDesc = cameraData.cameraTargetDescriptor,
-                    renderTargetIsRenderTexture = camera.targetTexture != null || camera.cameraType == CameraType.SceneView || camera.cameraType == CameraType.Preview,
+                    renderTargetIsRenderTexture = cameraData.targetTexture != null || camera.cameraType == CameraType.SceneView || camera.cameraType == CameraType.Preview,
                     // TODO: config renderTarget desc
                     customMirrorView = null
                 };
