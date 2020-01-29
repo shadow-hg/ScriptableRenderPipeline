@@ -40,7 +40,7 @@ Shader "Hidden/Universal Render Pipeline/CameraMotionBlur"
             float4 projPos = output.positionCS * 0.5;
             projPos.xy = projPos.xy + projPos.w;
 
-            output.uv = GetQuadTexCoord(input.vertexID) * _BlitScaleBias.xy + _BlitScaleBias.zw;
+            output.uv.xy = GetQuadTexCoord(input.vertexID) * _BlitScaleBias.xy + _BlitScaleBias.zw;
             output.uv.zw = projPos.xy;
 
             return output;

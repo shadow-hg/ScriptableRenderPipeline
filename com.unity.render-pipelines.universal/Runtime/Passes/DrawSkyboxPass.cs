@@ -20,7 +20,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             // Setup Legacy XR buffer states
             if (renderingData.cameraData.xrPass.hasMultiXrView)
             {
-                // Setup legacy XR stereo buffer
+                // Setup legacy skybox stereo buffer
                 renderingData.cameraData.camera.SetStereoProjectionMatrix(Camera.StereoscopicEye.Left, renderingData.cameraData.xrPass.GetProjMatrix(0));
                 renderingData.cameraData.camera.SetStereoViewMatrix(Camera.StereoscopicEye.Left, renderingData.cameraData.xrPass.GetViewMatrix(0));
                 renderingData.cameraData.camera.SetStereoProjectionMatrix(Camera.StereoscopicEye.Right, renderingData.cameraData.xrPass.GetProjMatrix(1));
@@ -31,7 +31,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
 
-                // Calling into build in skybox pass
+                // Calling into built-in skybox pass
                 context.DrawSkybox(renderingData.cameraData.camera);
 
                 // Disable Legacy XR path
@@ -40,24 +40,31 @@ namespace UnityEngine.Rendering.Universal.Internal
             }
             else
             {
-                renderingData.cameraData.camera.SetStereoProjectionMatrix(Camera.StereoscopicEye.Left, renderingData.cameraData.xrPass.GetProjMatrix(0));
-                renderingData.cameraData.camera.SetStereoViewMatrix(Camera.StereoscopicEye.Left, renderingData.cameraData.xrPass.GetViewMatrix(0));
+                float camFov = renderingData.cameraData.camera.fieldOfView;
+                float camAspect = renderingData.cameraData.camera.aspect;
+
+                // Decompose current pass' projection matrix
+                Matrix4x4 projection = renderingData.cameraData.xrPass.GetProjMatrix(0);
+                float fov = Mathf.Atan(1f / projection[1, 1]) * 2 * Mathf.Rad2Deg;
+                float aspect = projection[1, 1] / projection[0, 0];
+                // Setup legacy skybox camera data
+                renderingData.cameraData.camera.fieldOfView = fov;
+                renderingData.cameraData.camera.aspect = aspect;
 
                 // Use legacy stereo none mode for legacy multi pass
                 cmd.SetSinglePassStereo(SinglePassStereoMode.None);
                 context.ExecuteCommandBuffer(cmd);
 
-                // Calling into build in skybox pass
+                // Calling into built-in skybox pass
                 context.DrawSkybox(renderingData.cameraData.camera);
+                // Require context flush to get skybox work executed before restoring camera data
+                context.Submit();
+
+                // Restore camera data
+                renderingData.cameraData.camera.fieldOfView = camFov;
+                renderingData.cameraData.camera.aspect = camAspect;
             }
             CommandBufferPool.Release(cmd);
-
-            // We must submit/flush context before calling into camera legacy stereo calls
-            // XRTODO: verify this context.Submit();
-
-            // Reset legacy XR stereo buffer
-            renderingData.cameraData.camera.ResetStereoProjectionMatrices();
-            renderingData.cameraData.camera.ResetStereoViewMatrices();
         }
     }
 }

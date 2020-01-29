@@ -5,8 +5,9 @@ Shader "Hidden/Universal Render Pipeline/XR/XRMirrorView"
         Tags{ "RenderPipeline" = "UniversalPipeline" }
 
         HLSLINCLUDE
-            #pragma target 4.5
-            #pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
+            // Required to compile gles 2.0 with standard srp library
+            #pragma prefer_hlslcc gles
+            #pragma exclude_renderers d3d11_9x
         ENDHLSL
 
         // 0: TEXTURE2D

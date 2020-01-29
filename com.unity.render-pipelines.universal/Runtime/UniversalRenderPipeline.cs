@@ -283,8 +283,10 @@ namespace UnityEngine.Rendering.Universal
 
                     renderer.Execute(context, ref renderingData);
                 }
+                // Requires submit before rendering next pass
+                context.Submit();
             }
-            context.ExecuteCommandBuffer(cmd);
+
             // Render XR mirror view once all xr passes have been completed
             if (cameraData.camera.cameraType == CameraType.Game && requiresBlitToBackbuffer)
             {
