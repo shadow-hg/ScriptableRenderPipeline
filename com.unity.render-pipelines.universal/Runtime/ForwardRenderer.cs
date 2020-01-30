@@ -191,6 +191,7 @@ namespace UnityEngine.Rendering.Universal
                         intermediateRTDesc.dimension = TextureDimension.Tex2DArray;
                         intermediateRTDesc.volumeDepth = cameraData.xrPass.viewCount;
                     }
+                    intermediateRTDesc.colorFormat = cameraData.cameraTargetDescriptor.colorFormat;
                     CreateCameraRenderTarget(context, ref intermediateRTDesc);
                 }
 
