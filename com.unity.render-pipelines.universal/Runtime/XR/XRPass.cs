@@ -184,10 +184,11 @@ namespace UnityEngine.Rendering.Universal
             rtDesc.dimension = xrRenderPass.renderTargetDesc.dimension;
             rtDesc.volumeDepth = xrRenderPass.renderTargetDesc.volumeDepth;
             rtDesc.vrUsage = xrRenderPass.renderTargetDesc.vrUsage;
-            passInfo.renderTargetDesc = rtDesc;
+
             // XRTODO: check other descriptor field
             // Can't use xr descriptor directly as its descriptor force off y-flip cap
             //passInfo.renderTargetDesc = xrRenderPass.renderTargetDesc;
+            passInfo.renderTargetDesc = rtDesc;
 
             // Eye textures are back buffer type internally (See c++ core XRTextureManager)
             passInfo.renderTargetIsRenderTexture = false;

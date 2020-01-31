@@ -25,7 +25,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 renderingData.cameraData.camera.SetStereoViewMatrix(Camera.StereoscopicEye.Left, renderingData.cameraData.xrPass.GetViewMatrix(0));
                 renderingData.cameraData.camera.SetStereoProjectionMatrix(Camera.StereoscopicEye.Right, renderingData.cameraData.xrPass.GetProjMatrix(1));
                 renderingData.cameraData.camera.SetStereoViewMatrix(Camera.StereoscopicEye.Right, renderingData.cameraData.xrPass.GetViewMatrix(1));
-
+                
                 // Use legacy stereo instancing mode to have legacy XR code path configured
                 cmd.SetSinglePassStereo(SinglePassStereoMode.Instancing);
                 context.ExecuteCommandBuffer(cmd);
@@ -40,16 +40,8 @@ namespace UnityEngine.Rendering.Universal.Internal
             }
             else
             {
-                float camFov = renderingData.cameraData.camera.fieldOfView;
-                float camAspect = renderingData.cameraData.camera.aspect;
-
-                // Decompose current pass' projection matrix
-                Matrix4x4 projection = renderingData.cameraData.xrPass.GetProjMatrix(0);
-                float fov = Mathf.Atan(1f / projection[1, 1]) * 2 * Mathf.Rad2Deg;
-                float aspect = projection[1, 1] / projection[0, 0];
-                // Setup legacy skybox camera data
-                renderingData.cameraData.camera.fieldOfView = fov;
-                renderingData.cameraData.camera.aspect = aspect;
+                // Setup legacy XR before calling into skybox. In non-XR case, this function just returns false.
+                UniversalRenderPipeline.m_XRSystem.MountShimLayer();
 
                 // Use legacy stereo none mode for legacy multi pass
                 cmd.SetSinglePassStereo(SinglePassStereoMode.None);
@@ -57,12 +49,11 @@ namespace UnityEngine.Rendering.Universal.Internal
 
                 // Calling into built-in skybox pass
                 context.DrawSkybox(renderingData.cameraData.camera);
-                // Require context flush to get skybox work executed before restoring camera data
+                // Require context flush to get skybox work executed before UnmountShimLayer
                 context.Submit();
 
-                // Restore camera data
-                renderingData.cameraData.camera.fieldOfView = camFov;
-                renderingData.cameraData.camera.aspect = camAspect;
+                // Disable legacy XR after calling into skybox. In non-XR case, this function just returns false.
+                UniversalRenderPipeline.m_XRSystem.UnmountShimLayer();
             }
             CommandBufferPool.Release(cmd);
         }

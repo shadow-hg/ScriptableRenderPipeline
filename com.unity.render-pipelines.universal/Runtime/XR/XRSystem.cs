@@ -108,6 +108,32 @@ namespace UnityEngine.Rendering.Universal
             return maxViews;
         }
 
+        // XRTODO: Remove this BIG HACK. (Workaround URP Skybox)
+        internal bool MountShimLayer()
+        {
+#if ENABLE_VR && ENABLE_XR_MODULE
+            if (display != null)
+            {
+                display.disableLegacyRenderer = false;
+                return true;
+            }
+#endif
+            return false;
+        }
+
+        internal bool UnmountShimLayer()
+        {
+#if ENABLE_VR && ENABLE_XR_MODULE
+            if (display != null)
+            {
+                display.disableLegacyRenderer = true;
+                return true;
+            }
+#endif
+            return false;
+        }
+
+
         internal List<XRPass> SetupFrame(CameraData cameraData, bool singlePassAllowed, bool singlePassTestModeActive)
         {
             Camera camera = cameraData.camera;
@@ -118,6 +144,9 @@ namespace UnityEngine.Rendering.Universal
             {
                 // XRTODO: Handle stereo mode selection in URP pipeline asset UI
                 display.textureLayout = XR.XRDisplaySubsystem.TextureLayout.Texture2DArray;
+                display.zNear = cameraData.camera.nearClipPlane;
+                display.zFar  = cameraData.camera.farClipPlane;
+                display.sRGB  = QualitySettings.activeColorSpace == ColorSpace.Linear;
             }
 #endif
 

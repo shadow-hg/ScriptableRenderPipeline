@@ -663,8 +663,7 @@ namespace UnityEngine.Rendering.Universal
                 }
             }
 
-            // We must execute the commands recorded at this point because potential call to context.StartMultiEye(cameraData.camera) below will alter internal renderer states
-            // Also, we execute the commands recorded at this point to ensure SetRenderTarget is called before RenderPass.Execute
+            // We execute the commands recorded at this point to ensure SetRenderTarget is called before RenderPass.Execute
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
 
