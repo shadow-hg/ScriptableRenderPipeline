@@ -28,7 +28,9 @@ namespace UnityEditor.Rendering.HighDefinition
         public static string s_AssemblyName => typeof(HDRPShaderStructs).Assembly.FullName.ToString();
 
         struct UInt32_4
-        {}
+        { };
+        struct UInt32
+        { };
 
         internal struct AttributesMesh
         {
@@ -42,6 +44,7 @@ namespace UnityEditor.Rendering.HighDefinition
             [Semantic("BLENDWEIGHTS")][Optional]    Vector4 weights;
             [Semantic("BLENDINDICES")][Optional]    UInt32_4 indices;
             [Semantic("COLOR")][Optional]           Vector4 color;
+            [Semantic("SV_VertexID")] [Optional]    UInt32 vertexId;
             [Semantic("INSTANCEID_SEMANTIC")] [PreprocessorIf("UNITY_ANY_INSTANCING_ENABLED")] uint instanceID;
         };
 
@@ -243,6 +246,7 @@ namespace UnityEditor.Rendering.HighDefinition
             [Optional] Vector3 TimeParameters;
             [Optional] Vector4 BoneWeights;
             [Optional] UInt32_4 BoneIndices;
+            [Optional] UInt32 VertexId;
 
             public static Dependency[] dependencies = new Dependency[]
             {                                                                       // TODO: NOCHECKIN: these dependencies are not correct for vertex pass
@@ -280,7 +284,8 @@ namespace UnityEditor.Rendering.HighDefinition
                 new Dependency("VertexDescriptionInputs.VertexColor",               "AttributesMesh.color"),
 
                 new Dependency("VertexDescriptionInputs.BoneWeights",               "AttributesMesh.weights"),
-                new Dependency("VertexDescriptionInputs.BoneIndices",               "AttributesMesh.indices")
+                new Dependency("VertexDescriptionInputs.BoneIndices",               "AttributesMesh.indices"),
+                new Dependency("VertexDescriptionInputs.VertexId",                  "AttributesMesh.vertexId")
             };
         };
 
@@ -379,6 +384,7 @@ namespace UnityEditor.Rendering.HighDefinition
             {
                 activeFields.AddAll("VertexDescriptionInputs.BoneWeights");
                 activeFields.AddAll("VertexDescriptionInputs.BoneIndices");
+                activeFields.AddAll("VertexDescriptionInputs.VertexId");
             }
 
             foreach (var channel in requirements.requiresMeshUVs.Distinct())

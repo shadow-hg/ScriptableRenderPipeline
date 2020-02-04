@@ -583,6 +583,7 @@ namespace UnityEditor.ShaderGraph
             {
                 activeFields.Add($"{structName}.BoneWeights");
                 activeFields.Add($"{structName}.BoneIndices");
+                activeFields.Add($"{structName}.VertexId");
             }
         }
 
