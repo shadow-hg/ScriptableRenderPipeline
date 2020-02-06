@@ -213,7 +213,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void SelectUnusedNodes(DropdownMenuAction action)
         {
-            Undo.RecordObject(graph.owner, "Select Unused Nodes");
+            graph.owner.RegisterCompleteObjectUndo("Select Unused Nodes");
             ClearSelection();
             var nodeView = graph.GetNodes<IMasterNode>();
             var nodesConnectedToAMasterNode = new List<AbstractMaterialNode>();
