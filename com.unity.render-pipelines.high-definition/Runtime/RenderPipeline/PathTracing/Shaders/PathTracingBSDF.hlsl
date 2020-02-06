@@ -1,8 +1,134 @@
 #define DELTA_PDF 1000000.0
+#define MIN_GGX_ROUGHNESS 0.001
 #define MAX_GGX_ROUGHNESS 0.999
 
 namespace BRDF
 {
+
+// Adapted from: "Sampling the GGX Distribution of Visible Normals", by E. Heitz
+// http://jcgt.org/published/0007/04/01/paper.pdf
+void SampleVisibleAnisoGGXDir(float2 u,
+                              float3 V,
+                              float3x3 localToWorld,
+                              float roughnessX,
+                              float roughnessY,
+                          out float3 localV,
+                          out float3 localH,
+                          out float3 localL,
+                          out float  VdotH)
+{
+    localV = mul(V, transpose(localToWorld));
+
+    // Construct an orthonormal basis around the stretched view direction
+    float3x3 viewToLocal;
+    viewToLocal[2] = normalize(float3(roughnessX * localV.x, roughnessY * localV.y, localV.z));
+    viewToLocal[0] = (viewToLocal[2].z < 0.9999) ? normalize(cross(float3(0, 0, 1), viewToLocal[2])) : float3(1, 0, 0);
+    viewToLocal[1] = cross(viewToLocal[2], viewToLocal[0]);
+
+    // Compute a sample point with polar coordinates (r, phi)
+    float r   = sqrt(u.x);
+    float phi = 2.0 * PI * u.y;
+    float t1  = r * cos(phi);
+    float t2  = r * sin(phi);
+    float s  = 0.5 * (1.0 + viewToLocal[2].z);
+    t2 = (1.0 - s) * sqrt(1.0 - t1 * t1) + s * t2;
+
+    // Reproject onto hemisphere
+    localH = t1 * viewToLocal[0] + t2 * viewToLocal[1] + sqrt(max(0.0, 1.0 - t1 * t1 - t2 * t2)) * viewToLocal[2];
+
+    // Transform the normal back to the ellipsoid configuration
+    localH = normalize(float3(roughnessX * localH.x, roughnessY * localH.y, max(0.0, localH.z)));
+
+    VdotH = saturate(dot(localV, localH));
+
+    // Compute the reflection direction
+    localL = 2.0 * VdotH * localH - localV;
+}
+
+float G_AnisoGGX(float roughnessX,
+                 float roughnessY,
+                 float3 V)
+{
+    float lambda = 0.5 * (sqrt(1.0 + (Sq(roughnessX * V.x) + Sq(roughnessY * V.y)) / Sq(V.z)) - 1.0);
+    return rcp(1.0 + lambda);
+}
+
+float D_AnisoGGX(float roughnessX,
+                 float roughnessY,
+                 float3 H)
+{
+    return rcp(PI * roughnessX * roughnessY * Sq(Sq(H.x / roughnessX) + Sq(H.y / roughnessY) + Sq(H.z)));
+}
+
+bool SampleAnisoGGX(MaterialData mtlData,
+                    float3 fresnel0,
+                    float3 inputSample,
+                out float3 outgoingDir,
+                out float3 value,
+                out float pdf,
+                out float3 fresnel)
+{
+    float roughnessX = clamp(mtlData.bsdfData.roughnessT, MIN_GGX_ROUGHNESS, MAX_GGX_ROUGHNESS);
+    float roughnessY = clamp(mtlData.bsdfData.roughnessB, MIN_GGX_ROUGHNESS, MAX_GGX_ROUGHNESS);
+
+    float VdotH;
+    float3 localV, localH, localL;
+    float3x3 localToWorld = GetTangentFrame(mtlData);
+    SampleVisibleAnisoGGXDir(inputSample, mtlData.V, localToWorld, roughnessX, roughnessY, localV, localH, localL, VdotH);
+
+    outgoingDir = mul(localL, localToWorld);
+
+    if (localL.z < 0.001 || !IsAbove(mtlData, outgoingDir))
+        return false;
+
+    float D = D_AnisoGGX(roughnessX, roughnessY, localH);
+    float GV = G_AnisoGGX(roughnessX, roughnessY, localV);
+    float Dv = D * VdotH * GV / localV.z;
+    pdf = Dv / (4.0 * VdotH);
+
+    if (pdf < 0.001)
+        return false;
+
+    float GL = G_AnisoGGX(roughnessX, roughnessY, localL);
+    fresnel = F_Schlick(fresnel0, VdotH);
+    value = fresnel * D * GV * GL / (4.0 * localV.z);
+
+    return true;
+}
+
+void EvaluateAnisoGGX(MaterialData mtlData,
+                      float3 fresnel0,
+                      float3 outgoingDir,
+                  out float3 value,
+                  out float pdf,
+                  out float3 fresnel)
+{
+    float NdotV = dot(mtlData.bsdfData.normalWS, mtlData.V);
+    if (NdotV < 0.001)
+    {
+        value = 0.0;
+        pdf = 0.0;
+        return;
+    }
+
+    float roughnessX = clamp(mtlData.bsdfData.roughnessT, MIN_GGX_ROUGHNESS, MAX_GGX_ROUGHNESS);
+    float roughnessY = clamp(mtlData.bsdfData.roughnessB, MIN_GGX_ROUGHNESS, MAX_GGX_ROUGHNESS);
+
+    float3x3 worldToLocal = transpose(GetTangentFrame(mtlData));
+    float3 localV = mul(mtlData.V, worldToLocal);
+    float3 localL = mul(outgoingDir, worldToLocal);
+    float3 localH = normalize(localV + localL);
+    float VdotH = dot(localV, localH);
+
+    float D = D_AnisoGGX(roughnessX, roughnessY, localH);
+    float GV = G_AnisoGGX(roughnessX, roughnessY, localV);
+    float GL = G_AnisoGGX(roughnessX, roughnessY, localL);
+    float Dv = D * VdotH * GV / localV.z;
+
+    fresnel = F_Schlick(fresnel0, VdotH);
+    value = fresnel * D * GV * GL / (4.0 * localV.z);
+    pdf = Dv / (4.0 * VdotH);
+}
 
 bool SampleGGX(MaterialData mtlData,
                float roughness,
@@ -13,7 +139,7 @@ bool SampleGGX(MaterialData mtlData,
            out float pdf,
            out float3 fresnel)
 {
-    roughness = min(roughness, MAX_GGX_ROUGHNESS);
+    roughness = clamp(roughness, MIN_GGX_ROUGHNESS, MAX_GGX_ROUGHNESS);
 
     float NdotL, NdotH, VdotH;
     float3x3 localToWorld = GetLocalFrame(mtlData.bsdfData.normalWS);
@@ -54,7 +180,7 @@ void EvaluateGGX(MaterialData mtlData,
     }
     float NdotL = dot(mtlData.bsdfData.normalWS, outgoingDir);
 
-    roughness = min(roughness, MAX_GGX_ROUGHNESS);
+    roughness = clamp(roughness, MIN_GGX_ROUGHNESS, MAX_GGX_ROUGHNESS);
 
     float3 H = normalize(mtlData.V + outgoingDir);
     float NdotH = dot(mtlData.bsdfData.normalWS, H);
@@ -219,7 +345,7 @@ bool SampleGGX(MaterialData mtlData,
            out float3 value,
            out float pdf)
 {
-    float roughness = min(mtlData.bsdfData.roughnessT, MAX_GGX_ROUGHNESS);
+    float roughness = clamp(mtlData.bsdfData.roughnessT, MIN_GGX_ROUGHNESS, MAX_GGX_ROUGHNESS);
 
     float NdotL, NdotH, VdotH;
     float3x3 localToWorld = GetLocalFrame(mtlData.bsdfData.normalWS);

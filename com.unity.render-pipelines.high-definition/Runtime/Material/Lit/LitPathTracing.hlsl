@@ -24,7 +24,7 @@ MaterialData CreateMaterialData(BSDFData bsdfData, float3 V)
         // If N.V < 0 (can happen with normal mapping) we want to avoid spec sampling
         bool consistentNormal = (NdotV > 0.001);
         mtlData.bsdfWeight[1] = consistentNormal ? Fcoat : 0.0;
-        mtlData.bsdfWeight[2] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1]) * lerp(Fspec, 0.5, bsdfData.roughnessT) : 0.0;
+        mtlData.bsdfWeight[2] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1]) * lerp(Fspec, 0.5, 0.5 * (bsdfData.roughnessT + bsdfData.roughnessB)) : 0.0;
         mtlData.bsdfWeight[3] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1] - mtlData.bsdfWeight[2]) * bsdfData.transmittanceMask : 0.0;
         mtlData.bsdfWeight[0] = (1.0 - mtlData.bsdfWeight[1]) * (1.0 - bsdfData.transmittanceMask) * Luminance(bsdfData.diffuseColor);
 
@@ -88,7 +88,7 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
 
             if (mtlData.bsdfWeight[2] > BSDF_WEIGHT_EPSILON)
             {
-                BRDF::EvaluateGGX(mtlData, mtlData.bsdfData.roughnessT, mtlData.bsdfData.fresnel0, sampleDir, value, pdf, fresnelSpec);
+                BRDF::EvaluateAnisoGGX(mtlData, mtlData.bsdfData.fresnel0, sampleDir, value, pdf, fresnelSpec);
                 result.specValue += value * (1.0 - fresnelClearCoat);
                 result.specPdf += mtlData.bsdfWeight[2] * pdf;
             }
@@ -111,14 +111,14 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
 
             if (mtlData.bsdfWeight[2] > BSDF_WEIGHT_EPSILON)
             {
-                BRDF::EvaluateGGX(mtlData, mtlData.bsdfData.roughnessT, mtlData.bsdfData.fresnel0, sampleDir, value, pdf, fresnelSpec);
+                BRDF::EvaluateAnisoGGX(mtlData, mtlData.bsdfData.fresnel0, sampleDir, value, pdf, fresnelSpec);
                 result.specValue += value * (1.0 - fresnelClearCoat);
                 result.specPdf += mtlData.bsdfWeight[2] * pdf;
             }
         }
         else if (inputSample.z < mtlData.bsdfWeight[0] + mtlData.bsdfWeight[1] + mtlData.bsdfWeight[2]) // Specular BRDF
         {
-            if (!BRDF::SampleGGX(mtlData, mtlData.bsdfData.roughnessT, mtlData.bsdfData.fresnel0, inputSample, sampleDir, result.specValue, result.specPdf, fresnelSpec))
+            if (!BRDF::SampleAnisoGGX(mtlData, mtlData.bsdfData.fresnel0, inputSample, sampleDir, result.specValue, result.specPdf, fresnelSpec))
                 return false;
 
             result.specPdf *= mtlData.bsdfWeight[2];
@@ -211,7 +211,7 @@ void EvaluateMaterial(MaterialData mtlData, float3 sampleDir, out MaterialResult
 
         if (mtlData.bsdfWeight[2] > BSDF_WEIGHT_EPSILON)
         {
-            BRDF::EvaluateGGX(mtlData, mtlData.bsdfData.roughnessT, mtlData.bsdfData.fresnel0, sampleDir, value, pdf, fresnelSpec);
+            BRDF::EvaluateAnisoGGX(mtlData, mtlData.bsdfData.fresnel0, sampleDir, value, pdf, fresnelSpec);
             result.specValue += value * (1.0 - fresnelClearCoat);
             result.specPdf += mtlData.bsdfWeight[2] * pdf;
         }

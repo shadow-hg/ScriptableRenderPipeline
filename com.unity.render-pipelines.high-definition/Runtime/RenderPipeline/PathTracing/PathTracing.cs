@@ -31,6 +31,9 @@ namespace UnityEngine.Rendering.HighDefinition
     public partial class HDRenderPipeline
     {
         const string m_PathTracingRayGenShaderName = "RayGen";
+
+        PathTracing pathTracingSettings;
+
         uint currentIteration = 0;
 #if UNITY_EDITOR
         uint maxIteration = 0;
@@ -57,7 +60,6 @@ namespace UnityEngine.Rendering.HighDefinition
         private void ResetIteration()
         {
             // If we just changed the sample count, we don't want to reset the iteration
-            PathTracing pathTracingSettings = VolumeManager.instance.stack.GetComponent<PathTracing>();
             if (maxIteration != pathTracingSettings.maximumSamples.value)
                 maxIteration = (uint) pathTracingSettings.maximumSamples.value;
             else
@@ -94,7 +96,7 @@ namespace UnityEngine.Rendering.HighDefinition
         void RenderPathTracing(HDCamera hdCamera, CommandBuffer cmd, RTHandle outputTexture, ScriptableRenderContext renderContext, int frameCount)
         {
             RayTracingShader pathTracingShader = m_Asset.renderPipelineRayTracingResources.pathTracing;
-            PathTracing pathTracingSettings = hdCamera.volumeStack.GetComponent<PathTracing>();
+            pathTracingSettings = hdCamera.volumeStack.GetComponent<PathTracing>();
 
             // Check the validity of the state before moving on with the computation
             if (!pathTracingShader || !pathTracingSettings.enable.value)
