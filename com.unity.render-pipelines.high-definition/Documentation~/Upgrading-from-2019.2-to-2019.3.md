@@ -4,7 +4,9 @@ In the High Definition Render Pipeline (HDRP), some features work differently be
 
 ## New Scene
 
-New Scene system in HDRP rely on a prefab in your project. If you have already configured one with the Wizard, you need to update it.
+New Scene system in HDRP rely on a prefab in your project. It also depend on default settings set for the Volumes. If you already have configured one with the Wizard, you need to update it regarding the **Default Volume Profile Asset** (in **Edit > Project Settings > HDRP Default Settings**).
+
+If you use default prefab (the one created by the wizard) and rely on default **Default Volume Profile Asset**, then your prefab will not be sync anymore with the default volume profile and you must update it.
 
 The easiest way is to ask the Wizard to recreate a new on:
 
