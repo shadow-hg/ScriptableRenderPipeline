@@ -1709,6 +1709,10 @@ DirectLighting  EvaluateBSDF_Rect(LightLoopContext lightLoopContext,
 
     float3  positionWS = posInput.positionWS;
 
+#if SHADEROPTIONS_BARN_DOOR
+    // Apply the barn door modification to the light data
+    RectangularLightApplyBarnDoor(lightData, positionWS);
+#endif
     // Translate the light s.t. the shaded point is at the origin of the coordinate system.
     float3  lightPositionRWS = lightData.positionRWS - positionWS;
     if (dot(lightData.forward, lightPositionRWS) >= 0.0001)
@@ -1933,6 +1937,10 @@ IndirectLighting EvaluateBSDF_ScreenSpaceReflection(PositionInputs posInput,
 
     // TODO: this texture is sparse (mostly black). Can we avoid reading every texel? How about using Hi-S?
     float4 ssrLighting = LOAD_TEXTURE2D_X(_SsrLightingTexture, posInput.positionSS);
+    InversePreExposeSsrLighting(ssrLighting);
+
+    // Apply the weight on the ssr contribution (if required)
+    ApplyScreenSpaceReflectionWeight(ssrLighting);
 
     float3 reflectanceFactor = 0.0;
     bool HasClearcoat = (_Flags & 0x2U);
@@ -1968,8 +1976,7 @@ IndirectLighting EvaluateBSDF_ScreenSpaceReflection(PositionInputs posInput,
 #endif
     }
 
-    // Note: RGB is already premultiplied by A.
-    lighting.specularReflected = ssrLighting.rgb /* * ssrLighting.a */ * reflectanceFactor;
+    lighting.specularReflected = ssrLighting.rgb * reflectanceFactor;
     reflectionHierarchyWeight  = ssrLighting.a;
 
     return lighting;

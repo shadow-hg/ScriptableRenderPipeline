@@ -16,6 +16,7 @@ namespace UnityEditor.VFX
         
         VFXModel[] m_SubChildren;
         VFXBlock[] m_SubBlocks;
+        VFXGraph m_UsedSubgraph;
 
         public VisualEffectSubgraphBlock subgraph
         {
@@ -116,6 +117,7 @@ namespace UnityEditor.VFX
             {
                 m_SubChildren = null;
                 m_SubBlocks = null;
+                m_UsedSubgraph = null;
                 return;
             }
 
@@ -128,6 +130,7 @@ namespace UnityEditor.VFX
             {
                 m_SubChildren = null;
                 m_SubBlocks = null;
+                m_UsedSubgraph = null;
                 return;
             }
 
@@ -144,6 +147,7 @@ namespace UnityEditor.VFX
             }
 
             var copy = VFXMemorySerializer.DuplicateObjects(dependencies.ToArray());
+            m_UsedSubgraph = graph;
             m_SubChildren = copy.OfType<VFXModel>().Where(t => t is VFXBlock || t is VFXOperator || t is VFXParameter).ToArray();
             m_SubBlocks = m_SubChildren.OfType<VFXBlock>().ToArray();
             foreach (var child in m_SubChildren)
@@ -152,11 +156,13 @@ namespace UnityEditor.VFX
             {
                 child.hideFlags = HideFlags.HideAndDontSave;
             }
+
+            foreach (var subgraphBlocks in m_SubBlocks.OfType<VFXSubgraphBlock>())
+                subgraphBlocks.RecreateCopy();
             SyncSlots(VFXSlot.Direction.kInput,true);
-            PatchInputExpressions();
         }
         
-        void PatchInputExpressions()
+        public void PatchInputExpressions()
         {
             if (m_SubChildren == null) return;
 
@@ -193,7 +199,7 @@ namespace UnityEditor.VFX
         {
             get
             {
-                return m_SubBlocks == null || !isValid? Enumerable.Empty<VFXBlock>() : (m_SubBlocks.SelectMany(t => t is VFXSubgraphBlock ? (t as VFXSubgraphBlock).recursiveSubBlocks : Enumerable.Repeat(t, 1)));
+                return m_SubBlocks == null || !isActive ? Enumerable.Empty<VFXBlock>() : (m_SubBlocks.SelectMany(t => t is VFXSubgraphBlock ? (t as VFXSubgraphBlock).recursiveSubBlocks : Enumerable.Repeat(t, 1)));
             }
         }
         public override bool isValid
@@ -246,11 +252,15 @@ namespace UnityEditor.VFX
                 if (graph != null && subgraph != null && m_Subgraph.GetResource() != null)
                 {
                     var otherGraph = m_Subgraph.GetResource().GetOrCreateGraph();
+                    if (otherGraph != m_UsedSubgraph)
+                        RecreateCopy();
                     if (otherGraph == graph || otherGraph.subgraphDependencies.Contains(graph.GetResource().visualEffectObject))
                         m_Subgraph = null; // prevent cyclic dependencies.
                     if (graph.GetResource().isSubgraph) // BuildSubgraphDependenciesis called for vfx by recompilation, but in subgraph we must call it explicitely
                         graph.BuildSubgraphDependencies();
                 }
+                else if (m_UsedSubgraph != null)
+                    RecreateCopy();
 
             }
 
