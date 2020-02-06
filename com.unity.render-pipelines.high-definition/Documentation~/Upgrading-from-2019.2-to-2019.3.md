@@ -112,3 +112,8 @@ To do this, Unity opens a prompt when you begin the upgrade, asking if you want 
 For scene with baked probes authored prior to 2019.3, you may ran into a warning concerning a missing script for a GameObject named SceneIDMap when entering play mode.
 To fix it, you can load the scene in the editor and click on "Edit/Render Pipeline/Fix Warning 'referenced script in (Game Object 'SceneIDMap') is missing' in loaded scenes".
 
+## Light Intensity and Sky Exposure versus HDRP Default Settings.
+
+By default, HDRP is configured to use physically correct intensities for lights. Because of that, the exposure of the default HDRI sky present in HDRP is set to 11 to match a directional light intensity of 10000. You can find similar values in the template project for reference.
+When the HDRP wizard has been setup correctly, creating a new scene automatically create objects with the right intensities so that everything is coherent. However, if it's not the case, or if users create directional lights from scratch, their intensity is not physically correct. The consequence is that they don't match the default sky exposure and thus, any object in the scene will look black because of the automatic exposure compensating for the overly bright sky.
+In order to avoid this, make sure that you use coherent values for light intensity compared to the current sky exposure.
