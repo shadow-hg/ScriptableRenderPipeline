@@ -45,12 +45,18 @@ void SampleVisibleAnisoGGXDir(float2 u,
     localL = 2.0 * VdotH * localH - localV;
 }
 
+float Lambda_AnisoGGX(float roughnessX,
+                      float roughnessY,
+                      float3 V)
+{
+    return 0.5 * (sqrt(1.0 + (Sq(roughnessX * V.x) + Sq(roughnessY * V.y)) / Sq(V.z)) - 1.0);
+}
+
 float G_AnisoGGX(float roughnessX,
                  float roughnessY,
                  float3 V)
 {
-    float lambda = 0.5 * (sqrt(1.0 + (Sq(roughnessX * V.x) + Sq(roughnessY * V.y)) / Sq(V.z)) - 1.0);
-    return rcp(1.0 + lambda);
+    return rcp(1.0 + Lambda_AnisoGGX(roughnessX, roughnessY, V));
 }
 
 float D_AnisoGGX(float roughnessX,
@@ -81,17 +87,16 @@ bool SampleAnisoGGX(MaterialData mtlData,
     if (localL.z < 0.001 || !IsAbove(mtlData, outgoingDir))
         return false;
 
-    float D = D_AnisoGGX(roughnessX, roughnessY, localH);
-    float GV = G_AnisoGGX(roughnessX, roughnessY, localV);
-    float Dv = D * VdotH * GV / localV.z;
-    pdf = Dv / (4.0 * VdotH);
+    float pdfNoGV = D_AnisoGGX(roughnessX, roughnessY, localH) / (4.0 * localV.z);
+    float lambdaVPlusOne = Lambda_AnisoGGX(roughnessX, roughnessY, localV) + 1.0;
+    pdf = pdfNoGV / lambdaVPlusOne;
 
     if (pdf < 0.001)
         return false;
 
-    float GL = G_AnisoGGX(roughnessX, roughnessY, localL);
+    float lambdaL = Lambda_AnisoGGX(roughnessX, roughnessY, localL);
     fresnel = F_Schlick(fresnel0, VdotH);
-    value = fresnel * D * GV * GL / (4.0 * localV.z);
+    value = fresnel * pdfNoGV / (lambdaVPlusOne + lambdaL);
 
     return true;
 }
@@ -120,14 +125,13 @@ void EvaluateAnisoGGX(MaterialData mtlData,
     float3 localH = normalize(localV + localL);
     float VdotH = dot(localV, localH);
 
-    float D = D_AnisoGGX(roughnessX, roughnessY, localH);
-    float GV = G_AnisoGGX(roughnessX, roughnessY, localV);
-    float GL = G_AnisoGGX(roughnessX, roughnessY, localL);
-    float Dv = D * VdotH * GV / localV.z;
+    float pdfNoGV = D_AnisoGGX(roughnessX, roughnessY, localH) / (4.0 * localV.z);
+    float lambdaVPlusOne = Lambda_AnisoGGX(roughnessX, roughnessY, localV) + 1.0;
+    float lambdaL = Lambda_AnisoGGX(roughnessX, roughnessY, localL);
 
     fresnel = F_Schlick(fresnel0, VdotH);
-    value = fresnel * D * GV * GL / (4.0 * localV.z);
-    pdf = Dv / (4.0 * VdotH);
+    value = fresnel * pdfNoGV / (lambdaVPlusOne + lambdaL);
+    pdf = pdfNoGV / lambdaVPlusOne;
 }
 
 bool SampleGGX(MaterialData mtlData,
