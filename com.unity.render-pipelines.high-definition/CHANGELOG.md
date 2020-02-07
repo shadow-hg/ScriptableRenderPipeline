@@ -151,6 +151,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed minor issues with cubemap preview in the inspector.
 - Fixed wrong build error message when building for android on mac.
 - Fixed an issue related to denoising ray trace area shadows.
+- Fixed a potential source of NaN in planar reflection probe atlas.
 
 ### Changed
 - Hide unused LOD settings in Quality Settings legacy window.
