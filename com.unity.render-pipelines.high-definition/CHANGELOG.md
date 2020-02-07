@@ -152,6 +152,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed wrong build error message when building for android on mac.
 - Fixed an issue related to denoising ray trace area shadows.
 - Fixed a potential source of NaN in planar reflection probe atlas.
+- Fixed an issue with MipRatio debug mode showing _DebugMatCapTexture not being set.
 
 ### Changed
 - Hide unused LOD settings in Quality Settings legacy window.
