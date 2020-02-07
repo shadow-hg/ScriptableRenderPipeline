@@ -8,7 +8,7 @@ New Scene system in HDRP rely on a prefab in your project. It also depend on def
 
 If you use default prefab (the one created by the wizard) and rely on default **Default Volume Profile Asset**, then your prefab will not be sync anymore with the default volume profile and you must update it.
 
-The easiest way is to ask the Wizard to recreate a new on:
+The easiest way is to ask the Wizard to recreate a new one:
 
 1. Open the Wizard (**Window > Render Pipeline > HD Render Pipeline Wizard**)
 2. Remove the prefab set in **Default Scene Prefab**.
@@ -17,6 +17,8 @@ The easiest way is to ask the Wizard to recreate a new on:
 5. [*Optional*] Report your custom change in the new created prefab.
 
 Then repeat this for **Default DXR Scene Prefab** if you were also using DXR.
+
+New Scene system in HDRP rely on a prefab in your project. If you have already configured one with the Wizard, you need to update it.
 
 <a name="ProceduralSky"></a>
 

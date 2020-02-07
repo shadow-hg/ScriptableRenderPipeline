@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added script documentation for SSR, SSAO (ray tracing), GI, Light Cluster, RayTracingSettings, Ray Counters, etc.
 - Added path tracing support for refraction and internal reflections.
 - Added support for Thin Refraction Model and Lit's Clear Coat in Path Tracing.
+- Added the Tint parameter to Sky Colored Fog.
 
 ### Fixed
 - Update documentation of HDRISky-Backplate, precise how to have Ambient Occlusion on the Backplate
@@ -134,6 +135,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed the blend of reflections based on the weight.
 - Fixed fallback for ray traced reflections when denoising is enabled.
 - Fixed error spam issue with terrain detail terrainDetailUnsupported (cases 1211848)
+- Fixed hardware dynamic resolution causing cropping/scaling issues in scene view (case 1158661)
 - Fixed Wizard check order for `Hardware and OS` and `Direct3D12`
 - Fix AO issue turning black when Far/Near plane distance is big.
 - Fixed issue when opening lookdev and the lookdev volume have not been assigned yet.
@@ -151,6 +153,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed minor issues with cubemap preview in the inspector.
 - Fixed wrong build error message when building for android on mac.
 - Fixed an issue related to denoising ray trace area shadows.
+- Fixed wrong build error message when building for android on mac.
+- Fixed Wizard persistency of Direct3D12 change on domain reload.
+- Fixed Wizard persistency of FixAll on domain reload.
+- Fixed Wizard behaviour on domain reload.
 - Fixed a potential source of NaN in planar reflection probe atlas.
 - Fixed an issue with MipRatio debug mode showing _DebugMatCapTexture not being set.
 
