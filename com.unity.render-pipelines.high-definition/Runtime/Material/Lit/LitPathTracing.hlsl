@@ -140,7 +140,7 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
         }
         else // Specular BTDF
         {
-            if (!BTDF::SampleGGX(mtlData, inputSample, sampleDir, result.specValue, result.specPdf))
+            if (!BTDF::SampleAnisoGGX(mtlData, inputSample, sampleDir, result.specValue, result.specPdf))
                 return false;
 
 #ifdef _REFRACTION_THIN
