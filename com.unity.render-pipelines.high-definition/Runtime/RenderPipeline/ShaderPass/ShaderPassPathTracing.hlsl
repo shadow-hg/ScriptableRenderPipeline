@@ -253,8 +253,9 @@ void AnyHit(inout RayIntersection rayIntersection : SV_RayPayload, AttributeData
     {
         IgnoreHit();
     }
-    else
+    else if (rayIntersection.remainingDepth > _RaytracingMaxRecursion)
     {
+        // This is a transmission ray, on a non-clipped, opaque object: end search right away
         rayIntersection.t = RayTCurrent();
         AcceptHitAndEndSearch();
     }
