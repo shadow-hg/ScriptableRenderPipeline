@@ -70,6 +70,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added support for Thin Refraction Model and Lit's Clear Coat in Path Tracing.
 - Added the Tint parameter to Sky Colored Fog.
 - Added of Screen Space Reflections for Transparent materials
+- Added support for anisotropic specular lobes in path tracing.
+- Added support for alpha clipping in path tracing.
 
 ### Fixed
 - Update documentation of HDRISky-Backplate, precise how to have Ambient Occlusion on the Backplate
