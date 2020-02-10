@@ -140,7 +140,7 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
                 nextRayIntersection.t = rayDescriptor.TMax;
 
                 // FIXME: For the time being, we choose not to apply any back/front-face culling for shadows, will possibly change in the future
-                TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_FORCE_NON_OPAQUE | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
+                TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
                          RAYTRACINGRENDERERFLAG_CAST_SHADOW, 0, 1, 0, rayDescriptor, nextRayIntersection);
 
                 if (nextRayIntersection.t >= rayDescriptor.TMax)
@@ -186,7 +186,7 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
             nextRayIntersection.cone.spreadAngle = rayIntersection.cone.spreadAngle + roughnessToSpreadAngle(nextRayIntersection.maxRoughness);
 
             // Shoot ray for indirect lighting
-            TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_CULL_BACK_FACING_TRIANGLES | RAY_FLAG_FORCE_OPAQUE, RAYTRACINGRENDERERFLAG_PATH_TRACING, 0, 1, 0, rayDescriptor, nextRayIntersection);
+            TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, RAYTRACINGRENDERERFLAG_PATH_TRACING, 0, 1, 0, rayDescriptor, nextRayIntersection);
 
             if (computeDirect)
             {
@@ -226,9 +226,36 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
         rayIntersection.color *= _RaytracingIntensityClamp / intensity;
 }
 
+
 [shader("anyhit")]
 void AnyHit(inout RayIntersection rayIntersection : SV_RayPayload, AttributeData attributeData : SV_IntersectionAttributes)
 {
-    rayIntersection.t = RayTCurrent();
-    AcceptHitAndEndSearch();
+    // The first thing that we should do is grab the intersection vertice
+    IntersectionVertex currentVertex;
+    GetCurrentIntersectionVertex(attributeData, currentVertex);
+
+    // Build the Frag inputs from the intersection vertex
+    FragInputs fragInput;
+    BuildFragInputsFromIntersection(currentVertex, WorldRayDirection(), fragInput);
+
+    PositionInputs posInput;
+    posInput.positionWS = fragInput.positionRWS;
+    posInput.positionSS = rayIntersection.pixelCoord;
+
+    // Build the surfacedata and builtindata
+    SurfaceData surfaceData;
+    BuiltinData builtinData;
+    bool isVisible;
+    GetSurfaceAndBuiltinData(fragInput, -WorldRayDirection(), posInput, surfaceData, builtinData, currentVertex, rayIntersection.cone, isVisible);
+
+    // Check alpha clipping
+    if (!isVisible)
+    {
+        IgnoreHit();
+    }
+    else
+    {
+        rayIntersection.t = RayTCurrent();
+        AcceptHitAndEndSearch();
+    }
 }
