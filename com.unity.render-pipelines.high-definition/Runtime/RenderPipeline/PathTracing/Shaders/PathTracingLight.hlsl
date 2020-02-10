@@ -123,8 +123,34 @@ bool PickDistantLights(LightList list, inout float sample)
 
 float3 GetPunctualEmission(LightData lightData, float3 outgoingDir, float dist)
 {
+    float3 emission = lightData.color;
+
+    // Punctual attenuation
     float4 distances = float4(dist, Sq(dist), 1.0 / dist, -dist * dot(outgoingDir, lightData.forward));
-    return lightData.color * PunctualLightAttenuation(distances, lightData.rangeAttenuationScale, lightData.rangeAttenuationBias, lightData.angleScale, lightData.angleOffset);
+    emission *= PunctualLightAttenuation(distances, lightData.rangeAttenuationScale, lightData.rangeAttenuationBias, lightData.angleScale, lightData.angleOffset);
+
+    // Cookie
+    if (lightData.cookieMode != COOKIEMODE_NONE)
+    {
+        LightLoopContext context;
+        emission *= EvaluateCookie_Punctual(context, lightData, -dist * outgoingDir);
+    }
+
+    return emission;
+}
+
+float3 GetDirectionalEmission(DirectionalLightData lightData, float3 outgoingVec)
+{
+    float3 emission = lightData.color;
+
+    // Cookie
+    if (lightData.cookieMode != COOKIEMODE_NONE)
+    {
+        LightLoopContext context;
+        emission *= EvaluateCookie_Directional(context, lightData, -outgoingVec);
+    }
+
+    return emission;
 }
 
 bool SampleLights(LightList lightList,
@@ -205,18 +231,21 @@ bool SampleLights(LightList lightList,
         // Pick a distant light from the list
         DirectionalLightData lightData = GetDistantLightData(lightList, inputSample.z);
 
+        // The position-to-light unnormalized vector is used for cookie evaluation
+        float3 OutgoingVec = GetAbsolutePositionWS(lightData.positionRWS) - position;
+
         if (lightData.angularDiameter > 0.0)
         {
             SampleCone(inputSample, cos(lightData.angularDiameter * 0.5), outgoingDir, pdf); // computes rcpPdf
-            value = lightData.color / pdf;
+            value = GetDirectionalEmission(lightData, OutgoingVec) / pdf;
             pdf = GetDistantLightWeight(lightList) / pdf;
             outgoingDir = normalize(outgoingDir.x * normalize(lightData.right) + outgoingDir.y * normalize(lightData.up) - outgoingDir.z * lightData.forward);
         }
         else
         {
-            outgoingDir = -lightData.forward;
-            value = lightData.color * DELTA_PDF;
+            value = GetDirectionalEmission(lightData, OutgoingVec) * DELTA_PDF;
             pdf = GetDistantLightWeight(lightList) * DELTA_PDF;
+            outgoingDir = -lightData.forward;
         }
 
         if (dot(normal, outgoingDir) < 0.001)
@@ -284,7 +313,7 @@ void EvaluateLights(LightList lightList,
             if (cosTheta >= cosHalfAngle)
             {
                 float rcpPdf = TWO_PI * (1.0 - cosHalfAngle);
-                value += lightData.color / rcpPdf;
+                value += GetDirectionalEmission(lightData, rayDescriptor.Direction) / rcpPdf;
                 pdf += GetDistantLightWeight(lightList) / rcpPdf;
             }
         }
