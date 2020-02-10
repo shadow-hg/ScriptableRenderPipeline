@@ -15,7 +15,7 @@ namespace UnityEditor.ShaderGraph
     [FormerName("UnityEditor.ShaderGraph.MaterialGraph")]
     [FormerName("UnityEditor.ShaderGraph.SubGraph")]
     [FormerName("UnityEditor.ShaderGraph.AbstractMaterialGraph")]
-    sealed class GraphData : ISerializationCallbackReceiver
+    sealed partial class GraphData : ISerializationCallbackReceiver
     {
         public GraphObject owner { get; set; }
 
@@ -932,13 +932,8 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
-        public void ValidateGraph()
+        public void CleanupGraph()
         {
-            var propertyNodes = GetNodes<PropertyNode>().Where(n => !m_Properties.Any(p => p.guid == n.propertyGuid)).ToArray();
-            foreach (var pNode in propertyNodes)
-                ReplacePropertyNodeWithConcreteNodeNoValidate(pNode);
-
-            messageManager?.ClearAllFromProvider(this);
             //First validate edges, remove any
             //orphans. This can happen if a user
             //manually modifies serialized data
@@ -966,56 +961,15 @@ namespace UnityEditor.ShaderGraph
                     RemoveEdgeNoValidate(edge);
                 }
             }
+        }
 
-            var temporaryMarks = IndexSetPool.Get();
-            var permanentMarks = IndexSetPool.Get();
-            var slots = ListPool<MaterialSlot>.Get();
-
-            // Make sure we process a node's children before the node itself.
-            var stack = StackPool<AbstractMaterialNode>.Get();
-            foreach (var node in GetNodes<AbstractMaterialNode>())
-            {
-                stack.Push(node);
-            }
-            while (stack.Count > 0)
-            {
-                var node = stack.Pop();
-                if (permanentMarks.Contains(node.tempId.index))
-                {
-                    continue;
-                }
-
-                if (temporaryMarks.Contains(node.tempId.index))
-                {
-                    node.ValidateNode();
-                    permanentMarks.Add(node.tempId.index);
-                }
-                else
-                {
-                    temporaryMarks.Add(node.tempId.index);
-                    stack.Push(node);
-                    node.GetInputSlots(slots);
-                    foreach (var inputSlot in slots)
-                    {
-                        var nodeEdges = GetEdges(inputSlot.slotReference);
-                        foreach (var edge in nodeEdges)
-                        {
-                            var fromSocketRef = edge.outputSlot;
-                            var childNode = GetNodeFromGuid(fromSocketRef.nodeGuid);
-                            if (childNode != null)
-                            {
-                                stack.Push(childNode);
-                            }
-                        }
-                    }
-                    slots.Clear();
-                }
-            }
-
-            StackPool<AbstractMaterialNode>.Release(stack);
-            ListPool<MaterialSlot>.Release(slots);
-            IndexSetPool.Release(temporaryMarks);
-            IndexSetPool.Release(permanentMarks);
+        public void ValidateGraph()
+        {
+            messageManager?.ClearAllFromProvider(this);
+            CleanupGraph();
+            GraphSetup.SetupGraph(this);
+            GraphConcretization.ConcretizeGraph(this);
+            GraphValidation.ValidateGraph(this);
 
             foreach (var edge in m_AddedEdges.ToList())
             {
@@ -1043,7 +997,19 @@ namespace UnityEditor.ShaderGraph
         public void AddValidationError(Identifier id, string errorMessage,
             ShaderCompilerMessageSeverity severity = ShaderCompilerMessageSeverity.Error)
         {
-            messageManager?.AddOrAppendError(this, id, new ShaderMessage(errorMessage, severity));
+            messageManager?.AddOrAppendError(this, id, new ShaderMessage("Validation: " + errorMessage, severity));
+        }
+
+        public void AddSetupError(Identifier id, string errorMessage,
+            ShaderCompilerMessageSeverity severity = ShaderCompilerMessageSeverity.Error)
+        {
+            messageManager?.AddOrAppendError(this, id, new ShaderMessage("Setup: " + errorMessage, severity));
+        }
+
+        public void AddConcretizationError(Identifier id, string errorMessage,
+            ShaderCompilerMessageSeverity severity = ShaderCompilerMessageSeverity.Error)
+        {
+            messageManager?.AddOrAppendError(this, id, new ShaderMessage("Concretization: " + errorMessage, severity));
         }
 
         public void ClearErrorsForNode(AbstractMaterialNode node)
