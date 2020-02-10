@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added of Screen Space Reflections for Transparent materials
 - Added support for anisotropic specular lobes in path tracing.
 - Added support for alpha clipping in path tracing.
+- Added support for punctual and directional lights cookies in path tracing.
 
 ### Fixed
 - Update documentation of HDRISky-Backplate, precise how to have Ambient Occlusion on the Backplate
