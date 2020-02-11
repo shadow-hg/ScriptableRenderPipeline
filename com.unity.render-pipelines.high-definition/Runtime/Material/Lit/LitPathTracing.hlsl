@@ -26,7 +26,7 @@ MaterialData CreateMaterialData(BSDFData bsdfData, float3 V)
         mtlData.bsdfWeight[1] = consistentNormal ? Fcoat : 0.0;
         mtlData.bsdfWeight[2] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1]) * lerp(Fspec, 0.5, 0.5 * (bsdfData.roughnessT + bsdfData.roughnessB)) : 0.0;
         mtlData.bsdfWeight[3] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1] - mtlData.bsdfWeight[2]) * bsdfData.transmittanceMask : 0.0;
-        mtlData.bsdfWeight[0] = (1.0 - mtlData.bsdfWeight[1]) * (1.0 - bsdfData.transmittanceMask) * Luminance(bsdfData.diffuseColor);
+        mtlData.bsdfWeight[0] = (1.0 - mtlData.bsdfWeight[1]) * (1.0 - bsdfData.transmittanceMask) * Luminance(bsdfData.diffuseColor) * bsdfData.ambientOcclusion;
 
     }
     else // Below
@@ -84,7 +84,7 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
                 result.specPdf += mtlData.bsdfWeight[1] * pdf;
             }
 
-            result.diffValue *= (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat);
+            result.diffValue *= mtlData.bsdfData.ambientOcclusion * (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat);
 
             if (mtlData.bsdfWeight[2] > BSDF_WEIGHT_EPSILON)
             {
@@ -105,7 +105,7 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
             if (mtlData.bsdfWeight[0] > BSDF_WEIGHT_EPSILON)
             {
                 BRDF::EvaluateDiffuse(mtlData, sampleDir, result.diffValue, result.diffPdf);
-                result.diffValue *= (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat);
+                result.diffValue *= mtlData.bsdfData.ambientOcclusion * (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat);
                 result.diffPdf *= mtlData.bsdfWeight[0];
             }
 
@@ -134,7 +134,7 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
             if (mtlData.bsdfWeight[0] > BSDF_WEIGHT_EPSILON)
             {
                 BRDF::EvaluateDiffuse(mtlData, sampleDir, result.diffValue, result.diffPdf);
-                result.diffValue *= (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat);
+                result.diffValue *= mtlData.bsdfData.ambientOcclusion * (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat);
                 result.diffPdf *= mtlData.bsdfWeight[0];
             }
         }
@@ -205,7 +205,7 @@ void EvaluateMaterial(MaterialData mtlData, float3 sampleDir, out MaterialResult
         if (mtlData.bsdfWeight[0] > BSDF_WEIGHT_EPSILON)
         {
             BRDF::EvaluateDiffuse(mtlData, sampleDir, result.diffValue, result.diffPdf);
-            result.diffValue *= (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat);
+            result.diffValue *= (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat); // AO purposedly ignored here
             result.diffPdf *= mtlData.bsdfWeight[0];
         }
 

@@ -32,15 +32,15 @@ namespace UnityEngine.Rendering.HighDefinition
         public ClampedIntParameter maximumSamples = new ClampedIntParameter(256, 1, 4096);
 
         /// <summary>
-        /// Defines the minimum number of bounces for each path.
+        /// Defines the minimum number of bounces for each path, in [1, 10].
         /// </summary>
-        [Tooltip("Defines the minimum number of bounces for each path.")]
+        [Tooltip("Defines the minimum number of bounces for each path, in [1, 10].")]
         public ClampedIntParameter minimumDepth = new ClampedIntParameter(1, 1, 10);
 
         /// <summary>
-        /// Defines the maximum number of bounces for each path.
+        /// Defines the maximum number of bounces for each path, in [minimumDepth, 10].
         /// </summary>
-        [Tooltip("Defines the maximum number of bounces for each path.")]
+        [Tooltip("Defines the maximum number of bounces for each path, in [minimumDepth, 10].")]
         public ClampedIntParameter maximumDepth = new ClampedIntParameter(4, 1, 10);
 
         /// <summary>
