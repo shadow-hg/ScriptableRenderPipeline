@@ -153,6 +153,20 @@ float3 GetDirectionalEmission(DirectionalLightData lightData, float3 outgoingVec
     return emission;
 }
 
+float3 GetAreaEmission(LightData lightData, float centerU, float centerV)
+{
+    float3 emission = lightData.color;
+
+    // Cookie
+    if (lightData.cookieMode != COOKIEMODE_NONE)
+    {
+        float2 uv = float2(0.5 - centerU, 0.5 + centerV);
+        emission *= SampleCookie2D(uv, lightData.cookieScaleOffset);
+    }
+
+    return emission;
+}
+
 bool SampleLights(LightList lightList,
                   float3 inputSample,
                   float3 position,
@@ -173,8 +187,10 @@ bool SampleLights(LightList lightList,
         if (lightData.lightType == GPULIGHTTYPE_RECTANGLE)
         {
             // Generate a point on the surface of the light
+            float centerU = inputSample.x - 0.5;
+            float centerV = inputSample.y - 0.5;
             float3 lightCenter = GetAbsolutePositionWS(lightData.positionRWS);
-            float3 samplePos = lightCenter + (inputSample.x - 0.5) * lightData.size.x * lightData.right + (inputSample.y - 0.5) * lightData.size.y * lightData.up;
+            float3 samplePos = lightCenter + centerU * lightData.size.x * lightData.right + centerV * lightData.size.y * lightData.up;
 
             // And the corresponding direction
             outgoingDir = samplePos - position;
@@ -189,7 +205,7 @@ bool SampleLights(LightList lightList,
                 return false;
 
             float lightArea = length(cross(lightData.size.x * lightData.right, lightData.size.y * lightData.up));
-            value = lightData.color;
+            value = GetAreaEmission(lightData, centerU, centerV);
             pdf = GetLocalLightWeight(lightList) * Sq(dist) / (lightArea * cosTheta);
         }
         else // Punctual light
@@ -286,10 +302,11 @@ void EvaluateLights(LightList lightList,
                 float3 hitVec = rayDescriptor.Origin + t * rayDescriptor.Direction - lightCenter;
 
                 // Then check if we are within the rectangle bounds
-                if (2.0 * abs(dot(hitVec, lightData.right) / Length2(lightData.right)) < lightData.size.x &&
-                    2.0 * abs(dot(hitVec, lightData.up) / Length2(lightData.up)) < lightData.size.y)
+                float centerU = dot(hitVec, lightData.right) / (lightData.size.x * Length2(lightData.right));
+                float centerV = dot(hitVec, lightData.up) / (lightData.size.y * Length2(lightData.up));
+                if (abs(centerU) < 0.5 && abs(centerV) < 0.5)
                 {
-                    value += lightData.color;
+                    value += GetAreaEmission(lightData, centerU, centerV);
 
                     float lightArea = length(cross(lightData.size.x * lightData.right, lightData.size.y * lightData.up));
                     pdf += GetLocalLightWeight(lightList) * Sq(t) / (lightArea * cosTheta);
