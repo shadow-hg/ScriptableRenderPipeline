@@ -70,7 +70,6 @@ namespace UnityEditor.ShaderGraph
        }
        public static class GraphSetup
        {
-            private static Action<AbstractMaterialNode> setup = SetupNode;
             //Does anything else need to be setup? Should nodes track if they have been setup already, or should this class keep track?
             public static void SetupNode(AbstractMaterialNode node)
             {
@@ -79,7 +78,7 @@ namespace UnityEditor.ShaderGraph
 
             public static void SetupGraph(GraphData graph)
             {
-                GraphUtils.ApplyActionLeafFirst(graph, setup);
+                GraphUtils.ApplyActionLeafFirst(graph, SetupNode);
             }
        }
     }

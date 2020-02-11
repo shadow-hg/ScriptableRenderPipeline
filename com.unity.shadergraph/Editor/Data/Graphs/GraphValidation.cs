@@ -15,7 +15,6 @@ namespace UnityEditor.ShaderGraph
     {
         public static class GraphValidation
         {
-            private static Action<AbstractMaterialNode> action = ValidateNode;
             public static void ValidateNode(AbstractMaterialNode node)
             {
                 node.ValidateNode();
@@ -23,7 +22,7 @@ namespace UnityEditor.ShaderGraph
 
             public static void ValidateGraph(GraphData graph)
             {
-                GraphUtils.ApplyActionLeafFirst(graph, action);
+                GraphUtils.ApplyActionLeafFirst(graph, ValidateNode);
             }
         }
     }

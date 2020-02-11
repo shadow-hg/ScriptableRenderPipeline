@@ -15,7 +15,6 @@ namespace UnityEditor.ShaderGraph
     {
         public static class GraphConcretization
         {
-            private static Action<AbstractMaterialNode> action = ConcretizeNode;
             public static void ConcretizeNode(AbstractMaterialNode node)
             {
                 node.Concretize();
@@ -29,7 +28,7 @@ namespace UnityEditor.ShaderGraph
             public static void ConcretizeGraph(GraphData graph)
             {
                 ConcretizeProperties(graph);
-                GraphUtils.ApplyActionLeafFirst(graph, action);
+                GraphUtils.ApplyActionLeafFirst(graph, ConcretizeNode);
             }
         }
     }
