@@ -653,6 +653,40 @@ namespace UnityEditor.Rendering.HighDefinition
             UseInPreview = false,
         };
 
+        Pass m_PassRayTracingPrepass = new Pass()
+        {
+            Name = "RayTracingPrepass",
+            LightMode = "RayTracingPrepass",
+            TemplateName = "HDLitPass.template",
+            MaterialName = "Lit",
+            ShaderPassName = "SHADERPASS_CONSTANT",
+            BlendOverride = "Blend One Zero",
+            ZWriteOverride = "ZWrite On",
+            CullOverride = HDSubShaderUtilities.defaultCullMode,
+            ShaderStages = HDSubShaderUtilities.s_ShaderStagesRasterization,
+            ExtraDefines = new List<string>()
+            {
+                DefineRaytracingKeyword(RayTracingNode.RaytracingVariant.High),
+            },
+            Includes = new List<string>()
+            {
+                "#include \"Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPassConstant.hlsl\"",
+            },
+            PixelShaderSlots = new List<int>()
+            {
+                HDLitMasterNode.AlphaSlotId,
+                HDLitMasterNode.AlphaThresholdDepthPostpassSlotId,
+                HDLitMasterNode.DepthOffsetSlotId,
+            },
+            VertexShaderSlots = new List<int>()
+            {
+                HDLitMasterNode.PositionSlotId,
+                HDLitMasterNode.VertexNormalSlotID,
+                HDLitMasterNode.VertexTangentSlotID
+            },
+            UseInPreview = false,
+        };
+
         Pass m_PassRaytracingIndirect = new Pass()
         {
             Name = "IndirectDXR",
@@ -1344,6 +1378,11 @@ namespace UnityEditor.Rendering.HighDefinition
                 if (transparentDepthPostpassActive)
                 {
                     GenerateShaderPassLit(masterNode, m_PassTransparentDepthPostpass, mode, subShader, sourceAssetDependencyPaths);
+                }
+
+                if (masterNode.rayTracing.isOn)
+                {
+                    GenerateShaderPassLit(masterNode, m_PassRayTracingPrepass, mode, subShader, sourceAssetDependencyPaths);
                 }
             }
             subShader.Deindent();

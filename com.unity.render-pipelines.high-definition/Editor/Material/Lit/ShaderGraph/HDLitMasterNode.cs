@@ -198,6 +198,23 @@ namespace UnityEditor.Rendering.HighDefinition
         }
 
         [SerializeField]
+        bool m_RayTracing;
+
+        public ToggleData rayTracing
+        {
+            get { return new ToggleData(m_RayTracing); }
+            set
+            {
+                if (m_RayTracing == value.isOn)
+                    return;
+
+                m_RayTracing = value.isOn;
+                UpdateNodeAfterDeserialization();
+                Dirty(ModificationScope.Topological);
+            }
+        }
+
+        [SerializeField]
         SurfaceType m_SurfaceType;
 
         public SurfaceType surfaceType
@@ -1128,6 +1145,7 @@ namespace UnityEditor.Rendering.HighDefinition
             );
             HDSubShaderUtilities.AddAlphaCutoffShaderProperties(collector, alphaTest.isOn, alphaTestShadow.isOn);
             HDSubShaderUtilities.AddDoubleSidedProperty(collector, doubleSidedMode);
+            HDSubShaderUtilities.AddRayTracingProperty(collector, rayTracing.isOn);
 
             base.CollectShaderProperties(collector, generationMode);
         }
