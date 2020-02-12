@@ -92,6 +92,12 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
     bsdfData.roughnessT = max(rayIntersection.maxRoughness, bsdfData.roughnessT);
     bsdfData.roughnessB = max(rayIntersection.maxRoughness, bsdfData.roughnessB);
 
+#if !HAS_REFRACTION
+    // Turn alpha blending into proper refraction
+    bsdfData.transmittanceMask = 1.0 - builtinData.opacity;
+    bsdfData.ior = 1.0;
+#endif
+
     // Generate the new sample (following values of the sequence)
     float3 inputSample = 0.0;
     inputSample.x = GetSample(rayIntersection.pixelCoord, _RaytracingFrameIndex, 4 * currentDepth);
@@ -137,17 +143,14 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
                 // Shoot a transmission ray (to mark it as such, purposedly set remaining depth to an invalid value)
                 nextRayIntersection.remainingDepth = _RaytracingMaxRecursion + 1;
                 rayDescriptor.TMax -= _RaytracingRayBias;
-                nextRayIntersection.t = rayDescriptor.TMax;
+                nextRayIntersection.color = 1.0;
 
                 // FIXME: For the time being, we choose not to apply any back/front-face culling for shadows, will possibly change in the future
-                TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
-                         RAYTRACINGRENDERERFLAG_CAST_SHADOW, 0, 1, 0, rayDescriptor, nextRayIntersection);
+                TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_FORCE_NON_OPAQUE | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
+                         RAYTRACINGRENDERERFLAG_CAST_SHADOW, 0, 1, 1, rayDescriptor, nextRayIntersection);
 
-                if (nextRayIntersection.t >= rayDescriptor.TMax)
-                {
-                    float misWeight = PowerHeuristic(pdf, mtlResult.diffPdf + mtlResult.specPdf);
-                    rayIntersection.color += value * misWeight;
-                }
+                float misWeight = PowerHeuristic(pdf, mtlResult.diffPdf + mtlResult.specPdf);
+                rayIntersection.color += value * nextRayIntersection.color * misWeight;
             }
         }
     }
@@ -204,11 +207,11 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
             // Apply absorption on rays below the interface, using Beer-Lambert's law
             if (isfinite(nextRayIntersection.t) && IsBelow(mtlData, rayDescriptor.Direction))
             {
-#ifdef _REFRACTION_THIN
+    #ifdef _REFRACTION_THIN
                 nextRayIntersection.color *= exp(-mtlData.bsdfData.absorptionCoefficient * REFRACTION_THIN_DISTANCE);
-#else
+    #else
                 nextRayIntersection.color *= exp(-mtlData.bsdfData.absorptionCoefficient * nextRayIntersection.t);
-#endif
+    #endif
             }
 #endif
 
@@ -225,7 +228,6 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
     if (intensity > _RaytracingIntensityClamp)
         rayIntersection.color *= _RaytracingIntensityClamp / intensity;
 }
-
 
 [shader("anyhit")]
 void AnyHit(inout RayIntersection rayIntersection : SV_RayPayload, AttributeData attributeData : SV_IntersectionAttributes)
@@ -255,8 +257,14 @@ void AnyHit(inout RayIntersection rayIntersection : SV_RayPayload, AttributeData
     }
     else if (rayIntersection.remainingDepth > _RaytracingMaxRecursion)
     {
-        // This is a transmission ray, on a non-clipped, opaque object: end search right away
-        rayIntersection.t = RayTCurrent();
-        AcceptHitAndEndSearch();
+#if HAS_REFRACTION
+        rayIntersection.color *= surfaceData.transmittanceColor * surfaceData.transmittanceMask;
+#else
+        rayIntersection.color *= 1.0 - builtinData.opacity;
+#endif
+        if (Luminance(rayIntersection.color) < 0.001)
+            AcceptHitAndEndSearch();
+        else
+            IgnoreHit();
     }
 }
