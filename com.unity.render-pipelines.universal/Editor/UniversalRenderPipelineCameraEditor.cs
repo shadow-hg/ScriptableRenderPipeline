@@ -399,9 +399,9 @@ namespace UnityEditor.Rendering.Universal
             m_AdditionalCameraDataCameras = m_AdditionalCameraDataSO.FindProperty("m_Cameras");
         }
 
-        public void OnDisable()
+        public new void OnDisable()
         {
-            OnDisable();
+            base.OnDisable();
             m_ShowBGColorAnim.valueChanged.RemoveListener(Repaint);
             m_ShowOrthoAnim.valueChanged.RemoveListener(Repaint);
             m_ShowTargetEyeAnim.valueChanged.RemoveListener(Repaint);
