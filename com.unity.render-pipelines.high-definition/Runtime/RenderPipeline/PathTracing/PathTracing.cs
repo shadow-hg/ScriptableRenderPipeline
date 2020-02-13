@@ -57,7 +57,6 @@ namespace UnityEngine.Rendering.HighDefinition
 
         uint currentIteration = 0;
 #if UNITY_EDITOR
-        bool cacheEnable = false;
         uint cacheMaxIteration = 0;
 #endif // UNITY_EDITOR
 
@@ -81,10 +80,8 @@ namespace UnityEngine.Rendering.HighDefinition
 
         private void ResetIteration()
         {
-            // If we just toggle the PT on/off, or change the sample count, we don't want to reset iteration
-            if (cacheEnable != pathTracingSettings.enable.value)
-                cacheEnable = pathTracingSettings.enable.value;
-            else if (cacheMaxIteration != pathTracingSettings.maximumSamples.value)
+            // If we just change the sample count, we don't want to reset iteration
+            if (cacheMaxIteration != pathTracingSettings.maximumSamples.value)
                 cacheMaxIteration = (uint) pathTracingSettings.maximumSamples.value;
             else
                 currentIteration = 0;
