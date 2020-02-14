@@ -92,7 +92,7 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
     bsdfData.roughnessT = max(rayIntersection.maxRoughness, bsdfData.roughnessT);
     bsdfData.roughnessB = max(rayIntersection.maxRoughness, bsdfData.roughnessB);
 
-#if !HAS_REFRACTION
+#if defined(_SURFACE_TYPE_TRANSPARENT) && !HAS_REFRACTION
     // Turn alpha blending into proper refraction
     bsdfData.transmittanceMask = 1.0 - builtinData.opacity;
     bsdfData.ior = 1.0;
@@ -203,7 +203,7 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
                 nextRayIntersection.color += lightValue * misWeight;
             }
 
-#if HAS_REFRACTION
+#if defined(_SURFACE_TYPE_TRANSPARENT) && HAS_REFRACTION
             // Apply absorption on rays below the interface, using Beer-Lambert's law
             if (isfinite(nextRayIntersection.t) && IsBelow(mtlData, rayDescriptor.Direction))
             {
@@ -257,14 +257,19 @@ void AnyHit(inout RayIntersection rayIntersection : SV_RayPayload, AttributeData
     }
     else if (rayIntersection.remainingDepth > _RaytracingMaxRecursion)
     {
-#if HAS_REFRACTION
+#ifdef _SURFACE_TYPE_TRANSPARENT
+    #if HAS_REFRACTION
         rayIntersection.color *= surfaceData.transmittanceColor * surfaceData.transmittanceMask;
-#else
+    #else
         rayIntersection.color *= 1.0 - builtinData.opacity;
-#endif
+    #endif
         if (Luminance(rayIntersection.color) < 0.001)
             AcceptHitAndEndSearch();
         else
             IgnoreHit();
+#else
+        rayIntersection.color = 0.0;
+        AcceptHitAndEndSearch();
+#endif
     }
 }
