@@ -41,8 +41,8 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
     // Always set the new t value
     rayIntersection.t = RayTCurrent();
 
-    // If the max depth has been reached (or remaining depth is supsiciously large), bail out
-    if ((rayIntersection.remainingDepth == 0) || (rayIntersection.remainingDepth > _RaytracingMaxRecursion))
+    // If the max depth has been reached, bail out
+    if (!rayIntersection.remainingDepth)
     {
         rayIntersection.color = 0.0;
         return;
@@ -259,7 +259,7 @@ void AnyHit(inout RayIntersection rayIntersection : SV_RayPayload, AttributeData
     {
 #ifdef _SURFACE_TYPE_TRANSPARENT
     #if HAS_REFRACTION
-        rayIntersection.color *= surfaceData.transmittanceColor * surfaceData.transmittanceMask;
+        rayIntersection.color *= surfaceData.transmittanceMask * surfaceData.transmittanceColor;
     #else
         rayIntersection.color *= 1.0 - builtinData.opacity;
     #endif
@@ -268,6 +268,7 @@ void AnyHit(inout RayIntersection rayIntersection : SV_RayPayload, AttributeData
         else
             IgnoreHit();
 #else
+        // Opaque surface
         rayIntersection.color = 0.0;
         AcceptHitAndEndSearch();
 #endif
