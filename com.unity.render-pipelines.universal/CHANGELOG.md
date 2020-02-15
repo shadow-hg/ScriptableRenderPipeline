@@ -107,6 +107,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed the definition of `mad()` in SMAA shader for OpenGL.
 - Fixed an issue where rendering into RenderTexture with Single Pass Instanced renders both eyes overlapping.
 - Fixed an issue where Renderscale setting has no effect when using XRSDK.
+- Fixed an issue where renderScale != 1 or Display.main.requiresBlitToBackbuffer forced an unnecessary blit on XR.
 
 ## [7.1.1] - 2019-09-05
 ### Upgrade Guide
