@@ -29,9 +29,9 @@ float PowerHeuristic(float f, float b)
     return Sq(f) / (Sq(f) + Sq(b));
 }
 
-float3 GetPositionBias(float3 geomNormal, float3 dir, float bias)
+float3 GetPositionBias(float3 geomNormal, float bias, bool below)
 {
-    return geomNormal * (dot(geomNormal, dir) > 0.0 ? bias : -bias);
+    return geomNormal * (below ? -bias : bias);
 }
 
 // Generic function that handles the reflection code
@@ -170,7 +170,9 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
         float rand = GetSample(rayIntersection.pixelCoord, _RaytracingFrameIndex, 4 * currentDepth + 3);
         if (RussianRouletteTest(russianRouletteValue, rand, russianRouletteFactor, !currentDepth))
         {
-            rayDescriptor.Origin = position + GetPositionBias(bsdfData.geomNormalWS, rayDescriptor.Direction, _RaytracingRayBias);
+            bool isSampleBelow = IsBelow(mtlData, rayDescriptor.Direction);
+
+            rayDescriptor.Origin = position + GetPositionBias(bsdfData.geomNormalWS, _RaytracingRayBias, isSampleBelow);
             rayDescriptor.TMax = FLT_INF;
 
             // Copy path constants across
@@ -182,11 +184,17 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
             nextRayIntersection.remainingDepth = rayIntersection.remainingDepth - 1;
             nextRayIntersection.t = rayDescriptor.TMax;
 
+            // In order to achieve filtering for the textures, we need to compute the spread angle of the pixel
+            nextRayIntersection.cone.spreadAngle = rayIntersection.cone.spreadAngle + roughnessToSpreadAngle(nextRayIntersection.maxRoughness);
+
             // Adjust the max roughness, based on the estimated diff/spec ratio
             nextRayIntersection.maxRoughness = (mtlResult.specPdf * max(bsdfData.roughnessT, bsdfData.roughnessB) + mtlResult.diffPdf) / pdf;
 
-            // In order to achieve filtering for the textures, we need to compute the spread angle of the pixel
-            nextRayIntersection.cone.spreadAngle = rayIntersection.cone.spreadAngle + roughnessToSpreadAngle(nextRayIntersection.maxRoughness);
+#if defined(_SURFACE_TYPE_TRANSPARENT)
+            // When transmitting with an IOR close to 1.0, roughness is barely noticeable -> take that into account for roughness clamping
+            if (IsBelow(mtlData) != isSampleBelow)
+                nextRayIntersection.maxRoughness = lerp(rayIntersection.maxRoughness, nextRayIntersection.maxRoughness, smoothstep(1.0, 1.3, bsdfData.ior));
+#endif
 
             // Shoot ray for indirect lighting
             TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, RAYTRACINGRENDERERFLAG_PATH_TRACING, 0, 1, 0, rayDescriptor, nextRayIntersection);
@@ -205,12 +213,14 @@ void ClosestHit(inout RayIntersection rayIntersection : SV_RayPayload, Attribute
 
 #if defined(_SURFACE_TYPE_TRANSPARENT) && HAS_REFRACTION
             // Apply absorption on rays below the interface, using Beer-Lambert's law
-            if (isfinite(nextRayIntersection.t) && IsBelow(mtlData, rayDescriptor.Direction))
+            if (isSampleBelow)
             {
     #ifdef _REFRACTION_THIN
                 nextRayIntersection.color *= exp(-mtlData.bsdfData.absorptionCoefficient * REFRACTION_THIN_DISTANCE);
     #else
-                nextRayIntersection.color *= exp(-mtlData.bsdfData.absorptionCoefficient * nextRayIntersection.t);
+                // FIXME: maxDist might need some more tweaking
+                float maxDist = surfaceData.atDistance * 10.0;
+                nextRayIntersection.color *= exp(-mtlData.bsdfData.absorptionCoefficient * min(nextRayIntersection.t, maxDist));
     #endif
             }
 #endif
