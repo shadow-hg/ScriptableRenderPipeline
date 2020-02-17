@@ -38,22 +38,9 @@ platforms:
   # Exhaustive list of operating systems and editor components used by all jobs so the preparation jobs
   # can make sure all editors are cached on cheap vms before starting the heavy duty machines for running tests
   - os: mac
-    components:
-      - editor
-      - il2cpp
   - os: win
-    components:
-      - editor
-      - il2cpp
 
 testables:
-  # Add any package and/or project folders here. If you add a package that is already covered in a project
-  # you will end up doing duplicate testing etc, so try to avoid overlap
-  # name: all generated jobs will have this string as a part of the name
-  # path: the path to where this testable exists relative to the root folder of the repo
-  # type: package or project
-  # publish_source: indicates if this testable should be included in publishing
-  # standalone: true/false for if this testable contains runtime code or if it's only editor code
   - name: core
     path: com.unity.render-pipelines.core
     type: package
@@ -83,9 +70,9 @@ testables:
     path: com.unity.render-pipelines.high-definition-config
     type: package
     publish_source: true
-	standalone: true
+    standalone: true
   - name: lwrp
     path: com.unity.render-pipelines.lightweight
     type: package
     publish_source: true
-	standalone: false
+    standalone: false

@@ -49,15 +49,11 @@ auto-version:
       only:
         - "{{ repo.branches.integration }}"
 {% endif -%}
-{% if extra_jobs.pre -%}
-  dependencies:
-{% for prebuild in extra_jobs.pre -%}
-  - {{ prebuild }}
-{% endfor -%}
-{% endif -%}
+
+
 {% for test in testables -%}
 {% if test.publish_source == "true" -%}
-publish:{{ test.name }}:
+publish_{{ test.name }}:
   name: "[{{ test.name }}] Candidates Publish"
   agent:
     type: {{ images.windows.type }}
@@ -106,7 +102,7 @@ publish:{{ test.name }}:
 
 {% for test in testables -%}
 {% if test.publish_source == "true" -%}
-promote:{{ test.name }}:
+promote_{{ test.name }}:
   name: "[{{ test.name }}] Production Promote"
   agent:
     type: {{ images.windows.type }}
