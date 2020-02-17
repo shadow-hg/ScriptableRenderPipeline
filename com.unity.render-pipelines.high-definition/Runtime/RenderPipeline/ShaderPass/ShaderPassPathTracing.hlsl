@@ -88,16 +88,6 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
 
 #ifdef HAS_LIGHTLOOP
 
-    // FIXME: Adjust roughness to reduce fireflies
-    bsdfData.roughnessT = max(pathIntersection.maxRoughness, bsdfData.roughnessT);
-    bsdfData.roughnessB = max(pathIntersection.maxRoughness, bsdfData.roughnessB);
-
-#if defined(_SURFACE_TYPE_TRANSPARENT) && !HAS_REFRACTION
-    // Turn alpha blending into proper refraction
-    bsdfData.transmittanceMask = 1.0 - builtinData.opacity;
-    bsdfData.ior = 1.0;
-#endif
-
     // Generate the new sample (following values of the sequence)
     float3 inputSample = 0.0;
     inputSample.x = GetSample(pathIntersection.pixelCoord, _RaytracingFrameIndex, 4 * currentDepth);
@@ -110,8 +100,11 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
     // And reset the ray intersection color, which will store our final result
     pathIntersection.color = computeDirect ? builtinData.emissiveColor : 0.0;
 
+    // We adjust the BSDF data before doing anything else with it, to account for things computed in pre-lighting stage when rasterizing
+    PreprocessBSDFData(pathIntersection, builtinData, bsdfData);
+
     // Initialize our material data
-    MaterialData mtlData = CreateMaterialData(bsdfData, -WorldRayDirection());
+    MaterialData mtlData = CreateMaterialData(bsdfData);
 
     if (IsBlack(mtlData))
         return;
@@ -216,11 +209,11 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
             if (isSampleBelow)
             {
     #ifdef _REFRACTION_THIN
-                nextPathIntersection.color *= exp(-mtlData.bsdfData.absorptionCoefficient * REFRACTION_THIN_DISTANCE);
+                nextPathIntersection.color *= exp(-bsdfData.absorptionCoefficient * REFRACTION_THIN_DISTANCE);
     #else
                 // FIXME: maxDist might need some more tweaking
                 float maxDist = surfaceData.atDistance * 10.0;
-                nextPathIntersection.color *= exp(-mtlData.bsdfData.absorptionCoefficient * min(nextPathIntersection.t, maxDist));
+                nextPathIntersection.color *= exp(-bsdfData.absorptionCoefficient * min(nextPathIntersection.t, maxDist));
     #endif
             }
 #endif

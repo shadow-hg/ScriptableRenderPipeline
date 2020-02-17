@@ -9,15 +9,38 @@
 // bsdfWeight2  Spec GGX BRDF
 // bsdfWeight3  Spec GGX BTDF
 
-MaterialData CreateMaterialData(BSDFData bsdfData, float3 V)
+void PreprocessBSDFData(PathIntersection pathIntersection, BuiltinData builtinData, inout BSDFData bsdfData)
+{
+    // Adjust roughness to reduce fireflies
+    bsdfData.roughnessT = max(pathIntersection.maxRoughness, bsdfData.roughnessT);
+    bsdfData.roughnessB = max(pathIntersection.maxRoughness, bsdfData.roughnessB);
+
+    // Modify fresnel0 value to take iridescence into account (code adapted from Lit.hlsl to produce identical results)
+    if (bsdfData.iridescenceMask > 0.0)
+    {
+        float topIOR = lerp(1.0, CLEAR_COAT_IOR, bsdfData.coatMask);
+        float viewAngle = sqrt(1.0 + (Sq(dot(bsdfData.normalWS, WorldRayDirection())) - 1.0) / Sq(topIOR));
+
+        bsdfData.fresnel0 = lerp(bsdfData.fresnel0, EvalIridescence(topIOR, viewAngle, bsdfData.iridescenceThickness, bsdfData.fresnel0), bsdfData.iridescenceMask);
+    }
+
+#if defined(_SURFACE_TYPE_TRANSPARENT) && !HAS_REFRACTION
+    // Turn alpha blending into proper refraction
+    bsdfData.transmittanceMask = 1.0 - builtinData.opacity;
+    bsdfData.ior = 1.0;
+#endif
+}
+
+MaterialData CreateMaterialData(BSDFData bsdfData)
 {
     MaterialData mtlData;
     mtlData.bsdfCount = 4;
+    mtlData.V = -WorldRayDirection();
 
     // First determine if our incoming direction V is above (exterior) or below (interior) the surface
-    if (IsAbove(bsdfData.geomNormalWS, V))
+    if (IsAbove(bsdfData.geomNormalWS, mtlData.V))
     {
-        float NdotV = dot(bsdfData.normalWS, V);
+        float NdotV = dot(bsdfData.normalWS, mtlData.V);
         float Fcoat = HasFlag(bsdfData.materialFeatures, MATERIALFEATUREFLAGS_LIT_CLEAR_COAT) ? F_Schlick(CLEAR_COAT_F0, NdotV) * bsdfData.coatMask : 0.0;
         float Fspec = Luminance(F_Schlick(bsdfData.fresnel0, NdotV));
 
@@ -31,7 +54,7 @@ MaterialData CreateMaterialData(BSDFData bsdfData, float3 V)
     }
     else // Below
     {
-        float NdotV = -dot(bsdfData.normalWS, V);
+        float NdotV = -dot(bsdfData.normalWS, mtlData.V);
         float F = F_FresnelDielectric(1.0 / mtlData.bsdfData.ior, NdotV);
 
         // If N.V < 0 (can happen with normal mapping) we want to avoid spec sampling
@@ -51,9 +74,8 @@ MaterialData CreateMaterialData(BSDFData bsdfData, float3 V)
         mtlData.bsdfWeight[2] /= denom;
         mtlData.bsdfWeight[3] /= denom;
 
-        // Keep these around, rather than passing them to all methods
+        // Keep the BSDF data around, rather than passing it to all methods
         mtlData.bsdfData = bsdfData;
-        mtlData.V = V;
     }
 
     return mtlData;
