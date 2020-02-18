@@ -15,14 +15,26 @@ void PreprocessBSDFData(PathIntersection pathIntersection, BuiltinData builtinDa
     bsdfData.roughnessT = max(pathIntersection.maxRoughness, bsdfData.roughnessT);
     bsdfData.roughnessB = max(pathIntersection.maxRoughness, bsdfData.roughnessB);
 
+    float NdotV = abs(dot(bsdfData.normalWS, WorldRayDirection()));
+
     // Modify fresnel0 value to take iridescence into account (code adapted from Lit.hlsl to produce identical results)
     if (bsdfData.iridescenceMask > 0.0)
     {
         float topIOR = lerp(1.0, CLEAR_COAT_IOR, bsdfData.coatMask);
-        float viewAngle = sqrt(1.0 + (Sq(dot(bsdfData.normalWS, WorldRayDirection())) - 1.0) / Sq(topIOR));
+        float viewAngle = sqrt(1.0 + (Sq(NdotV) - 1.0) / Sq(topIOR));
 
         bsdfData.fresnel0 = lerp(bsdfData.fresnel0, EvalIridescence(topIOR, viewAngle, bsdfData.iridescenceThickness, bsdfData.fresnel0), bsdfData.iridescenceMask);
     }
+
+    // We store an energy compensation coefficient for GGX into the specular occlusion (code adapted from Lit.hlsl to produce identical results)
+#ifdef LIT_USE_GGX_ENERGY_COMPENSATION
+    float roughness = 0.5 * (bsdfData.roughnessT + bsdfData.roughnessB);
+    float2 coordLUT = Remap01ToHalfTexelCoord(float2(sqrt(NdotV), roughness), FGDTEXTURE_RESOLUTION);
+    float E = SAMPLE_TEXTURE2D_LOD(_PreIntegratedFGD_GGXDisneyDiffuse, s_linear_clamp_sampler, coordLUT, 0).y;
+    bsdfData.specularOcclusion = (1.0 - E) / E;
+#else
+    bsdfData.specularOcclusion = 0.0;
+#endif
 
 #if defined(_SURFACE_TYPE_TRANSPARENT) && !HAS_REFRACTION
     // Turn alpha blending into proper refraction
@@ -47,7 +59,7 @@ MaterialData CreateMaterialData(BSDFData bsdfData)
         // If N.V < 0 (can happen with normal mapping) we want to avoid spec sampling
         bool consistentNormal = (NdotV > 0.001);
         mtlData.bsdfWeight[1] = consistentNormal ? Fcoat : 0.0;
-        mtlData.bsdfWeight[2] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1]) * lerp(Fspec, 0.5, 0.5 * (bsdfData.roughnessT + bsdfData.roughnessB)) : 0.0;
+        mtlData.bsdfWeight[2] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1]) * lerp(Fspec, 0.5, 0.5 * (bsdfData.roughnessT + bsdfData.roughnessB)) * (1.0 + Fspec * bsdfData.specularOcclusion) : 0.0;
         mtlData.bsdfWeight[3] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1] - mtlData.bsdfWeight[2]) * bsdfData.transmittanceMask : 0.0;
         mtlData.bsdfWeight[0] = (1.0 - mtlData.bsdfWeight[1]) * (1.0 - bsdfData.transmittanceMask) * Luminance(bsdfData.diffuseColor) * bsdfData.ambientOcclusion;
 
@@ -81,6 +93,12 @@ MaterialData CreateMaterialData(BSDFData bsdfData)
     return mtlData;
 }
 
+// Little helper to get the specular compensation term
+float3 GetSpecularCompensation(BSDFData bsdfData)
+{
+    return 1.0 + bsdfData.specularOcclusion * bsdfData.fresnel0;
+}
+
 bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleDir, out MaterialResult result)
 {
     Init(result);
@@ -88,8 +106,8 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
     if (IsAbove(mtlData))
     {
         float3 value;
-        float pdf;
-        float fresnelSpec, fresnelClearCoat = 0.0;
+        float  pdf;
+        float  fresnelSpec, fresnelClearCoat = 0.0;
 
         if (inputSample.z < mtlData.bsdfWeight[0]) // Diffuse BRDF
         {
@@ -111,7 +129,7 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
             if (mtlData.bsdfWeight[2] > BSDF_WEIGHT_EPSILON)
             {
                 BRDF::EvaluateAnisoGGX(mtlData, mtlData.bsdfData.fresnel0, sampleDir, value, pdf, fresnelSpec);
-                result.specValue += value * (1.0 - fresnelClearCoat);
+                result.specValue += value * (1.0 - fresnelClearCoat) * GetSpecularCompensation(mtlData.bsdfData);
                 result.specPdf += mtlData.bsdfWeight[2] * pdf;
             }
         }
@@ -134,7 +152,7 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
             if (mtlData.bsdfWeight[2] > BSDF_WEIGHT_EPSILON)
             {
                 BRDF::EvaluateAnisoGGX(mtlData, mtlData.bsdfData.fresnel0, sampleDir, value, pdf, fresnelSpec);
-                result.specValue += value * (1.0 - fresnelClearCoat);
+                result.specValue += value * (1.0 - fresnelClearCoat) * GetSpecularCompensation(mtlData.bsdfData);
                 result.specPdf += mtlData.bsdfWeight[2] * pdf;
             }
         }
@@ -143,6 +161,7 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
             if (!BRDF::SampleAnisoGGX(mtlData, mtlData.bsdfData.fresnel0, inputSample, sampleDir, result.specValue, result.specPdf, fresnelSpec))
                 return false;
 
+            result.specValue *= GetSpecularCompensation(mtlData.bsdfData);
             result.specPdf *= mtlData.bsdfWeight[2];
 
             if (mtlData.bsdfWeight[1] > BSDF_WEIGHT_EPSILON)
@@ -234,7 +253,7 @@ void EvaluateMaterial(MaterialData mtlData, float3 sampleDir, out MaterialResult
         if (mtlData.bsdfWeight[2] > BSDF_WEIGHT_EPSILON)
         {
             BRDF::EvaluateAnisoGGX(mtlData, mtlData.bsdfData.fresnel0, sampleDir, value, pdf, fresnelSpec);
-            result.specValue += value * (1.0 - fresnelClearCoat);
+            result.specValue += value * (1.0 - fresnelClearCoat) * GetSpecularCompensation(mtlData.bsdfData);
             result.specPdf += mtlData.bsdfWeight[2] * pdf;
         }
     }
