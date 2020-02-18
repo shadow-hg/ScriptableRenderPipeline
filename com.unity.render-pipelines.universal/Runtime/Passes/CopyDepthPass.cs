@@ -18,6 +18,12 @@ namespace UnityEngine.Rendering.Universal.Internal
         Material m_CopyDepthMaterial;
         const string m_ProfilerTag = "Copy Depth";
 
+        int m_ScaleBiasId = Shader.PropertyToID("_ScaleBiasRT");
+
+        // Tells if while doing a blit we should flip
+        // TODO: remove this when we remove cmd.Blit() from this pass.
+        internal bool hasFlip { get; set;}
+
         public CopyDepthPass(RenderPassEvent evt, Material copyDepthMaterial)
         {
             m_CopyDepthMaterial = copyDepthMaterial;
@@ -60,32 +66,44 @@ namespace UnityEngine.Rendering.Universal.Internal
             RenderTextureDescriptor descriptor = renderingData.cameraData.cameraTargetDescriptor;
             int cameraSamples = descriptor.msaaSamples;
 
-            // TODO: we don't need a command buffer here. We can set these via Material.Set* API
+            CameraData cameraData = renderingData.cameraData;
+            
+            // scaleBias.x = scale
+            // scaleBias.y = bias
+            // In shader: uv.y = bias + uv.y * scale
+            Vector4 scaleBias = (hasFlip) ? new Vector4(1.0f, 0.0f, 1.0f, 1.0f) : new Vector4(-1.0f, 1.0f, 1.0f, 1.0f);
+            cmd.SetGlobalVector(m_ScaleBiasId, scaleBias);
             cmd.SetGlobalTexture("_CameraDepthAttachment", source.Identifier());
 
-            if (cameraSamples > 1)
+            switch (cameraSamples)
             {
-                cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthNoMsaa);
-                if (cameraSamples == 4)
-                {
+                case 8:
+                    cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa2);
+                    cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa4);
+                    cmd.EnableShaderKeyword(ShaderKeywordStrings.DepthMsaa8);
+                    break;
+
+                case 4:
                     cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa2);
                     cmd.EnableShaderKeyword(ShaderKeywordStrings.DepthMsaa4);
-                }
-                else
-                {
+                    cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa8);
+                    break;
+
+                case 2:
                     cmd.EnableShaderKeyword(ShaderKeywordStrings.DepthMsaa2);
                     cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa4);
-                }
-                
-                Blit(cmd, depthSurface, copyDepthSurface, m_CopyDepthMaterial);
+                    cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa8);
+                    break;
+
+                // MSAA disabled
+                default:
+                    cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa2);
+                    cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa4);
+                    cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa8);
+                    break;
             }
-            else
-            {
-                cmd.EnableShaderKeyword(ShaderKeywordStrings.DepthNoMsaa);
-                cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa2);
-                cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa4);
-                CopyTexture(cmd, depthSurface, copyDepthSurface, m_CopyDepthMaterial);
-            }
+
+            CopyTexture(cmd, depthSurface, copyDepthSurface, m_CopyDepthMaterial);
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
@@ -96,7 +114,11 @@ namespace UnityEngine.Rendering.Universal.Internal
             //if (SystemInfo.copyTextureSupport != CopyTextureSupport.None)
             //    cmd.CopyTexture(source, dest);
             //else
-            Blit(cmd, source, dest, material);
+                // Blit has logic to flip projection matrix when rendering to render texture.
+                // Currently the y-flip is handled in CopyDepthPass.hlsl by checking _ProjectionParams.x
+                // If you replace this Blit with a Draw* that sets projection matrix double check
+                // to also update shader.
+                Blit(cmd, source, dest, material);
         }
 
         /// <inheritdoc/>

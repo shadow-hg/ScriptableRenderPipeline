@@ -242,6 +242,13 @@ namespace UnityEngine.Rendering.Universal
             if (!requiresDepthPrepass && renderingData.cameraData.requiresDepthTexture && createDepthTexture)
             {
                 m_CopyDepthPass.Setup(m_ActiveCameraDepthAttachment, m_DepthTexture);
+
+                // TODO: This logic is only required because we use cmd.Blit() that handles y-flip in weird situations
+                // Remove it once we remove cmd.Blit();
+                // Check: Does stereo always flip as it's rendering to camera eye RT?
+                bool hasFlip = SystemInfo.graphicsUVStartsAtTop &&
+                    (cameraData.isStereoEnabled || cameraData.targetTexture != null || m_ActiveCameraColorAttachment.Identifier() != BuiltinRenderTextureType.CameraTarget);
+                m_CopyDepthPass.hasFlip = hasFlip;
                 EnqueuePass(m_CopyDepthPass);
             }
 

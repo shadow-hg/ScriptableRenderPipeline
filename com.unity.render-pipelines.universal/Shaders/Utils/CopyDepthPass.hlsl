@@ -41,13 +41,17 @@ Varyings vert(Attributes input)
 #define SAMPLE(uv) SAMPLE_DEPTH_TEXTURE(_CameraDepthAttachment, sampler_CameraDepthAttachment, uv)
 #endif
 
-#ifdef _DEPTH_MSAA_2
+#if defined(_DEPTH_MSAA_2)
     #define MSAA_SAMPLES 2
-#elif _DEPTH_MSAA_4
+#elif defined(_DEPTH_MSAA_4)
     #define MSAA_SAMPLES 4
+#elif defined(_DEPTH_MSAA_8)
+    #define MSAA_SAMPLES 8
+#else
+    #define MSAA_SAMPLES 1
 #endif
 
-#ifdef _DEPTH_NO_MSAA
+#if MSAA_SAMPLES == 1
     DEPTH_TEXTURE(_CameraDepthAttachment);
     SAMPLER(sampler_CameraDepthAttachment);
 #else
@@ -63,9 +67,33 @@ Varyings vert(Attributes input)
     #define DEPTH_OP max
 #endif
 
+half4 _ScaleBiasRT;
+
 float SampleDepth(float2 uv)
 {
-#ifdef _DEPTH_NO_MSAA
+    // Currently CopyDepthPass.cs uses cmd.Blit() that sets implicitly a projeciton matrix with y-flip
+    // This can cause some issues that might end up sampling depth with a wrong orientation depending on if URP
+    // renders game to RT or screen (case https://issuetracker.unity3d.com/issues/lwrp-depth-texture-flipy)
+
+    // How to fix it:
+    // - Ideally remove cmd.Blit() madness from the pipeline. It needs all camera matrices to be setup by the pipeline and big XR work.
+    // - We need a fix for now, so BUCKLE UP and try to follow the wonders of y-flip in Unity
+    //
+    // If URP is rendering to RT:
+    //  - Source Depth is upside down. We copy depth with cmd.Blit that flips it to normal orientation. :tableflip:
+    //  - When rendering objects that sample depth we flip again in the matrix because we rely on cmd.SetViewProjectionMatrices().
+    //  - In this case we set bias to 0 and scale to 1.
+    //  - uv.y = 0.0 + uv.y * 1.0. No op. All good!
+    // If URP is NOT rendering to RT:
+    //  - Source Depth is not fliped. We CANNOT flip when copying depth and don't flip when sampling.
+    //  - Because we use cmd.Blit() it will flip, so we need unflip uv below by setting
+    //  - bias to 1.0 and scale -1.0
+    //  - uv.y = 1.0 + uv.y * (-1.0). We unflip the flip in matrix. All good.
+    half scale = _ScaleBiasRT.x;
+    half bias = _ScaleBiasRT.y;
+    uv.y = bias + uv.y * scale;
+
+#if MSAA_SAMPLES == 1
     return SAMPLE(uv);
 #else
     int2 coord = int2(uv * _CameraDepthAttachment_TexelSize.zw);
