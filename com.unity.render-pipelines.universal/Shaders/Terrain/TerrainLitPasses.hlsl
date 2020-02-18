@@ -441,7 +441,7 @@ VaryingsLean DepthOnlyVertex(AttributesLean v)
 {
     VaryingsLean o = (VaryingsLean)0;
     UNITY_SETUP_INSTANCE_ID(v);
-	UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
     TerrainInstancing(v.position, v.normalOS);
     o.clipPos = TransformObjectToHClip(v.position.xyz);
 #ifdef _ALPHATEST_ON		

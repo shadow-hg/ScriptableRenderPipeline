@@ -106,6 +106,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed an issue where Renderscale setting has no effect when using XRSDK.
 - Fixed an issue where renderScale != 1 or Display.main.requiresBlitToBackbuffer forced an unnecessary blit on XR.
 - Fixed an issue that causes double sRGB correction on Quest. [case 1209292](https://issuetracker.unity3d.com/product/unity/issues/guid/1209292)
+- Fixed an issue where terrain depthOnly pass does not work for XR.
 
 ## [7.1.1] - 2019-09-05
 ### Upgrade Guide
