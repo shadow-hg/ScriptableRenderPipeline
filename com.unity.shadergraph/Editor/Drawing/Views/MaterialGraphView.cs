@@ -27,6 +27,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             deleteSelection = DeleteSelectionImplementation;
             RegisterCallback<DragUpdatedEvent>(OnDragUpdatedEvent);
             RegisterCallback<DragPerformEvent>(OnDragPerformEvent);
+            RegisterCallback<MouseMoveEvent>(OnMouseMoveEvent);
         }
 
         protected override bool canCopySelection
@@ -41,6 +42,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         public GraphData graph { get; private set; }
         public Action onConvertToSubgraphClick { get; set; }
+        public Vector2 cachedMousePosition { get; private set; }
 
         public override List<Port> GetCompatiblePorts(Port startAnchor, NodeAdapter nodeAdapter)
         {
@@ -560,6 +562,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         void UnserializeAndPasteImplementation(string operationName, string serializedData)
         {
             graph.owner.RegisterCompleteObjectUndo(operationName);
+
             var pastedGraph = CopyPasteGraph.FromJson(serializedData);
             this.InsertCopyPasteGraph(pastedGraph);
         }
@@ -723,6 +726,11 @@ namespace UnityEditor.ShaderGraph.Drawing
                     }
                 }
             }
+        }
+
+        void OnMouseMoveEvent(MouseMoveEvent evt)
+        {
+            this.cachedMousePosition = evt.mousePosition;
         }
 
         void CreateNode(object obj, Vector2 nodePosition)
@@ -944,7 +952,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                 {
                     var remappedNodes = remappedNodesDisposable.value;
                     var remappedEdges = remappedEdgesDisposable.value;
-                    graphView.graph.PasteGraph(copyGraph, remappedNodes, remappedEdges);
+                    var graphMousePosition = graphView.contentViewContainer.WorldToLocal(graphView.cachedMousePosition);
+                    graphView.graph.PasteGraph(copyGraph, remappedNodes, remappedEdges, graphMousePosition);
 
                     if (graphView.graph.assetGuid != copyGraph.sourceGraphGuid)
                     {
