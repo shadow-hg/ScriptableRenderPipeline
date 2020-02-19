@@ -126,7 +126,7 @@ float3 GetPunctualEmission(LightData lightData, float3 outgoingDir, float dist)
     float3 emission = lightData.color;
 
     // Punctual attenuation
-    float4 distances = float4(dist, Sq(dist), 1.0 / dist, -dist * dot(outgoingDir, lightData.forward));
+    float4 distances = float4(dist, Sq(dist), rcp(dist), -dist * dot(outgoingDir, lightData.forward));
     emission *= PunctualLightAttenuation(distances, lightData.rangeAttenuationScale, lightData.rangeAttenuationBias, lightData.angleScale, lightData.angleOffset);
 
     // Cookie
@@ -153,7 +153,7 @@ float3 GetDirectionalEmission(DirectionalLightData lightData, float3 outgoingVec
     return emission;
 }
 
-float3 GetAreaEmission(LightData lightData, float centerU, float centerV)
+float3 GetAreaEmission(LightData lightData, float centerU, float centerV, float sqDist)
 {
     float3 emission = lightData.color;
 
@@ -163,6 +163,10 @@ float3 GetAreaEmission(LightData lightData, float centerU, float centerV)
         float2 uv = float2(0.5 - centerU, 0.5 + centerV);
         emission *= SampleCookie2D(uv, lightData.cookieScaleOffset);
     }
+
+    // Range windowing (see LightLoop.cs to understand why it is written this way)
+    if (lightData.rangeAttenuationBias == 1.0)
+        emission *= SmoothDistanceWindowing(sqDist, 1.0, lightData.range);
 
     return emission;
 }
@@ -194,7 +198,8 @@ bool SampleLights(LightList lightList,
 
             // And the corresponding direction
             outgoingDir = samplePos - position;
-            dist = length(outgoingDir);
+            float sqDist = Length2(outgoingDir);
+            dist = sqrt(sqDist);
             outgoingDir /= dist;
 
             if (dot(normal, outgoingDir) < 0.001)
@@ -205,8 +210,9 @@ bool SampleLights(LightList lightList,
                 return false;
 
             float lightArea = length(cross(lightData.size.x * lightData.right, lightData.size.y * lightData.up));
-            value = GetAreaEmission(lightData, centerU, centerV);
-            pdf = GetLocalLightWeight(lightList) * Sq(dist) / (lightArea * cosTheta);
+
+            value = GetAreaEmission(lightData, centerU, centerV, sqDist);
+            pdf = GetLocalLightWeight(lightList) * sqDist / (lightArea * cosTheta);
         }
         else // Punctual light
         {
@@ -306,10 +312,11 @@ void EvaluateLights(LightList lightList,
                 float centerV = dot(hitVec, lightData.up) / (lightData.size.y * Length2(lightData.up));
                 if (abs(centerU) < 0.5 && abs(centerV) < 0.5)
                 {
-                    value += GetAreaEmission(lightData, centerU, centerV);
+                    float t2 = Sq(t);
+                    value += GetAreaEmission(lightData, centerU, centerV, t2);
 
                     float lightArea = length(cross(lightData.size.x * lightData.right, lightData.size.y * lightData.up));
-                    pdf += GetLocalLightWeight(lightList) * Sq(t) / (lightArea * cosTheta);
+                    pdf += GetLocalLightWeight(lightList) * t2 / (lightArea * cosTheta);
 
                     // If we consider that a ray is very unlikely to hit 2 area lights one after another, we can exit the loop
                     break;
