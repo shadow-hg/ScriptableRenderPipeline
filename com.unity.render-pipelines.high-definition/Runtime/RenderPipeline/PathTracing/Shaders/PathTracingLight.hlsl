@@ -166,7 +166,7 @@ float3 GetAreaEmission(LightData lightData, float centerU, float centerV, float 
 
     // Range windowing (see LightLoop.cs to understand why it is written this way)
     if (lightData.rangeAttenuationBias == 1.0)
-        emission *= SmoothDistanceWindowing(sqDist, 1.0, lightData.range);
+        emission *= SmoothDistanceWindowing(sqDist, rcp(Sq(lightData.range)), lightData.rangeAttenuationBias) ;
 
     return emission;
 }
