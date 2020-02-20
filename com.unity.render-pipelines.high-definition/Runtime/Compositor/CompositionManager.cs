@@ -59,6 +59,10 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         public bool redraw
         {
             get => m_requiresRedraw;
+            set
+            {
+                m_requiresRedraw = value;
+            }
         }
 
         public bool enableOutput

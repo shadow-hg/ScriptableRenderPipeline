@@ -71,6 +71,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added the Tint parameter to Sky Colored Fog.
 - Added of Screen Space Reflections for Transparent materials
 - Added a fallback for ray traced area light shadows in case the material is forward or the lit mode is forward.
+- Added alpha channel support in motion blur pass.
+- Added the HDRP Compositor Tool (in Preview) for graph-based composition and camera stacking.
+
 
 ### Fixed
 - Update documentation of HDRISky-Backplate, precise how to have Ambient Occlusion on the Backplate

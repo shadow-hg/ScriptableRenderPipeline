@@ -86,6 +86,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             if (m_Editor == null || m_Editor.target == null || m_Editor.isDirty || compositor.redraw)
             {
                 m_Editor = (CompositionManagerEditor)Editor.CreateEditor(compositor);
+                compositor.redraw = false;
             }
 
             m_ScrollPosition = GUILayout.BeginScrollView(m_ScrollPosition);

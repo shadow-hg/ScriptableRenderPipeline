@@ -256,6 +256,9 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             {
                 // Some properties were changed, mark the profile as dirty so it can be saved if the user saves the scene
                 EditorUtility.SetDirty(m_compositionManager.profile);
+
+                // Also the layers might need to be re-initialized
+                layerListChange = true;
             }
 
             if (m_SerializedProperties != null)
