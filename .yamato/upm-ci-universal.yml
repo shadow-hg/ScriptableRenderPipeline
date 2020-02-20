@@ -404,8 +404,9 @@ Build_{{ project.name }}_Android_OpenGLES_{{ editor.version }}:
       %ANDROID_SDK_ROOT%\platform-tools\adb.exe connect %BOKKEN_DEVICE_IP%
     - powershell %ANDROID_SDK_ROOT%\platform-tools\adb.exe devices
     - NetSh Advfirewall set allprofiles state off
-    - set ANDROID_DEVICE_CONNECTION=%BOKKEN_DEVICE_IP%
-    - utr\utr --suite=playmode --platform=Android --editor-location=WindowsEditor --artifacts_path=test-results --player-load-path=players --scripting-backend=il2cpp --timeout=1200 --player-connection-ip=%BOKKEN_DEVICE_IP%
+    - |
+      set ANDROID_DEVICE_CONNECTION=%BOKKEN_DEVICE_IP%
+      utr\utr --suite=playmode --platform=Android --editor-location=WindowsEditor --artifacts_path=test-results --player-load-path=players --scripting-backend=il2cpp --timeout=1200 --player-connection-ip=%BOKKEN_DEVICE_IP%
     - start %ANDROID_SDK_ROOT%\platform-tools\adb.exe kill-server
   artifacts:
     logs:
