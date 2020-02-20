@@ -65,9 +65,8 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 CompositionUtils.LoadOrCreateCompositionProfileAsset(compositor);
                 compositor.SetupCompositionMaterial();
             }
-            
-            //if (m_Editor == null || m_Editor.target == null || m_Editor.isDirty || compositor.isDirty)
-            if (m_Editor == null || m_Editor.target == null || m_Editor.isDirty)
+
+            if (m_Editor == null || m_Editor.target == null || m_Editor.isDirty || compositor.redraw)
             {
                 m_Editor = (CompositionManagerEditor)Editor.CreateEditor(compositor);
             }

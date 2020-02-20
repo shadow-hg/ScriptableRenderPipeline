@@ -58,14 +58,38 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         public void AddPropertiesFromShaderAndMaterial (Shader shader, Material material)
         {
-            //ClearShaderProperties();
-
             // reflect the non-texture shader properties
+            List<string> propertyNames = new List<string>();
             int propCount = shader.GetPropertyCount();
             for (int i = 0; i < propCount; i++)
             {
                 ShaderProperty sp = ShaderProperty.Create(shader, material, i);
                 AddShaderProperty(sp);
+                propertyNames.Add(sp.m_PropertyName);
+            }
+
+            // remove any properties that do not appear in the shader
+            for (int j = m_ShaderProperties.Count - 1; j >= 0; --j)
+            //    foreach (var property in m_ShaderProperties)
+            {
+                int indx = propertyNames.FindIndex(x => x == m_ShaderProperties[j].m_PropertyName);
+                if (indx < 0)
+                {
+                    m_ShaderProperties.RemoveAt(j);
+                }
+            }
+
+            // Now remove any layers that do not appear in the shader
+            for (int j = m_InputLayers.Count - 1; j >= 0; --j)
+            {
+                if (m_InputLayers[j].GetOutputTarget() != CompositorLayer.OutputTarget.CameraStack)
+                {
+                    int indx = propertyNames.FindIndex(x => x == m_InputLayers[j].m_LayerName);
+                    if (indx < 0)
+                    {
+                        RemoveLayerAtIndex(j);
+                    }
+                }
             }
         }
 

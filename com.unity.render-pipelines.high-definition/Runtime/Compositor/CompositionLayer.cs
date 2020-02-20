@@ -57,7 +57,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         public Texture m_InputTexture;
         public BackgroundFitMode m_BackgroundFit;
 
-        public ResolutionScale m_ResolutionScale;
+        public ResolutionScale m_ResolutionScale = ResolutionScale.Full;
 
         public UIColorBufferFormat m_ColorBufferFormat = UIColorBufferFormat.R16G16B16A16;
 

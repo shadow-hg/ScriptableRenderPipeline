@@ -48,10 +48,10 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         internal GameObject m_CompositorGameObject;
 
         internal bool m_IsCompositorDirty;
-
-        public bool isDirty
+        internal bool m_requiresRedraw = false;
+        public bool redraw
         {
-            get => m_IsCompositorDirty;
+            get => m_requiresRedraw;
         }
 
         internal class SGShaderIDs
@@ -355,7 +355,6 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         {
             // When we load a new shader, we need to clear the serialized material. 
             m_Material = null;
-            //m_CompositionProfile.ClearShaderProperties();
             SetupCompositionMaterial();
         }
 
@@ -439,11 +438,6 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         bool ShaderPropertiesWereChanged()
         {
-            if (shader == null)
-            {
-                return false;
-            }
-
             int propCount = m_Shader.GetPropertyCount();
             if (propCount != m_CompositionProfile.m_ShaderProperties.Count)
             {
@@ -491,10 +485,12 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 m_IsCompositorDirty = false;
             }
 #if UNITY_EDITOR
+            m_requiresRedraw = false;
             if (ShaderPropertiesWereChanged())
             {
                 SetNewCompositionShader();
-                m_IsCompositorDirty = true;
+                m_requiresRedraw = true;
+                SetupCompositorLayers();//< required to allocate RT for the new layers
             }
 #endif
             if (m_CompositionProfile)
