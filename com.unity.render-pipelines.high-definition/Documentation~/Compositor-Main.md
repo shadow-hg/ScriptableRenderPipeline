@@ -19,7 +19,7 @@ Furthermore, the compositor exposes functionality such as *"localized post-proce
 
 For a high level overview of the compositor's functionality please refer to the [User Guide](Compositor-User-Guide) section. For a description on specific options in the user interface, please refer to the [User Options](Compositor-User-Options) section.
 
-A simple watermark rendered on top of a 3D scene using the compositor tool.
+A simple watermark rendered on top of a 3D scene using the compositor tool:
 ![](Images/Compositor/HDRPTemplateWithLogo.png)
 
 
