@@ -237,6 +237,68 @@ MonoBehaviour:
     m_InputFilters: []
     m_AOVBitmask: 0
     m_ExpandLayer: 1
+  - m_LayerName: GreenScreen
+    m_Show: 1
+    m_OutputTarget: 0
+    m_ClearDepth: 0
+    m_ClearAlpha: 1
+    m_OutputRenderer: {fileID: 0}
+    m_Type: 0
+    m_Camera: {fileID: 0}
+    m_InputVideo: {fileID: 0}
+    m_InputTexture: {fileID: 0}
+    m_BackgroundFit: 0
+    m_ResolutionScale: 1
+    m_ColorBufferFormat: 24
+    m_OverrideAntialiasing: 0
+    m_Antialiasing: 0
+    m_OverrideClearMode: 0
+    m_ClearMode: 0
+    m_OverrideCullingMask: 0
+    m_CullingMask:
+      serializedVersion: 2
+      m_Bits: 0
+    m_OverrideVolumeMask: 0
+    m_VolumeMask:
+      serializedVersion: 2
+      m_Bits: 0
+    m_InputFilters: []
+    m_AOVBitmask: 0
+    m_ExpandLayer: 1
+  - m_LayerName: New Layer
+    m_Show: 1
+    m_OutputTarget: 1
+    m_ClearDepth: 1
+    m_ClearAlpha: 0
+    m_OutputRenderer: {fileID: 0}
+    m_Type: 2
+    m_Camera: {fileID: 0}
+    m_InputVideo: {fileID: 0}
+    m_InputTexture: {fileID: 2800000, guid: 64f6f649f205d4c4fba3217f1f8023e7, type: 3}
+    m_BackgroundFit: 0
+    m_ResolutionScale: 1
+    m_ColorBufferFormat: 24
+    m_OverrideAntialiasing: 1
+    m_Antialiasing: 0
+    m_OverrideClearMode: 0
+    m_ClearMode: 0
+    m_OverrideCullingMask: 1
+    m_CullingMask:
+      serializedVersion: 2
+      m_Bits: 0
+    m_OverrideVolumeMask: 1
+    m_VolumeMask:
+      serializedVersion: 2
+      m_Bits: 0
+    m_InputFilters:
+    - m_Type: 0
+      m_MaskColor: {r: 0.09431517, g: 1, b: 0, a: 0}
+      m_KeyThreshold: 2.67
+      m_KeyTolerance: 1.31
+      m_SpillRemoval: 0
+      m_AlphaMask: {fileID: 0}
+    m_AOVBitmask: 0
+    m_ExpandLayer: 1
   m_ShaderProperties:
   - m_PropertyName: Layer0
     m_Type: 4
@@ -247,6 +309,10 @@ MonoBehaviour:
     m_Value: {x: 0, y: 0, z: 0, w: 0}
     m_RangeLimits: {x: 0, y: 0}
   - m_PropertyName: Logo
+    m_Type: 4
+    m_Value: {x: 0, y: 0, z: 0, w: 0}
+    m_RangeLimits: {x: 0, y: 0}
+  - m_PropertyName: GreenScreen
     m_Type: 4
     m_Value: {x: 0, y: 0, z: 0, w: 0}
     m_RangeLimits: {x: 0, y: 0}
