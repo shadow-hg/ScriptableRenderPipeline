@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace UnityEngine.Rendering.HighDefinition
+namespace UnityEngine.Rendering.HighDefinition.Compositor
 {
     [System.Serializable]
     internal class CompositionFilter

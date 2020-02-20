@@ -1,9 +1,10 @@
 using UnityEngine;
 using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.Rendering.HighDefinition.Compositor;
 
 using UnityEditor;
 
-namespace UnityEditor.Rendering.HighDefinition
+namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
     internal class CompositionUtils
     {

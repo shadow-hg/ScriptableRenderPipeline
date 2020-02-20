@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace UnityEngine.Rendering.HighDefinition
+namespace UnityEngine.Rendering.HighDefinition.Compositor
 {
     internal enum BackgroundFitMode
     {

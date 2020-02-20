@@ -4,7 +4,7 @@ using UnityEditor;
 
 using System.Collections.Generic;
 
-namespace UnityEditor.Rendering.HighDefinition
+namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
     internal class ShaderPropertyUI
     {

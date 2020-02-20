@@ -2,11 +2,12 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Rendering.HighDefinition.Attributes;
+using UnityEngine.Rendering.HighDefinition.Compositor;
 
 using UnityEditor;
 using UnityEditorInternal;
 
-namespace UnityEditor.Rendering.HighDefinition
+namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
     internal class CompositionLayerUI
     {

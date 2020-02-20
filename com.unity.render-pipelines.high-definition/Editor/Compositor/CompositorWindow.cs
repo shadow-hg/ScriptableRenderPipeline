@@ -1,11 +1,11 @@
 using UnityEngine;
-using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.Rendering.HighDefinition.Compositor;
 
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditorInternal;
 
-namespace UnityEditor.Rendering.HighDefinition
+namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
     internal class CompositorWindow : EditorWindow
     {

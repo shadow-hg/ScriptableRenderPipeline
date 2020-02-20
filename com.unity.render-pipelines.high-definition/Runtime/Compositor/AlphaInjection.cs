@@ -3,55 +3,59 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using System;
 
-[Serializable, VolumeComponentMenu("Post-processing/Custom/AlphaIjection")]
-internal sealed class AlphaInjection : CustomPostProcessVolumeComponent, IPostProcessComponent
+namespace UnityEngine.Rendering.HighDefinition.Compositor
 {
-    internal class ShaderIDs
+    [Serializable, VolumeComponentMenu("Post-processing/Custom/AlphaIjection")]
+    internal sealed class AlphaInjection : CustomPostProcessVolumeComponent, IPostProcessComponent
     {
-        public static readonly int _AlphaTexture = Shader.PropertyToID("_AlphaTexture");
-        public static readonly int _InputTexture = Shader.PropertyToID("_InputTexture");
-    }
-
-    Material m_Material;
-
-    public bool IsActive() => m_Material != null; 
-
-    public override CustomPostProcessInjectionPoint injectionPoint => CustomPostProcessInjectionPoint.BeforePostProcess;
-
-    public override void Setup()
-    {
-        if (Shader.Find("Hidden/Shader/AlphaInjection") != null)
-            m_Material = new Material(Shader.Find("Hidden/Shader/AlphaInjection"));
-    }
-
-    public override void Render(CommandBuffer cmd, HDCamera camera, RTHandle source, RTHandle destination)
-    {
-        Debug.Assert(m_Material != null);
-
-        //TODO: can we detect this before we get here?
-        AdditionalCompositorData layerData = camera.camera.gameObject.GetComponent<AdditionalCompositorData>();
-        if (layerData == null || layerData.m_layerFilters == null)
+        internal class ShaderIDs
         {
-            HDUtils.BlitCameraTexture(cmd, source, destination);
-            return;
+            public static readonly int _AlphaTexture = Shader.PropertyToID("_AlphaTexture");
+            public static readonly int _InputTexture = Shader.PropertyToID("_InputTexture");
         }
 
-        int indx = layerData.m_layerFilters.FindIndex(x => x.m_Type == (int)CompositionFilter.FilterType.ALPHA_MASK);
-        if (indx < 0)
+        Material m_Material;
+
+        public bool IsActive() => m_Material != null;
+
+        public override CustomPostProcessInjectionPoint injectionPoint => CustomPostProcessInjectionPoint.BeforePostProcess;
+
+        public override void Setup()
         {
-            HDUtils.BlitCameraTexture(cmd, source, destination);
-            return;
+            if (Shader.Find("Hidden/Shader/AlphaInjection") != null)
+                m_Material = new Material(Shader.Find("Hidden/Shader/AlphaInjection"));
         }
 
-        var filter = layerData.m_layerFilters[indx];
-        m_Material.SetTexture(ShaderIDs._InputTexture, source);
-        m_Material.SetTexture(ShaderIDs._AlphaTexture, filter.m_AlphaMask);
+        public override void Render(CommandBuffer cmd, HDCamera camera, RTHandle source, RTHandle destination)
+        {
+            Debug.Assert(m_Material != null);
 
-        HDUtils.DrawFullScreen(cmd, m_Material, destination);
+            //TODO: can we detect this before we get here?
+            AdditionalCompositorData layerData = camera.camera.gameObject.GetComponent<AdditionalCompositorData>();
+            if (layerData == null || layerData.m_layerFilters == null)
+            {
+                HDUtils.BlitCameraTexture(cmd, source, destination);
+                return;
+            }
+
+            int indx = layerData.m_layerFilters.FindIndex(x => x.m_Type == (int)CompositionFilter.FilterType.ALPHA_MASK);
+            if (indx < 0)
+            {
+                HDUtils.BlitCameraTexture(cmd, source, destination);
+                return;
+            }
+
+            var filter = layerData.m_layerFilters[indx];
+            m_Material.SetTexture(ShaderIDs._InputTexture, source);
+            m_Material.SetTexture(ShaderIDs._AlphaTexture, filter.m_AlphaMask);
+
+            HDUtils.DrawFullScreen(cmd, m_Material, destination);
+        }
+
+        public override void Cleanup()
+        {
+            CoreUtils.Destroy(m_Material);
+        }
     }
 
-    public override void Cleanup()
-    {
-        CoreUtils.Destroy(m_Material);
-    }
 }

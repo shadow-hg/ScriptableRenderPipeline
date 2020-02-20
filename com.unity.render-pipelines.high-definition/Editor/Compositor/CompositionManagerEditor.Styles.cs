@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using System;
 
-namespace UnityEditor.Rendering.HighDefinition
+namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
     static internal class CompositorStyle
     {

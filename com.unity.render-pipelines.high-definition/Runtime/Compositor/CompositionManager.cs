@@ -8,7 +8,7 @@ using UnityEngine.Video;
 
 using UnityEngine.Experimental.Rendering;
 
-namespace UnityEngine.Rendering.HighDefinition
+namespace UnityEngine.Rendering.HighDefinition.Compositor
 {
     // The main entry point for the compositing operations. Manages the list of layers, output displays, etc.
     [ExecuteAlways]

@@ -1,11 +1,11 @@
 # Compositor: User Guide
-To access the compositing tool select **Window > Render Pipeline > HD Render Pipeline Compositor** from the menu in the Unity Editor. From this window you can control the compositor configuration. The first time you open the compositor window, the compositor will automatically use a default *"pass-through"* composition profile that simply forwards the output of the main camera to the final composed frame. You can edit this profile or you can load another one from disk.
+To access the HDRP Compositor tool select **Window > Render Pipeline > HD Render Pipeline Compositor** from the menu in the Unity Editor. From this window you can control the compositor configuration. The first time you open the compositor window, the compositor will automatically use a default *"pass-through"* composition profile that simply forwards the output of the main camera to the final composed frame. You can edit this profile or you can load another one from disk.
 
 
 ## Layer Types
-The HDRP compositor typically handles two types of layers: 
+The HDRP Compositor tool typically handles two types of layers: 
 - **Compositor layers**: are defined in the [Composition Graph](#composition-graph). The composition graph defines the number of layers and how they will be combined, but does not define what are the sources of their content.
-- **Sub-layers**: are defined in the compositor window, in the Render Schedule(#render-schedule) section. By stacking one or more sub-layers, the user can define the source of content for each one of the compositor layers. This can be done in the [Render Schedule](#render-schedule) section of the window.
+- **Sub-layers**: are defined in the compositor window, in the [Render Schedule](#render-schedule)section. By stacking one or more sub-layers, the user can define the source of content for each one of the compositor layers.
 
 
 ## Composition Graph

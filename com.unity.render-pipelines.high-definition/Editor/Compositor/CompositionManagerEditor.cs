@@ -5,12 +5,13 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Rendering.HighDefinition.Attributes;
+using UnityEngine.Rendering.HighDefinition.Compositor;
 using UnityEngine.Video;
 
 using UnityEditor;
 using UnityEditorInternal;
 
-namespace UnityEditor.Rendering.HighDefinition
+namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
     [CustomEditor(typeof(CompositionManager))]
     internal class CompositionManagerEditor : Editor

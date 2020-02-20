@@ -9,7 +9,7 @@ using UnityEngine.Video;
 
 using UnityEngine.Experimental.Rendering;
 
-namespace UnityEngine.Rendering.HighDefinition
+namespace UnityEngine.Rendering.HighDefinition.Compositor
 {
     // Defines a single compositor layer
     [System.Serializable]

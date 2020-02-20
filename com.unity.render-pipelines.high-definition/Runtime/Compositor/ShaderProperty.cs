@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace UnityEngine.Rendering.HighDefinition
+namespace UnityEngine.Rendering.HighDefinition.Compositor
 {
     [System.Serializable]
     internal class ShaderProperty

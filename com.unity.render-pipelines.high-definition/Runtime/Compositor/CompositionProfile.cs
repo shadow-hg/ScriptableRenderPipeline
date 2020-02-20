@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Assertions;
 
-namespace UnityEngine.Rendering.HighDefinition
+namespace UnityEngine.Rendering.HighDefinition.Compositor
 {
     internal class CompositionProfile : ScriptableObject
     {
@@ -67,30 +67,6 @@ namespace UnityEngine.Rendering.HighDefinition
                 ShaderProperty sp = ShaderProperty.Create(shader, material, i);
                 AddShaderProperty(sp);
             }
-
-            /*
-            // Now remove any layers that do not appear in the shader
-            for (int j = m_InputLayers.Count - 1; j >= 0; --j)
-            {
-                if (m_InputLayers[j].GetOutputTarget() != CompositorLayer.OutputTarget.CameraStack)
-                {
-                    bool found = false;
-                    foreach (var prop in m_ShaderProperties)
-                    {
-                        if (prop.m_PropertyName == m_InputLayers[j].m_LayerName)
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found)
-                    {
-                        RemoveLayerAtIndex(j);
-                    }
-                }
-            }
-            */
-
         }
 
         public void AddShaderProperty(ShaderProperty sp)

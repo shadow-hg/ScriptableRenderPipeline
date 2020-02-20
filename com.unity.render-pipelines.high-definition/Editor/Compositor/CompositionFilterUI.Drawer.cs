@@ -1,8 +1,8 @@
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.Rendering.HighDefinition.Compositor;
 
-namespace UnityEditor.Rendering.HighDefinition
+namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
     internal class CompositionFilterUI
     {

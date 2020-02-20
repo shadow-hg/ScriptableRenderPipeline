@@ -1,6 +1,6 @@
 using UnityEditor;
 
-namespace UnityEditor.Rendering.HighDefinition
+namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
     internal class SerializedCompositionManager
     {
