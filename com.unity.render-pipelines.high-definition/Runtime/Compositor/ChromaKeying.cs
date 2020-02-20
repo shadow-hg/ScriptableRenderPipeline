@@ -5,7 +5,8 @@ using System;
 
 namespace UnityEngine.Rendering.HighDefinition.Compositor
 {
-
+    // Custom post-processing pass that performs chroma keying
+    // Shader adapted from: https://github.com/keijiro/ProcAmp
     [Serializable, VolumeComponentMenu("Post-processing/Custom/ChromaKeying")]
     internal sealed class ChromaKeying : CustomPostProcessVolumeComponent, IPostProcessComponent
     {

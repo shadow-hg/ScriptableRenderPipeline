@@ -105,7 +105,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             set
             {
                 m_CompositionProfile = value;
-                ValidateProfile();
+                m_InputLayers = m_CompositionProfile.m_InputLayers;
             }
         }
 
@@ -527,7 +527,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             m_CompositionProfile.m_InputLayers[index].AddInputFilter(filter);
         }
 
-        public void AddNewLayer(int index, CompositorLayer.LayerType type = CompositorLayer.LayerType.CG_Element)
+        public void AddNewLayer(int index, CompositorLayer.LayerType type = CompositorLayer.LayerType.Camera)
         {
             var newLayer = CompositorLayer.CreateStackLayer(type, "New Layer");
             m_CompositionProfile.AddNewLayerAtIndex(newLayer, index);

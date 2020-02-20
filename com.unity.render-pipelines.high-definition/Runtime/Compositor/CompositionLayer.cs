@@ -11,13 +11,13 @@ using UnityEngine.Experimental.Rendering;
 
 namespace UnityEngine.Rendering.HighDefinition.Compositor
 {
-    // Defines a single compositor layer
+    // Defines a single compositor layer and it's properties.
     [System.Serializable]
     internal class CompositorLayer
     {
         public enum LayerType
         {
-            CG_Element = 0,
+            Camera = 0,
             Video = 1,
             Image = 2
         };
@@ -125,7 +125,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         {
         }
 
-        public static CompositorLayer CreateStackLayer(LayerType type = CompositorLayer.LayerType.CG_Element, string layerName = "New Layer")
+        public static CompositorLayer CreateStackLayer(LayerType type = CompositorLayer.LayerType.Camera, string layerName = "New Layer")
         {
             var newLayer = new CompositorLayer();
             newLayer.m_LayerName = layerName;
@@ -216,17 +216,23 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             // Create a new camera if necessary or use the one specified by the user
             if (m_LayerCamera == null && m_OutputTarget == OutputTarget.CameraStack)
             {
-                    // Another layer is using this camera (the user set the same camera in two layers), so make a clone of it
-                    m_LayerCamera = Object.Instantiate(m_Camera);
-                    m_LayerCamera.name = "CompositorLayer_" + layerID;
-                    m_LayerCamera.gameObject.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy | HideFlags.HideAndDontSave;
+                m_LayerCamera = Object.Instantiate(m_Camera);
 
-                    // Remove the compositor copy (if exists) from the cloned camera. This will happen if the compositor script was attached to the camera we are cloning 
-                    var compositionManager = m_LayerCamera.GetComponent<CompositionManager>();
-                    if (compositionManager != null)
-                    {
-                        CoreUtils.Destroy(compositionManager);
-                    }
+                // delete any audio listeners from the clone camera
+                var listener = m_LayerCamera.GetComponent<AudioListener>();
+                if (listener)
+                {
+                    CoreUtils.Destroy(listener);
+                }
+                m_LayerCamera.name = "CompositorLayer_" + layerID;
+                m_LayerCamera.gameObject.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy | HideFlags.HideAndDontSave;
+
+                // Remove the compositor copy (if exists) from the cloned camera. This will happen if the compositor script was attached to the camera we are cloning 
+                var compositionManager = m_LayerCamera.GetComponent<CompositionManager>();
+                if (compositionManager != null)
+                {
+                    CoreUtils.Destroy(compositionManager);
+                }
 
             }
             m_ClearsBackGround = false;

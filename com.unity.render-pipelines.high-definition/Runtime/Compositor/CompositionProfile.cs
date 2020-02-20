@@ -5,6 +5,7 @@ using UnityEngine.Assertions;
 
 namespace UnityEngine.Rendering.HighDefinition.Compositor
 {
+    // Holds a list of layers and layer/composition properties. This is serialized and can be shared between projects
     internal class CompositionProfile : ScriptableObject
     {
         public List<CompositorLayer> m_InputLayers = new List<CompositorLayer>();

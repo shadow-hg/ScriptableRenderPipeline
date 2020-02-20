@@ -75,7 +75,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                     iconRect.y -= 5;
                     switch (serialized.InputLayerType.enumValueIndex)
                     {
-                        case (int)CompositorLayer.LayerType.CG_Element:
+                        case (int)CompositorLayer.LayerType.Camera:
                             if (CompositorStyle.cameraIcon)
                             {
                                 GUI.DrawTexture(iconRect, CompositorStyle.cameraIcon);
@@ -142,7 +142,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
 
             switch (serializedProperties.InputLayerType.enumValueIndex)
             {
-                case (int)CompositorLayer.LayerType.CG_Element:
+                case (int)CompositorLayer.LayerType.Camera:
                     EditorGUI.PropertyField(rect, serializedProperties.InputCamera, TextUI.Camera);
                     break;
                 case (int)CompositorLayer.LayerType.Video:

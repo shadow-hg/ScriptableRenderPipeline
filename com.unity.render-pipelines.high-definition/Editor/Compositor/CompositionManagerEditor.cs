@@ -13,6 +13,7 @@ using UnityEditorInternal;
 
 namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
+    // Responsible for drawing the inspector UI of the composition manager
     [CustomEditor(typeof(CompositionManager))]
     internal class CompositionManagerEditor : Editor
     {
@@ -26,8 +27,8 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             static public readonly GUIContent RenderSchedule = EditorGUIUtility.TrTextContent("Render Schedule", "A list of layers and sub-layers in the scene. Layers are drawn from top to bottom.");
         }
 
-        private ReorderableList m_layerList;
-        private ReorderableList m_filterList;
+        ReorderableList m_layerList;
+        ReorderableList m_filterList;
 
         // Cached serialized properties
         SerializedCompositionManager m_SerializedProperties;
@@ -189,7 +190,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                     var menu = new GenericMenu();
                     menu.AddItem(new GUIContent("Image"), false, AddLayerOfTypeCallback, CompositorLayer.LayerType.Image);
                     menu.AddItem(new GUIContent("Video"), false, AddLayerOfTypeCallback, CompositorLayer.LayerType.Video);
-                    menu.AddItem(new GUIContent("Camera"), false, AddLayerOfTypeCallback, CompositorLayer.LayerType.CG_Element);
+                    menu.AddItem(new GUIContent("Camera"), false, AddLayerOfTypeCallback, CompositorLayer.LayerType.Camera);
                     menu.ShowAsContext();
                     m_IsEditorDirty = true;
 

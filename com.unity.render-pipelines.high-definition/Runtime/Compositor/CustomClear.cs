@@ -5,6 +5,10 @@ using UnityEngine.Experimental.Rendering;
 
 namespace UnityEngine.Rendering.HighDefinition.Compositor
 {
+    // A custom clear pass that is used internally in the compositor. The functionality includes:
+    // - Always clears the stencil buffer
+    // - Clears the alpha channel if desired
+    // - Clears the RGB channel to the color of a texture using a specified stretching mode
     internal class CustomClear : CustomPass
     {
         internal class ShaderIDs

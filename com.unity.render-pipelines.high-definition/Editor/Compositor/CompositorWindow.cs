@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition.Compositor;
 
 #if UNITY_EDITOR
@@ -9,6 +10,12 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
     internal class CompositorWindow : EditorWindow
     {
+        static partial class TextUI
+        {
+            static public readonly GUIContent EnableCompositor = EditorGUIUtility.TrTextContent("Enable Compositor", "Enabled the compositor and creates a default composition profile.");
+            static public readonly GUIContent RemoveCompositor = EditorGUIUtility.TrTextContent("Remove compositor from scene", "Removes the compositor and any composition settings from the scene.");
+        }
+
         static CompositorWindow s_Window;
         CompositionManagerEditor m_Editor;
         Vector2 m_ScrollPosition = Vector2.zero;
@@ -36,7 +43,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             {
                 enableCompositor = compositor.enabled;
             }
-            enableCompositor = EditorGUILayout.Toggle("Enable Compositor", enableCompositor);
+            enableCompositor = EditorGUILayout.Toggle(TextUI.EnableCompositor, enableCompositor);
 
             if (compositor == null && enableCompositor)
             {
@@ -59,11 +66,21 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 return;
             }
 
-            if(compositor.profile == null)
+            if (compositor && compositor.enabled == false)
+            {
+                if (GUILayout.Button(new GUIContent("Remove compositor from scene")))
+                {
+                    CoreUtils.Destroy(compositor);
+                    return;
+                }
+            }
+
+            if (compositor.profile == null)
             {
                 // The compositor was loaded, but there was no profile (someone deleted the asset from disk?), so create a new one
                 CompositionUtils.LoadOrCreateCompositionProfileAsset(compositor);
                 compositor.SetupCompositionMaterial();
+                return;
             }
 
             if (m_Editor == null || m_Editor.target == null || m_Editor.isDirty || compositor.redraw)
