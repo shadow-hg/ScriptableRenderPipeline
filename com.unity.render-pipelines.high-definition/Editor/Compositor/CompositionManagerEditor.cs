@@ -179,7 +179,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 {
                     if (index < m_compositionManager.numLayers)
                     {
-                        return m_SerializedLayerProperties[index].GetHeight();
+                        return m_SerializedLayerProperties[index].GetListItemHeight();
                     }
                     return 0;
                 };
@@ -228,7 +228,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             float height = EditorGUIUtility.singleLineHeight;
             if (m_layerList.index >= 0)
             {
-                height += m_SerializedLayerProperties[m_layerList.index].GetHeight(true);
+                height += m_SerializedLayerProperties[m_layerList.index].GetPropertiesHeight();
             }
 
             var rectagle = EditorGUILayout.BeginVertical(GUILayout.Height(height));

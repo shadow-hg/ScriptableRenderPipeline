@@ -68,28 +68,34 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             }
         }
 
-        public float GetHeight(bool detailed = false)
+        public float GetPropertiesHeight()
         {
-            if (detailed)
+            if (OutTarget.intValue != (int)CompositorLayer.OutputTarget.CameraStack)
             {
-                //TODO: update this one when the UI is final
-                return EditorGUI.GetPropertyHeight(LayerName, null) +
-                    EditorGUI.GetPropertyHeight(Show, null) +
-                    EditorGUI.GetPropertyHeight(OutTarget, null) +
-                    EditorGUI.GetPropertyHeight(ClearDepth, null) +
-                    EditorGUI.GetPropertyHeight(InputLayerType, null) +
-                    EditorGUI.GetPropertyHeight(InputVideo, null) +
+                return 
                     EditorGUI.GetPropertyHeight(OutputRenderer, null) +
                     EditorGUI.GetPropertyHeight(ColorFormat, null) +
-                    EditorGUI.GetPropertyHeight(OverrideAA, null) +
-                    EditorGUI.GetPropertyHeight(AAMode, null) +
-                    EditorGUI.GetPropertyHeight(OverrideCulling, null) +
-                    EditorGUI.GetPropertyHeight(CullingMaskProperty, null) +
-                    EditorGUI.GetPropertyHeight(OverrideVolume, null) +
-                    EditorGUI.GetPropertyHeight(VolumeMask, null);
+                    EditorGUI.GetPropertyHeight(AOVBitmask, null) +
+                    EditorGUI.GetPropertyHeight(ResolutionScale, null) +
+                    2 * EditorGUIUtility.singleLineHeight; //for the heading and pading
             }
             else
             {
+                return EditorGUI.GetPropertyHeight(LayerName, null) +
+                EditorGUI.GetPropertyHeight(InputCamera, null) +
+                EditorGUI.GetPropertyHeight(ClearDepth, null) +
+                EditorGUI.GetPropertyHeight(ClearAlpha, null) +
+                EditorGUI.GetPropertyHeight(ClearMode, null) +
+                EditorGUI.GetPropertyHeight(AAMode, null) +
+                EditorGUI.GetPropertyHeight(CullingMaskProperty, null) +
+                EditorGUI.GetPropertyHeight(VolumeMask, null) +
+                EditorGUI.GetPropertyHeight(InputFilters, null) +
+                7 * EditorGUIUtility.singleLineHeight; //for the heading and pading
+            }
+        }
+
+        public float GetListItemHeight()
+        {
                 int pading = 10;
                 if (OutTarget.intValue != (int)CompositorLayer.OutputTarget.CameraStack)
                 {
@@ -101,5 +107,4 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 }
             }
         }
-    }
 }
