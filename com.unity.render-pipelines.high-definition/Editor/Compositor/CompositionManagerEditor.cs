@@ -221,10 +221,16 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 m_layerList.headerHeight = 0;
             }
 
+            bool layerListChange = false;
+            EditorGUI.BeginChangeCheck();
             EditorGUILayout.BeginVertical();
             EditorGUILayout.LabelField(TextUI.RenderSchedule, headerStyle);
             m_layerList.DoLayoutList();
             EditorGUILayout.EndVertical();
+            if (EditorGUI.EndChangeCheck())
+            {
+                layerListChange = true;
+            }
 
             float height = EditorGUIUtility.singleLineHeight;
             if (m_layerList.index >= 0)
@@ -280,6 +286,12 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 m_compositionManager.DropCompositorCamera();
                 m_compositionManager.Init();
             }
+
+            if (layerListChange)
+            {
+                m_compositionManager.UpdateLayerSetup();
+            }
+
         }
  
         void DrawLayerProperties(Rect rect, SerializedCompositionLayer serializedProperties, int layerIndex, RenderTexture preview = null)

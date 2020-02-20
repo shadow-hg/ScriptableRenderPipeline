@@ -30,6 +30,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             R32G32B32A32 = GraphicsFormat.R32G32B32A32_SFloat
         };
 
+        // Specifies if this layer will be used in the compositor or a camera stack
         public enum OutputTarget
         {
             CompositorLayer = 0,
@@ -44,21 +45,17 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         }
 
         public string m_LayerName;
-        public bool m_Show = true;
-        public OutputTarget m_OutputTarget; // Specifies if this layer will be used in the compositor, the camera stack or as a texture in the 3D scene
+        public bool m_Show = true;          // Used to toggle visibility of layers
+        public OutputTarget m_OutputTarget; // Specifies if this layer will be used in the compositor or a camera stack
         public bool m_ClearDepth = false;   // Specifies if the depth will be cleared when stacking this camera over the previous one (for overlays)
         public bool m_ClearAlpha = true;    // Specifies if the Alpha channel will be cleared when stacking this camera over the previous one (for overlays)
         public Renderer m_OutputRenderer = null; // Specifies the output surface/renderer
-
-        // Input type
         public LayerType m_Type;
         public Camera m_Camera;
         public VideoPlayer m_InputVideo;
         public Texture m_InputTexture;
         public BackgroundFitMode m_BackgroundFit;
-
         public ResolutionScale m_ResolutionScale = ResolutionScale.Full;
-
         public UIColorBufferFormat m_ColorBufferFormat = UIColorBufferFormat.R16G16B16A16;
 
         // Layer overrides
@@ -94,7 +91,6 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         RTHandle m_AOVTmpRTHandle;
 
         Camera m_LayerCamera;
-
         bool m_ClearsBackGround = false;
 
         //static HashSet<Camera> s_CameraPool = new HashSet<Camera>();

@@ -13,7 +13,7 @@ The final output of the compositor is controlled by a graph of compositing opera
 
 A composition graph is generally expected to expose two types of input properties:
 - Texture2D properties correspond to layer that will be composited to generate the final frame. These properties will automatically appear as compositor layers in the [Render Schedule](#render-schedule) section of the compositor window. The "Mode" option in ShaderGraph corresponds to the default value that the shader will see when the visibility of the layer is toggled off from the Render Schedule list. Please note that by default this value is set to white, but for many compositing operations setting it to black might make more sense.
-- Other input properties like colors/floats that controls various aspects of the composition, like tint or brightness. These parameters will appear automatically in the [Composition Parameters](#composition-parameters) section of the compositor window. An example of such parameter is the opacity of the watermarked logo in the following shader graph:
+- Other input properties like colors/floats that controls various aspects of the composition, like tint or brightness. These parameters, as long as they are of type Color, Float or Vector, will appear automatically in the [Composition Parameters](#composition-parameters) section of the compositor window. An example of such parameter is the opacity of the watermarked logo in the following shader graph:
 
 ![](Images/Compositor/CompositorSimpleGraph.png)
 

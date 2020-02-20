@@ -14,6 +14,12 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
     [ExecuteAlways]
     internal class CompositionManager : MonoBehaviour
     {
+        internal class SGShaderIDs
+        {
+            public static readonly int _ViewProjMatrix = Shader.PropertyToID("_ViewProjMatrix");
+            public static readonly int _WorldSpaceCameraPos = Shader.PropertyToID("_WorldSpaceCameraPos");
+        }
+
         public enum OutputDisplay
         {
             Display1 = 0,
@@ -43,23 +49,18 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         [HideInInspector]
         public CompositionProfile m_CompositionProfile;
 
-        internal Matrix4x4 m_ViewProjMatrix;
+        internal Matrix4x4 m_ViewProjMatrix; 
         internal Matrix4x4 m_ViewProjMatrixFlipped;
         internal GameObject m_CompositorGameObject;
 
-        internal bool m_IsCompositorDirty;
+        internal bool m_IsCompositorDirty = true;
         internal bool m_requiresRedraw = false;
+
         public bool redraw
         {
             get => m_requiresRedraw;
         }
 
-        internal class SGShaderIDs
-        {
-            public static readonly int _ViewProjMatrix = Shader.PropertyToID("_ViewProjMatrix");
-            public static readonly int _WorldSpaceCameraPos = Shader.PropertyToID("_WorldSpaceCameraPos");
-            public static readonly int _ProjectionParams = Shader.PropertyToID("_ProjectionParams");
-        }
         public bool enableOutput
         {
             get
@@ -131,8 +132,8 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         }
 
         #region Validation
-
-        void ValidatePipeline()
+        // Validates the rendering pipeline and fixes potential issues
+        bool ValidatePipeline()
         {
             var hdPipeline = RenderPipelineManager.currentPipeline as HDRenderPipeline;
             if (hdPipeline != null)
@@ -159,8 +160,9 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                     Debug.Log("Registering alpha injection pass for the HDRP pipeline");
                     hdPipeline.asset.beforePostProcessCustomPostProcesses.Add(typeof(AlphaInjection).AssemblyQualifiedName);
                 }
-
+                return true;
             }
+            return false;
         }
         bool ValidateCompositionShader()
         {
@@ -436,6 +438,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             m_ViewProjMatrixFlipped = Matrix4x4.Scale(new Vector3(2.0f, -2.0f, 0.0f)) * Matrix4x4.Translate(new Vector3(-0.5f, -0.5f, 0.0f));
         }
 
+        // Detects if a shader property was changed. There is no API for that in Unity, so this is a brute force solution
         bool ShaderPropertiesWereChanged()
         {
             int propCount = m_Shader.GetPropertyCount();
@@ -464,18 +467,8 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             return false;
         }
 
-        // Update is called once per frame
-        void Update()
+        public void UpdateLayerSetup()
         {
-            if (!ValidateAndFixRuntime())
-            {
-                return;
-            }
-
-            ValidatePipeline();
-
-            UpdateDisplayNumber();
-
             if (m_IsCompositorDirty)
             {
                 SetupCompositorLayers();
@@ -484,6 +477,18 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
                 m_IsCompositorDirty = false;
             }
+        }
+
+        // Update is called once per frame
+        void Update()
+        {
+            if (ValidateAndFixRuntime() == false || ValidatePipeline() == false)
+            {
+                return;
+            }
+
+            UpdateDisplayNumber();
+
 #if UNITY_EDITOR
             m_requiresRedraw = false;
             if (ShaderPropertiesWereChanged())
@@ -493,6 +498,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 SetupCompositorLayers();//< required to allocate RT for the new layers
             }
 #endif
+
             if (m_CompositionProfile)
             {
                 m_CompositionProfile.UpdateLayers(Application.IsPlaying(gameObject));
