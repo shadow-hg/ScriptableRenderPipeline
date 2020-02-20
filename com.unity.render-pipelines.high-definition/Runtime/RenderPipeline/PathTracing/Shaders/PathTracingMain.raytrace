@@ -45,18 +45,24 @@ void AddConvergenceCue(uint2 pixelCoord, uint sampleCount, inout float3 color)
 }
 
 [shader("miss")]
-void MissEnv(inout PathIntersection pathIntersection : SV_RayPayload)
+void MissCamera(inout PathIntersection pathIntersection : SV_RayPayload)
+{
+    pathIntersection.color = SAMPLE_TEXTURECUBE_ARRAY_LOD(_SkyTexture, s_trilinear_clamp_sampler, WorldRayDirection(), 0.0f, 0);
+}
+
+[shader("miss")]
+void MissLight(inout PathIntersection pathIntersection : SV_RayPayload)
+{
+}
+
+[shader("miss")]
+void MissMaterial(inout PathIntersection pathIntersection : SV_RayPayload)
 {
     // Grab depth information
     uint currentDepth = _RaytracingMaxRecursion - pathIntersection.remainingDepth;
 
-    pathIntersection.color = !currentDepth || currentDepth >= _RaytracingMinRecursion ?
+    pathIntersection.color = currentDepth >= _RaytracingMinRecursion ?
         SAMPLE_TEXTURECUBE_ARRAY_LOD(_SkyTexture, s_trilinear_clamp_sampler, WorldRayDirection(), 0.0f, 0) : 0.0;
-}
-
-[shader("miss")]
-void MissShadow(inout PathIntersection pathIntersection : SV_RayPayload)
-{
 }
 
 [shader("raygeneration")]

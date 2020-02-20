@@ -197,7 +197,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
 #endif
 
             // Shoot ray for indirect lighting
-            TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, RAYTRACINGRENDERERFLAG_PATH_TRACING, 0, 1, 0, rayDescriptor, nextPathIntersection);
+            TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, RAYTRACINGRENDERERFLAG_PATH_TRACING, 0, 1, 2, rayDescriptor, nextPathIntersection);
 
             if (computeDirect)
             {
