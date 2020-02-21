@@ -336,8 +336,15 @@ namespace UnityEngine.Rendering.Universal.Internal
                 // Only apply dithering & grain if there isn't a final pass.
                 SetupGrain(cameraData, m_Materials.uber);
                 SetupDithering(cameraData, m_Materials.uber);
-				
-                if (Display.main.requiresSrgbBlitToBackbuffer && m_EnableSRGBConversionIfNeeded)
+
+                bool requiresSRGBConvertion = Display.main.requiresSrgbBlitToBackbuffer;
+                // For stereo case, eye texture always want color data in sRGB space.
+                // If eye texture color format is linear, we do explicit sRGB convertion
+#if ENABLE_VR && ENABLE_VR_MODULE
+            if (cameraData.isStereoEnabled)
+                requiresSRGBConvertion = !XRGraphics.eyeTextureDesc.sRGB;
+#endif
+                if (requiresSRGBConvertion && m_EnableSRGBConversionIfNeeded)
                     m_Materials.uber.EnableKeyword(ShaderKeywordStrings.LinearToSRGBConversion);
 
                 // Done with Uber, blit it
@@ -1050,7 +1057,14 @@ namespace UnityEngine.Rendering.Universal.Internal
             SetupGrain(cameraData, material);
             SetupDithering(cameraData, material);
 
-            if (Display.main.requiresSrgbBlitToBackbuffer && m_EnableSRGBConversionIfNeeded)
+            bool requiresSRGBConvertion = Display.main.requiresSrgbBlitToBackbuffer;
+            // For stereo case, eye texture always want color data in sRGB space.
+            // If eye texture color format is linear, we do explicit sRGB convertion
+#if ENABLE_VR && ENABLE_VR_MODULE
+            if (cameraData.isStereoEnabled)
+                requiresSRGBConvertion = !XRGraphics.eyeTextureDesc.sRGB;
+#endif
+            if (requiresSRGBConvertion && m_EnableSRGBConversionIfNeeded)
                 material.EnableKeyword(ShaderKeywordStrings.LinearToSRGBConversion);
 
             cmd.SetGlobalTexture("_BlitTex", m_Source.Identifier());
