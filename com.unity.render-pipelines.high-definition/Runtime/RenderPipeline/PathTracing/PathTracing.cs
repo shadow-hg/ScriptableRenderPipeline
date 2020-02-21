@@ -51,8 +51,6 @@ namespace UnityEngine.Rendering.HighDefinition
     }
     public partial class HDRenderPipeline
     {
-        const string m_PathTracingRayGenShaderName = "RayGen";
-
         PathTracing pathTracingSettings;
 
         uint currentIteration = 0;
@@ -63,16 +61,18 @@ namespace UnityEngine.Rendering.HighDefinition
         void InitPathTracing()
         {
 #if UNITY_EDITOR
-            Undo.postprocessModifications += UndoRecordedCallback;
-            Undo.undoRedoPerformed += UndoPerformedCallback;
+            Undo.postprocessModifications += OnUndoRecorded;
+            Undo.undoRedoPerformed += OnUndoPerformed;
+            SceneView.duringSceneGui += OnSceneGui;
 #endif // UNITY_EDITOR
         }
 
         void ReleasePathTracing()
         {
 #if UNITY_EDITOR
-            Undo.postprocessModifications -= UndoRecordedCallback;
-            Undo.undoRedoPerformed -= UndoPerformedCallback;
+            Undo.postprocessModifications -= OnUndoRecorded;
+            Undo.undoRedoPerformed -= OnUndoPerformed;
+            SceneView.duringSceneGui -= OnSceneGui;
 #endif // UNITY_EDITOR
         }
 
@@ -87,16 +87,22 @@ namespace UnityEngine.Rendering.HighDefinition
                 currentIteration = 0;
         }
 
-        private UndoPropertyModification[] UndoRecordedCallback(UndoPropertyModification[] modifications)
+        private UndoPropertyModification[] OnUndoRecorded(UndoPropertyModification[] modifications)
         {
             ResetIteration();
 
             return modifications;
         }
 
-        private void UndoPerformedCallback()
+        private void OnUndoPerformed()
         {
             ResetIteration();
+        }
+
+        private void OnSceneGui(SceneView sv)
+        {
+            if (Event.current.type == EventType.MouseDrag)
+                currentIteration = 0;
         }
 
 #endif // UNITY_EDITOR
@@ -181,7 +187,7 @@ namespace UnityEngine.Rendering.HighDefinition
             cmd.SetRayTracingMatrixParam(pathTracingShader, HDShaderIDs._PixelCoordToViewDirWS, hdCamera.mainViewConstants.pixelCoordToViewDirWS);
 
             // Run the computation
-            cmd.DispatchRays(pathTracingShader, m_PathTracingRayGenShaderName, (uint)hdCamera.actualWidth, (uint)hdCamera.actualHeight, 1);
+            cmd.DispatchRays(pathTracingShader, "RayGen", (uint)hdCamera.actualWidth, (uint)hdCamera.actualHeight, 1);
         }
     }
 }

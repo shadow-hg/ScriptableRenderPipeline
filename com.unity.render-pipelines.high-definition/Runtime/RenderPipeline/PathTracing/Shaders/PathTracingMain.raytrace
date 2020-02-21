@@ -47,6 +47,7 @@ void AddConvergenceCue(uint2 pixelCoord, uint sampleCount, inout float3 color)
 [shader("miss")]
 void MissCamera(inout PathIntersection pathIntersection : SV_RayPayload)
 {
+    // FIXME: Take into account whether we want sky or bg color to be displayed
     pathIntersection.color = SAMPLE_TEXTURECUBE_ARRAY_LOD(_SkyTexture, s_trilinear_clamp_sampler, WorldRayDirection(), 0.0f, 0);
 }
 
