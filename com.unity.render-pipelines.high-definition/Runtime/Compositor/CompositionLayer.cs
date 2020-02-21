@@ -77,7 +77,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         // AOVs
         [HideInInspector]
-        public int m_AOVBitmask = 0;
+        public MaterialSharedProperty m_AOVBitmask = 0;
         [HideInInspector]
         public Dictionary<string, int> m_AOVMap;
         List<RTHandle> m_AOVHandles;
@@ -238,7 +238,8 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 m_RenderTarget = new RenderTexture(pixelWidth, pixelHeight, 24, (GraphicsFormat)m_ColorBufferFormat);
                 m_RTHandle = RTHandles.Alloc(m_RenderTarget);
 
-                if (m_AOVBitmask > 1)
+                int aovMask = (1 << (int)m_AOVBitmask);
+                if (aovMask > 1)
                 {
                     m_AOVMap = new Dictionary<string, int>();
                     m_AOVRenderTargets = new List<RenderTexture>();
@@ -249,7 +250,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                     int outputIndex = 0;
                     for (int i = 0; i < NUM_AOVs; ++i)
                     {
-                        if ((m_AOVBitmask & (1 << i)) != 0)
+                        if ((aovMask & (1 << i)) != 0)
                         {
                             m_AOVMap[aovNames[i]] = outputIndex;
                             m_AOVRenderTargets.Add(new RenderTexture(pixelWidth, pixelHeight, 24, (GraphicsFormat)m_ColorBufferFormat));
@@ -516,7 +517,8 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             }
 
             // The target layer expects AOVs, so this stacked layer should also generate AOVs
-            if (targetLayer.m_AOVBitmask > 1)
+            int aovMask = (1 << (int)targetLayer.m_AOVBitmask);
+            if (aovMask > 1)
             {
                 var aovRequestBuilder = new AOVRequestBuilder();
 
@@ -525,7 +527,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 int outputIndex = 0;
                 for (int i = 0; i < NUM_AOVs; ++i)
                 {
-                    if ((targetLayer.m_AOVBitmask & (1 << i)) != 0)
+                    if ((aovMask & (1 << i)) != 0)
                     {
                         int aovType = i;
 

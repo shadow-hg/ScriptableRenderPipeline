@@ -14,6 +14,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
     [ExecuteAlways]
     internal class CompositionManager : MonoBehaviour
     {
+        // These shader graph properties should be properly set when drawing a full screen quad for the compositor output
         internal class SGShaderIDs
         {
             public static readonly int _ViewProjMatrix = Shader.PropertyToID("_ViewProjMatrix");

@@ -10,6 +10,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         FitVertically
     };
 
+    // This class store some additional per-camera data (filters, custom clear modes, etc) that are used by the compositor.
     internal class AdditionalCompositorData : MonoBehaviour
     {
         public Texture m_clearColorTexture = null;

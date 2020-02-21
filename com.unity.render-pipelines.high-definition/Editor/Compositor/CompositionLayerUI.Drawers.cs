@@ -119,7 +119,9 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             EditorGUI.PropertyField(rect, serializedProperties.OutputRenderer, TextUI.OutputRenderer);
             rect.y += CompositorStyle.k_Spacing;
 
-            serializedProperties.AOVBitmask.intValue = EditorGUI.MaskField(rect, TextUI.AOVs, serializedProperties.AOVBitmask.intValue, System.Enum.GetNames(typeof(MaterialSharedProperty)));
+            EditorGUI.PropertyField(rect, serializedProperties.AOVBitmask, TextUI.OutputRenderer);
+            //serializedProperties.AOVBitmask.intValue = EditorGUI.MaskField(rect, TextUI.AOVs, serializedProperties.AOVBitmask.intValue, System.Enum.GetNames(typeof(MaterialSharedProperty)));
+            
             rect.y += CompositorStyle.k_Spacing;
         }
 
