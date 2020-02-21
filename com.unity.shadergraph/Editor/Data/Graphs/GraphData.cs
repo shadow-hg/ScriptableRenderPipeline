@@ -1174,18 +1174,14 @@ namespace UnityEditor.ShaderGraph
                 m_PastedStickyNotes.Add(pastedStickyNote);
             }
 
-            // Compute the mean of the copied nodes at their original position
-            Vector2 centroid = Vector2.zero;
-            var count = 1;
-            foreach (var node in graphToPaste.GetNodes<AbstractMaterialNode>())
-            {
-                var position = node.drawState.position.position;
-                centroid = centroid + (position - centroid) / count;
-                ++count;
-            }
+            var nodeList = graphToPaste.GetNodes<AbstractMaterialNode>();
+
+            // Compute the centroid of the copied nodes at their original positions
+            var nodePositions = nodeList.Select(n => n.drawState.position.position);
+            var centroid = UIUtilities.CalculateCentroid(nodePositions);
 
             var nodeGuidMap = new Dictionary<Guid, Guid>();
-            foreach (var node in graphToPaste.GetNodes<AbstractMaterialNode>())
+            foreach (var node in nodeList)
             {
                 AbstractMaterialNode pastedNode = node;
 
@@ -1233,8 +1229,8 @@ namespace UnityEditor.ShaderGraph
                 var position = drawState.position;
                 // Get the relative position to the calculated centroid and apply that relative offset
                 var relativeOffsetFromCentroid = position.position - centroid;
-                position.x = cursorGraphPosition.x + relativeOffsetFromCentroid.x + 30;
-                position.y = cursorGraphPosition.y + relativeOffsetFromCentroid.y + 30;
+                position.x = cursorGraphPosition.x + relativeOffsetFromCentroid.x;
+                position.y = cursorGraphPosition.y + relativeOffsetFromCentroid.y;
                 drawState.position = position;
                 node.drawState = drawState;
                 remappedNodes.Add(pastedNode);
