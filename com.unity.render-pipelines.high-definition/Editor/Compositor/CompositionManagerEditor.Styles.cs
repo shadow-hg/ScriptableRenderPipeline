@@ -14,9 +14,5 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
         internal static readonly int k_ListItemStackPading = 20;
         internal static readonly float k_SingleLineHeight = EditorGUIUtility.singleLineHeight;
         internal static readonly float k_Spacing = k_SingleLineHeight * 1.1f;
-
-        internal static readonly Texture2D videoIcon = UnityEditor.AssetDatabase.LoadAssetAtPath <Texture2D>(HDUtils.GetHDRenderPipelinePath() + "Editor/Compositor/Icons/Video.png");
-        internal static readonly Texture2D imageIcon = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(HDUtils.GetHDRenderPipelinePath() + "Editor/Compositor/Icons/Layer.png");
-        internal static readonly Texture2D cameraIcon = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(HDUtils.GetHDRenderPipelinePath() + "Editor/Compositor/Icons/Camera.png");
     }
 }

@@ -17,7 +17,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             static public readonly GUIContent Resolution = EditorGUIUtility.TrTextContent("Resolution", "Specifies the resolution of this layer's render target. Lower resolution increases the performance at the expense of visual quality.");
             static public readonly GUIContent BufferFormat = EditorGUIUtility.TrTextContent("Format", "Specifies the color buffer format of this layer. ");
             static public readonly GUIContent OutputRenderer = EditorGUIUtility.TrTextContent("Output Renderer", "Redirects the output of this layer to the surface which is drawn by the selected mesh renderer. ");
-            static public readonly GUIContent AOVs = EditorGUIUtility.TrTextContent("AOVs", "Specifies the AOVs . ");
+            static public readonly GUIContent AOVs = EditorGUIUtility.TrTextContent("AOVs", "Specifies the output variable that will be drawn on this layer. This option affects all cameras that are stacked on this layer.");
 
             // Sub layer
             static public readonly GUIContent NameContent = EditorGUIUtility.TrTextContent("Layer Name", "Specifies the name of this layer.");
@@ -29,7 +29,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             static public readonly GUIContent ClearMode = EditorGUIUtility.TrTextContent("Clear Color", "To override the clear mode of this layer, activate the option by clicking on the check-box and then select the desired value.");
             static public readonly GUIContent AAMode = EditorGUIUtility.TrTextContent("Anti Aliasing", "To override the anti-aliasing mode, activate the option by clicking on the check-box and then select the desired value.");
             static public readonly GUIContent CullingMask = EditorGUIUtility.TrTextContent("Culling Mask", "To override the culling mask, activate the option by clicking on the check-box and then select the desired value.");
-            static public readonly GUIContent VolumeMask = EditorGUIUtility.TrTextContent("Volume Mask", "Specifies the type of output variable in this layer. This option affects all cameras that re stacked in this layer.");
+            static public readonly GUIContent VolumeMask = EditorGUIUtility.TrTextContent("Volume Mask", "Specifies the type of output variable in this layer. This option affects all cameras that are stacked in this layer. Selecting nothing (no AOV) indicates that the layer's color will be outputted.");
         }
 
         public static void DrawItemInList(Rect rect, SerializedCompositionLayer serialized, RenderTexture thumbnail = null, float aspectRatio = 1.0f)
@@ -76,29 +76,20 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                     switch (serialized.InputLayerType.enumValueIndex)
                     {
                         case (int)CompositorLayer.LayerType.Camera:
-                            if (CompositorStyle.cameraIcon)
-                            {
-                                GUI.DrawTexture(iconRect, CompositorStyle.cameraIcon);
-                            }
+                            GUI.DrawTexture(iconRect, EditorGUIUtility.ObjectContent(null, typeof(Camera)).image);
                             break;
                         case (int)CompositorLayer.LayerType.Video:
-                            if (CompositorStyle.videoIcon)
-                            {
-                                GUI.DrawTexture(iconRect, CompositorStyle.videoIcon);
-                            }
+                            GUI.DrawTexture(iconRect, EditorGUIUtility.ObjectContent(null, typeof(UnityEngine.Video.VideoPlayer)).image);
                             break;
                         case (int)CompositorLayer.LayerType.Image:
-                            if (CompositorStyle.imageIcon)
-                            {
-                                GUI.DrawTexture(iconRect, CompositorStyle.imageIcon);
-                            }
+                            GUI.DrawTexture(iconRect, EditorGUIUtility.ObjectContent(null, typeof(Texture)).image);
                             break;
                         default:
                             // This will happen if someone adds a new layer type and does not update this switch statement
                             Debug.Log("Unknown layer type: Please add code here to draw this type of layer.");
                             break;
                     }
-                    newRect.x += CompositorStyle.k_IconSize;
+                    newRect.x += CompositorStyle.k_IconSize + 5;
                 }
 
                 newRect.width = rect.width - 60 - 20;
