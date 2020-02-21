@@ -233,10 +233,13 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
     pathIntersection.color = (!currentDepth || computeDirect) ? bsdfData.color * GetInverseCurrentExposureMultiplier() + builtinData.emissiveColor : 0.0;
 #endif
 
-    // Bias the result (making it too dark), but reduces fireflies a lot
-    float intensity = Luminance(pathIntersection.color) * GetCurrentExposureMultiplier();
-    if (intensity > _RaytracingIntensityClamp)
-        pathIntersection.color *= _RaytracingIntensityClamp / intensity;
+    if (currentDepth)
+    {
+        // Bias the result (making it too dark), but reduces fireflies a lot
+        float intensity = Luminance(pathIntersection.color) * GetCurrentExposureMultiplier();
+        if (intensity > _RaytracingIntensityClamp)
+            pathIntersection.color *= _RaytracingIntensityClamp / intensity;
+    }
 }
 
 [shader("anyhit")]
