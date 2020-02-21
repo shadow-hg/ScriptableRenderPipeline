@@ -51,7 +51,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         public bool m_ClearAlpha = true;    // Specifies if the Alpha channel will be cleared when stacking this camera over the previous one (for overlays)
         public Renderer m_OutputRenderer = null; // Specifies the output surface/renderer
         public LayerType m_Type;
-        public Camera m_Camera;
+        public Camera m_Camera;             // The source camera for the layer (were we get the default properties). The actual rendering, with overridden properties is done by the m_LayerCamera
         public VideoPlayer m_InputVideo;
         public Texture m_InputTexture;
         public BackgroundFitMode m_BackgroundFit;
@@ -115,6 +115,11 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 }
                 return 1.0f;
             }
+        }
+
+        public Camera camera
+        {
+            get => m_LayerCamera;
         }
 
         private CompositorLayer()
@@ -395,6 +400,8 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         public void UpdateOutputCameraAndTexture(bool isPlaying)
         {
+            var compositor = CompositionManager.GetInstance();
+
             if (m_OutputRenderer != null)
             {
                 m_OutputRenderer.enabled = m_Show || m_ClearsBackGround;
@@ -412,7 +419,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 return;
             }
 
-            m_LayerCamera.enabled = m_Show || m_ClearsBackGround;
+            m_LayerCamera.enabled = (m_Show || m_ClearsBackGround) && compositor.enableOutput;
 
             //TODO: maybe we can spawn the clone camera as child of the original one
             m_LayerCamera.gameObject.transform.position = m_Camera.gameObject.transform.position;

@@ -37,7 +37,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
 
         void OnGUI()
         {
-            CompositionManager compositor = GameObject.FindObjectOfType(typeof(CompositionManager), true) as CompositionManager;
+            CompositionManager compositor = CompositionManager.GetInstance();
             bool enableCompositor = false;
             if (compositor)
             {

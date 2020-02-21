@@ -34,12 +34,12 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         }
 
         [SerializeField]
-        Shader m_Shader = null;
+        Shader m_Shader;
 
         [HideInInspector, SerializeField]
         Material m_Material;
 
-        public Camera m_OutputCamera = null;
+        public Camera m_OutputCamera;
 
         [SerializeField]
         public OutputDisplay m_OutputDisplay = OutputDisplay.Display1;
@@ -56,6 +56,8 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         internal bool m_IsCompositorDirty = true;
         internal bool m_requiresRedraw = false;
+
+        static private CompositionManager s_CompositorInstance;
 
         public bool redraw
         {
@@ -81,6 +83,16 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 if (m_OutputCamera)
                 {
                     m_OutputCamera.enabled = value;
+
+                    // also change the layers
+                    foreach(var layer in m_InputLayers)
+                    {
+                        if (layer.camera)
+                        {
+                            layer.camera.enabled = value;
+                        }
+                    }
+
                 }
             }
         }
@@ -635,6 +647,16 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             }
             Debug.LogWarning("Camera not found");
             return null;
+        }
+
+        static public CompositionManager GetInstance()
+        {
+            if(s_CompositorInstance != null)
+            {
+                return s_CompositorInstance;
+            }
+            s_CompositorInstance = GameObject.FindObjectOfType(typeof(CompositionManager), true) as CompositionManager;
+            return s_CompositorInstance;
         }
     }
 }

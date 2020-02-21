@@ -142,7 +142,6 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             if (EditorGUI.EndChangeCheck())
             {
                 // Clear the existing shader (the new shader will be loaded in the next Update)
-                // m_compositionManager.ClearCompositionShader();
                 m_IsEditorDirty = true;
                 shaderChange = true;
             }
