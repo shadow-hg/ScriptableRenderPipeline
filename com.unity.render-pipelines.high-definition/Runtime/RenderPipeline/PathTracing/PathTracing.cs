@@ -54,8 +54,11 @@ namespace UnityEngine.Rendering.HighDefinition
         PathTracing m_PathTracingSettings;
 
         uint m_CurrentIteration = 0;
+
 #if UNITY_EDITOR
-        uint m_CacheMaxIteration = 0;
+        uint  m_CacheMaxIteration = 0;
+        int   m_CacheLightCount = 0;
+        ulong m_CacheAccelSize = 0;
 #endif // UNITY_EDITOR
 
         void InitPathTracing()
@@ -109,16 +112,38 @@ namespace UnityEngine.Rendering.HighDefinition
 
         private void CheckDirtiness(HDCamera hdCamera)
         {
-            // Check camera and materials dirtiness
+            // Check camera dirtiness
             if (hdCamera.mainViewConstants.nonJitteredViewProjMatrix != (hdCamera.mainViewConstants.prevViewProjMatrix))
             {
                 m_CurrentIteration = 0;
+                return;
             }
-            else if (m_MaterialsDirty)
+
+            // Check materials dirtiness
+            if (m_MaterialsDirty)
             {
                 m_CurrentIteration = 0;
                 m_MaterialsDirty = false;
+                return;
             }
+
+#if UNITY_EDITOR
+            // Check lights dirtiness
+            if (m_CacheLightCount != m_RayTracingLights.lightCount)
+            {
+                m_CacheLightCount = m_RayTracingLights.lightCount;
+                m_CurrentIteration = 0;
+                return;
+            }
+
+            // Check geometry dirtiness
+            ulong accelSize = m_CurrentRAS.GetSize();
+            if (accelSize != m_CacheAccelSize)
+            {
+                m_CacheAccelSize = accelSize;
+                m_CurrentIteration = 0;
+            }
+#endif // UNITY_EDITOR
         }
 
         static RTHandle PathTracingHistoryBufferAllocatorFunction(string viewName, int frameIndex, RTHandleSystem rtHandleSystem)
