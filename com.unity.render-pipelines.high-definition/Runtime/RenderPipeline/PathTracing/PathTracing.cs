@@ -62,7 +62,7 @@ namespace UnityEngine.Rendering.HighDefinition
         {
 #if UNITY_EDITOR
             Undo.postprocessModifications += OnUndoRecorded;
-            Undo.undoRedoPerformed += OnUndoPerformed;
+            Undo.undoRedoPerformed += OnSceneEdit;
             SceneView.duringSceneGui += OnSceneGui;
 #endif // UNITY_EDITOR
         }
@@ -71,14 +71,19 @@ namespace UnityEngine.Rendering.HighDefinition
         {
 #if UNITY_EDITOR
             Undo.postprocessModifications -= OnUndoRecorded;
-            Undo.undoRedoPerformed -= OnUndoPerformed;
+            Undo.undoRedoPerformed -= OnSceneEdit;
             SceneView.duringSceneGui -= OnSceneGui;
 #endif // UNITY_EDITOR
         }
 
 #if UNITY_EDITOR
 
-        private void ResetIteration()
+        internal void ResetPathTracing()
+        {
+            m_CurrentIteration = 0;
+        }
+
+        private void OnSceneEdit()
         {
             // If we just change the sample count, we don't want to reset iteration
             if (m_CacheMaxIteration != m_PathTracingSettings.maximumSamples.value)
@@ -89,14 +94,9 @@ namespace UnityEngine.Rendering.HighDefinition
 
         private UndoPropertyModification[] OnUndoRecorded(UndoPropertyModification[] modifications)
         {
-            ResetIteration();
+            OnSceneEdit();
 
             return modifications;
-        }
-
-        private void OnUndoPerformed()
-        {
-            ResetIteration();
         }
 
         private void OnSceneGui(SceneView sv)
@@ -109,6 +109,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
         private void CheckDirtiness(HDCamera hdCamera)
         {
+            // Check camera and materials dirtiness
             if (hdCamera.mainViewConstants.nonJitteredViewProjMatrix != (hdCamera.mainViewConstants.prevViewProjMatrix))
             {
                 m_CurrentIteration = 0;
