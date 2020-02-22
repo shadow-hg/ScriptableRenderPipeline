@@ -112,7 +112,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed an issue where Prefab previews were incorrectly lit when you used the 2D Renderer.
 - Fixed an issue where the Light didn't update correctly when you deleted a Sprite that a Sprite 2D Light uses.
 - Fixed an issue where Cinemachine v2.4 couldn't be used together with Universal RP due to a circular dependency between the two packages.
-- Fixed Shader using Texture Arrays does not compile when building, prevents build [case 1218714]
+- Fixed an issue where Shaders that used Texture Arrays didn't compile at build time, which caused the build to fail.
 
 ## [7.1.2] - 2019-09-19
 ### Added
