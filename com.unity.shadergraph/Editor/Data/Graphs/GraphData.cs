@@ -807,9 +807,7 @@ namespace UnityEditor.ShaderGraph
             switch(input)
             {
                 case AbstractShaderProperty property:
-                    var propetyNodes = GetNodes<PropertyNode>().Where(x => x.propertyGuid == input.guid).ToList();
-                    foreach (var propNode in propetyNodes)
-                        ReplacePropertyNodeWithConcreteNodeNoValidate(propNode);
+                    GraphConcretization.ConcretizeMatchedProperties(this, x => x.propertyGuid == input.guid);
                     break;
             }
 
@@ -885,37 +883,6 @@ namespace UnityEditor.ShaderGraph
 
         static List<IEdge> s_TempEdges = new List<IEdge>();
 
-        public void ReplacePropertyNodeWithConcreteNode(PropertyNode propertyNode)
-        {
-            ReplacePropertyNodeWithConcreteNodeNoValidate(propertyNode);
-            ValidateGraph();
-        }
-
-        void ReplacePropertyNodeWithConcreteNodeNoValidate(PropertyNode propertyNode)
-        {
-            var property = properties.FirstOrDefault(x => x.guid == propertyNode.propertyGuid);
-            if (property == null)
-                return;
-
-            var node = property.ToConcreteNode() as AbstractMaterialNode;
-            if (node == null)
-                return;
-
-            var slot = propertyNode.FindOutputSlot<MaterialSlot>(PropertyNode.OutputSlotId);
-            var newSlot = node.GetOutputSlots<MaterialSlot>().FirstOrDefault(s => s.valueType == slot.valueType);
-            if (newSlot == null)
-                return;
-
-            node.drawState = propertyNode.drawState;
-            node.groupGuid = propertyNode.groupGuid;
-            AddNodeNoValidate(node);
-
-            foreach (var edge in this.GetEdges(slot.slotReference))
-                ConnectNoValidate(newSlot.slotReference, edge.inputSlot);
-
-            RemoveNodeNoValidate(propertyNode);
-        }
-
         public void OnKeywordChanged()
         {
             OnKeywordChangedNoValidate();
@@ -967,6 +934,7 @@ namespace UnityEditor.ShaderGraph
         {
             messageManager?.ClearAllFromProvider(this);
             CleanupGraph();
+            GraphConcretization.ConcretizeUnmanagedProperties(this);
             GraphSetup.SetupGraph(this);
             GraphConcretization.ConcretizeGraph(this);
             GraphValidation.ValidateGraph(this);
