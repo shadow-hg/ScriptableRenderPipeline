@@ -25,7 +25,9 @@ Varyings vert(Attributes input)
     UNITY_TRANSFER_INSTANCE_ID(input, output);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
     output.uv = UnityStereoTransformScreenSpaceTex(input.uv);
-    output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+    //output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+    output.positionCS = float4(input.positionOS.xyz, 1.0);
+    output.positionCS.y *= _ProjectionParams.x;
     return output;
 }
 
@@ -71,7 +73,7 @@ half4 _ScaleBiasRT;
 
 float SampleDepth(float2 uv)
 {
-    // Currently CopyDepthPass.cs uses cmd.Blit() that sets implicitly a projeciton matrix with y-flip
+    // Currently CopyDepthPass.cs uses cmd.Blit() that sets implicitly a projection matrix with y-flip
     // This can cause some issues that might end up sampling depth with a wrong orientation depending on if URP
     // renders game to RT or screen (case https://issuetracker.unity3d.com/issues/lwrp-depth-texture-flipy)
 
@@ -91,7 +93,7 @@ float SampleDepth(float2 uv)
     //  - uv.y = 1.0 + uv.y * (-1.0). We unflip the flip in matrix. All good.
     half scale = _ScaleBiasRT.x;
     half bias = _ScaleBiasRT.y;
-    uv.y = bias + uv.y * scale;
+    //uv.y = bias + uv.y * scale;
 
 #if MSAA_SAMPLES == 1
     return SAMPLE(uv);
