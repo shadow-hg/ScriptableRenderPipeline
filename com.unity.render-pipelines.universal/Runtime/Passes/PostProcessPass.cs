@@ -349,7 +349,6 @@ namespace UnityEngine.Rendering.Universal.Internal
                 SetupGrain(cameraData, m_Materials.uber);
                 SetupDithering(cameraData, m_Materials.uber);
 
-                
                 if (RequireSRGBConversionBlitToBackBuffer(cameraData) && m_EnableSRGBConversionIfNeeded)
                     m_Materials.uber.EnableKeyword(ShaderKeywordStrings.LinearToSRGBConversion);
 
