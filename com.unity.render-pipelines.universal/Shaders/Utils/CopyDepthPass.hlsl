@@ -27,7 +27,6 @@ Varyings vert(Attributes input)
     output.uv = UnityStereoTransformScreenSpaceTex(input.uv);
     //output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
     output.positionCS = float4(input.positionOS.xyz, 1.0);
-    output.positionCS.y *= _ProjectionParams.x;
     return output;
 }
 
