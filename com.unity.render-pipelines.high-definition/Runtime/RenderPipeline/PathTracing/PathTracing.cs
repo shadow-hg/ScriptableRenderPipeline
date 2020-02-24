@@ -55,7 +55,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
         uint  m_CurrentIteration = 0;
 
-        int   m_CacheLightCount = 0;
+        uint  m_CacheLightCount = 0;
         ulong m_CacheAccelSize = 0;
 #if UNITY_EDITOR
         uint  m_CacheMaxIteration = 0;
@@ -141,7 +141,7 @@ namespace UnityEngine.Rendering.HighDefinition
             // Check lights dirtiness
             if (m_CacheLightCount != m_RayTracingLights.lightCount)
             {
-                m_CacheLightCount = m_RayTracingLights.lightCount;
+                m_CacheLightCount = (uint) m_RayTracingLights.lightCount;
                 m_CurrentIteration = 0;
                 return;
             }
@@ -207,7 +207,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
             // Set the data for the ray generation
             cmd.SetRayTracingTextureParam(pathTracingShader, HDShaderIDs._CameraColorTextureRW, outputTexture);
-            cmd.SetGlobalInt(HDShaderIDs._RaytracingFrameIndex, (int)m_CurrentIteration++);
+            cmd.SetGlobalInt(HDShaderIDs._RaytracingFrameIndex, (int)m_CurrentIteration);
 
             // Compute an approximate pixel spread angle value (in radians)
             cmd.SetRayTracingFloatParam(pathTracingShader, HDShaderIDs._RaytracingPixelSpreadAngle, GetPixelSpreadAngle(hdCamera.camera.fieldOfView, hdCamera.actualWidth, hdCamera.actualHeight));
@@ -232,6 +232,10 @@ namespace UnityEngine.Rendering.HighDefinition
 
             // Run the computation
             cmd.DispatchRays(pathTracingShader, "RayGen", (uint)hdCamera.actualWidth, (uint)hdCamera.actualHeight, 1);
+
+            // Increment the iteration counter, if we haven't converged yet
+            if (m_CurrentIteration < m_PathTracingSettings.maximumSamples.value)
+                m_CurrentIteration++;
         }
     }
 }
