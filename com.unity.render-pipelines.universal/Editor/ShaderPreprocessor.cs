@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering;
-using UnityEditor.Build;
-using UnityEditor.Build.Reporting;
 
 namespace UnityEditor.Rendering.Universal
 {
@@ -235,7 +234,6 @@ namespace UnityEditor.Rendering.Universal
     }
     class ShaderBuildPreprocessor : IPreprocessBuildWithReport
     {
-
         public static ShaderFeatures supportedFeatures
         {
             get {
