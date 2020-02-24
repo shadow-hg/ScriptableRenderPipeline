@@ -10,8 +10,8 @@ The following table provides a high level overview of the advantages and disadva
 | Technique  | Performance | Memory Overhead | Flexibility | Feature Coverage [*]|
 | ------------- | ------------- |------------- | ------------- | ------------- |
 | Camera Stacking  | High  | Low | Low | High |
-| Graph-Based Composition | Low(er)  | High | High | Low |
-| 3D composition  | Low(er)  | High | Low | High |
+| Graph-Based Composition | Low  | High | High | Low |
+| 3D composition  | Low  | High | Low | High |
 
 [*] *"Feature coverage"* indicates whether rendering features such as screen-space reflections, transparencies or refractions can work between layers.
 
