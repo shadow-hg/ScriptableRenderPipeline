@@ -27,11 +27,15 @@ RWTexture2D<float4> _AccumulatedFrameTexture;
 
 void AddConvergenceCue(uint2 pixelCoord, uint sampleCount, inout float3 color)
 {
+    // If we reached 100%, do not display the bar anymore
+    if (sampleCount >= _RaytracingNumSamples)
+        return;
+
     uint width, height;
     _CameraColorTextureRW.GetDimensions(width, height);
 
     // Change color only in a region corresponding to a progress bar, on the bottom 1% of the screen
-    if (pixelCoord.y < 0.01 * height && (float)pixelCoord.x / width <= (float)sampleCount / (_RaytracingNumSamples - 1))
+    if (pixelCoord.y < 0.01 * height && (float)pixelCoord.x / width <= (float)sampleCount / _RaytracingNumSamples)
     {
         float lum = Luminance(color);
 
