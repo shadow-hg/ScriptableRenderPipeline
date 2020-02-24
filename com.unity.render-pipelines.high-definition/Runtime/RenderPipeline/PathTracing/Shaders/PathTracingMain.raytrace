@@ -18,6 +18,8 @@
 
 // Input(s)
 float4x4 _PixelCoordToViewDirWS;
+int      _RaytracingCameraSkyEnabled;
+float3   _RaytracingCameraClearColor;
 
 // Output(s)
 RWTexture2D<float4> _CameraColorTextureRW;
@@ -47,8 +49,9 @@ void AddConvergenceCue(uint2 pixelCoord, uint sampleCount, inout float3 color)
 [shader("miss")]
 void MissCamera(inout PathIntersection pathIntersection : SV_RayPayload)
 {
-    // FIXME: Take into account whether we want sky or bg color to be displayed
-    pathIntersection.color = SAMPLE_TEXTURECUBE_ARRAY_LOD(_SkyTexture, s_trilinear_clamp_sampler, WorldRayDirection(), 0.0f, 0);
+    // If the _RaytracingCameraClearColor content is positive, we override the camera sky display with a bg color
+    pathIntersection.color = _EnvLightSkyEnabled && _RaytracingCameraSkyEnabled ?
+        SAMPLE_TEXTURECUBE_ARRAY_LOD(_SkyTexture, s_trilinear_clamp_sampler, WorldRayDirection(), 0.0, 0) : _RaytracingCameraClearColor * GetInverseCurrentExposureMultiplier();
 }
 
 [shader("miss")]
@@ -59,11 +62,8 @@ void MissLight(inout PathIntersection pathIntersection : SV_RayPayload)
 [shader("miss")]
 void MissMaterial(inout PathIntersection pathIntersection : SV_RayPayload)
 {
-    // Grab depth information
-    uint currentDepth = _RaytracingMaxRecursion - pathIntersection.remainingDepth;
-
-    pathIntersection.color = currentDepth >= _RaytracingMinRecursion ?
-        SAMPLE_TEXTURECUBE_ARRAY_LOD(_SkyTexture, s_trilinear_clamp_sampler, WorldRayDirection(), 0.0f, 0) : 0.0;
+    pathIntersection.color = _EnvLightSkyEnabled && (_RaytracingMaxRecursion - pathIntersection.remainingDepth) >= _RaytracingMinRecursion ?
+        SAMPLE_TEXTURECUBE_ARRAY_LOD(_SkyTexture, s_trilinear_clamp_sampler, WorldRayDirection(), 0.0, 0) : 0.0;
 }
 
 [shader("raygeneration")]

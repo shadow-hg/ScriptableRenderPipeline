@@ -53,13 +53,15 @@ namespace UnityEngine.Rendering.HighDefinition
     {
         PathTracing m_PathTracingSettings;
 
-        uint m_CurrentIteration = 0;
+        uint  m_CurrentIteration = 0;
 
-#if UNITY_EDITOR
-        uint  m_CacheMaxIteration = 0;
         int   m_CacheLightCount = 0;
         ulong m_CacheAccelSize = 0;
+#if UNITY_EDITOR
+        uint  m_CacheMaxIteration = 0;
 #endif // UNITY_EDITOR
+
+        bool m_CameraSkyEnabled;
 
         void InitPathTracing()
         {
@@ -79,12 +81,12 @@ namespace UnityEngine.Rendering.HighDefinition
 #endif // UNITY_EDITOR
         }
 
-#if UNITY_EDITOR
-
         internal void ResetPathTracing()
         {
             m_CurrentIteration = 0;
         }
+
+#if UNITY_EDITOR
 
         private void OnSceneEdit()
         {
@@ -112,7 +114,16 @@ namespace UnityEngine.Rendering.HighDefinition
 
         private void CheckDirtiness(HDCamera hdCamera)
         {
-            // Check camera dirtiness
+            // Check camera clear mode dirtiness
+            bool cameraSkyEnabled = (hdCamera.clearColorMode == HDAdditionalCameraData.ClearColorMode.Sky);
+            if (cameraSkyEnabled != m_CameraSkyEnabled)
+            {
+                m_CameraSkyEnabled = cameraSkyEnabled;
+                m_CurrentIteration = 0;
+                return;
+            }
+
+            // Check camera matrix dirtiness
             if (hdCamera.mainViewConstants.nonJitteredViewProjMatrix != (hdCamera.mainViewConstants.prevViewProjMatrix))
             {
                 m_CurrentIteration = 0;
@@ -127,7 +138,6 @@ namespace UnityEngine.Rendering.HighDefinition
                 return;
             }
 
-#if UNITY_EDITOR
             // Check lights dirtiness
             if (m_CacheLightCount != m_RayTracingLights.lightCount)
             {
@@ -143,7 +153,6 @@ namespace UnityEngine.Rendering.HighDefinition
                 m_CacheAccelSize = accelSize;
                 m_CurrentIteration = 0;
             }
-#endif // UNITY_EDITOR
         }
 
         static RTHandle PathTracingHistoryBufferAllocatorFunction(string viewName, int frameIndex, RTHandleSystem rtHandleSystem)
@@ -213,6 +222,8 @@ namespace UnityEngine.Rendering.HighDefinition
             cmd.SetGlobalInt(HDShaderIDs._AreaLightCountRT, lightCluster.GetAreaLightCount());
 
             // Set the data for the ray miss
+            cmd.SetRayTracingIntParam(pathTracingShader, HDShaderIDs._RaytracingCameraSkyEnabled, m_CameraSkyEnabled ? 1 : 0);
+            cmd.SetRayTracingVectorParam(pathTracingShader, HDShaderIDs._RaytracingCameraClearColor, hdCamera.backgroundColorHDR);
             cmd.SetRayTracingTextureParam(pathTracingShader, HDShaderIDs._SkyTexture, m_SkyManager.GetSkyReflection(hdCamera));
 
             // Additional data for path tracing
