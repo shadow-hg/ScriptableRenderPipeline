@@ -55,18 +55,9 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         internal GameObject m_CompositorGameObject;
 
         internal bool m_IsCompositorDirty = true;
-        internal bool m_requiresRedraw = false;
+        internal bool m_ShaderPropertiesAreDirty = false;
 
         static private CompositionManager s_CompositorInstance;
-
-        public bool redraw
-        {
-            get => m_requiresRedraw;
-            set
-            {
-                m_requiresRedraw = value;
-            }
-        }
 
         public bool enableOutput
         {
@@ -145,6 +136,14 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                     return m_CompositionProfile.aspectRatio;
                 }
                 return 1.0f;
+            }
+        }
+
+        public bool shaderPropertiesAreDirty
+        {
+            set
+            {
+                m_ShaderPropertiesAreDirty = true;
             }
         }
 
@@ -455,35 +454,6 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             m_ViewProjMatrixFlipped = Matrix4x4.Scale(new Vector3(2.0f, -2.0f, 0.0f)) * Matrix4x4.Translate(new Vector3(-0.5f, -0.5f, 0.0f));
         }
 
-        // Detects if a shader property was changed. There is no API for that in Unity, so this is a brute force solution
-        bool ShaderPropertiesWereChanged()
-        {
-            int propCount = m_Shader.GetPropertyCount();
-            if (propCount != m_CompositionProfile.m_ShaderProperties.Count)
-            {
-                return true;
-            }
-
-            for (int i = 0; i < propCount; i++)
-            {
-                if (m_Shader.GetPropertyName(i) != m_CompositionProfile.m_ShaderProperties[i].m_PropertyName)
-                {
-                    return true;
-                }
-                else if (m_Shader.GetPropertyType(i) != m_CompositionProfile.m_ShaderProperties[i].m_Type)
-                {
-                    return true;
-                }
-                else if (m_CompositionProfile.m_ShaderProperties[i].m_Type == ShaderPropertyType.Range &&
-                    m_CompositionProfile.m_ShaderProperties[i].m_RangeLimits != m_Shader.GetPropertyRangeLimits(i))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         public void UpdateLayerSetup()
         {
             if (m_IsCompositorDirty)
@@ -507,11 +477,10 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             UpdateDisplayNumber();
 
 #if UNITY_EDITOR
-            m_requiresRedraw = false;
-            if (ShaderPropertiesWereChanged())
+            if (m_ShaderPropertiesAreDirty)
             {
                 SetNewCompositionShader();
-                m_requiresRedraw = true;
+                m_ShaderPropertiesAreDirty = false;
                 SetupCompositorLayers();//< required to allocate RT for the new layers
             }
 #endif

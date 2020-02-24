@@ -5,6 +5,7 @@ using UnityEngine.Rendering.HighDefinition.Compositor;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditorInternal;
+using UnityEditor.ShaderGraph;
 
 namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
@@ -19,13 +20,14 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
         static CompositorWindow s_Window;
         CompositionManagerEditor m_Editor;
         Vector2 m_ScrollPosition = Vector2.zero;
+        bool m_RequiresRedraw = false;
 
         [MenuItem("Window/Render Pipeline/HD Render Pipeline Compositor", false, 10400)]
         static void Init()
         {
             // Get existing open window or if none, make a new one:
             s_Window = (CompositorWindow)EditorWindow.GetWindow(typeof(CompositorWindow));
-            s_Window.titleContent = new GUIContent("Compositor (Preview)");
+            s_Window.titleContent = new GUIContent("HDRP Compositor (Preview)");
             s_Window.Show();
         }
 
@@ -83,10 +85,16 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 return;
             }
 
-            if (m_Editor == null || m_Editor.target == null || m_Editor.isDirty || compositor.redraw)
+            if (compositor.shader != null)
+            {
+                // keep track of shader graph changes: when the user saves a graph, we should load/reflect any new shader properties
+                GraphData.onSaveGraph += MarkShaderAsDirty;
+            }
+
+            if (m_Editor == null || m_Editor.target == null || m_Editor.isDirty || m_RequiresRedraw)
             {
                 m_Editor = (CompositionManagerEditor)Editor.CreateEditor(compositor);
-                compositor.redraw = false;
+                m_RequiresRedraw = false;
             }
 
             m_ScrollPosition = GUILayout.BeginScrollView(m_ScrollPosition);
@@ -98,6 +106,22 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 }
             }
             GUILayout.EndScrollView();
+        }
+
+        void MarkShaderAsDirty(Shader shader, object context)
+        {
+            CompositionManager compositor = CompositionManager.GetInstance();
+            compositor.shaderPropertiesAreDirty = true;
+            m_RequiresRedraw = true;
+        }
+
+        private void OnDestroy()
+        {
+            CompositionManager compositor = CompositionManager.GetInstance();
+            if (compositor.shader != null)
+            {
+                GraphData.onSaveGraph -= MarkShaderAsDirty;
+            }
         }
     }
 }
