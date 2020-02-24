@@ -225,7 +225,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 {
                     CoreUtils.Destroy(listener);
                 }
-                m_LayerCamera.name = "CompositorLayer_" + layerID;
+                m_LayerCamera.name = "Compositor" + layerID;
                 m_LayerCamera.gameObject.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy | HideFlags.HideAndDontSave;
 
                 // Remove the compositor copy (if exists) from the cloned camera. This will happen if the compositor script was attached to the camera we are cloning 

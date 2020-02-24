@@ -124,7 +124,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             CompositorLayer lastLayer = null;
             for (int i = 0; i < m_InputLayers.Count; ++i)
             {
-                m_InputLayers[i].Init($"_Layer{i}");
+                m_InputLayers[i].Init($"Layer{i}");
 
                 if (m_InputLayers[i].GetOutputTarget() != CompositorLayer.OutputTarget.CameraStack)
                 {
