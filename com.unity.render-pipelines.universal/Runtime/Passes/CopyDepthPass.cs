@@ -48,6 +48,8 @@ namespace UnityEngine.Rendering.Universal.Internal
             descriptor.depthBufferBits = 32; //TODO: do we really need this. double check;
             descriptor.msaaSamples = 1;
             cmd.GetTemporaryRT(destination.id, descriptor, FilterMode.Point);
+
+            ConfigureTarget(destination.Identifier());
         }
 
         /// <inheritdoc/>
@@ -114,11 +116,12 @@ namespace UnityEngine.Rendering.Universal.Internal
             //if (SystemInfo.copyTextureSupport != CopyTextureSupport.None)
             //    cmd.CopyTexture(source, dest);
             //else
-                // Blit has logic to flip projection matrix when rendering to render texture.
-                // Currently the y-flip is handled in CopyDepthPass.hlsl by checking _ProjectionParams.x
-                // If you replace this Blit with a Draw* that sets projection matrix double check
-                // to also update shader.
-                Blit(cmd, source, dest, material);
+            // Blit has logic to flip projection matrix when rendering to render texture.
+            // Currently the y-flip is handled in CopyDepthPass.hlsl by checking _ProjectionParams.x
+            // If you replace this Blit with a Draw* that sets projection matrix double check
+            // to also update shader.
+            cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_CopyDepthMaterial);
+                //Blit(cmd, source, dest, material);
         }
 
         /// <inheritdoc/>
