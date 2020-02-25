@@ -17,7 +17,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             static public readonly GUIContent Resolution = EditorGUIUtility.TrTextContent("Resolution", "Specifies the resolution of this layer's render target. Lower resolution increases the performance at the expense of visual quality.");
             static public readonly GUIContent BufferFormat = EditorGUIUtility.TrTextContent("Format", "Specifies the color buffer format of this layer. ");
             static public readonly GUIContent OutputRenderer = EditorGUIUtility.TrTextContent("Output Renderer", "Redirects the output of this layer to the surface which is drawn by the selected mesh renderer. ");
-            static public readonly GUIContent AOVs = EditorGUIUtility.TrTextContent("AOVs", "Specifies the output variable that will be drawn on this layer. This option affects all cameras that are stacked on this layer.");
+            static public readonly GUIContent AOVs = EditorGUIUtility.TrTextContent("AOVs", "Specifies the Arbitrary Output Variable (AOV) that will be drawn on this layer. This option affects all cameras that are stacked on this layer.");
 
             // Sub layer
             static public readonly GUIContent NameContent = EditorGUIUtility.TrTextContent("Layer Name", "Specifies the name of this layer.");
