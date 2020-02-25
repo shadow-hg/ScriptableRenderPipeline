@@ -242,7 +242,10 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             {
                 m_RenderTarget = new RenderTexture(pixelWidth, pixelHeight, 24, (GraphicsFormat)m_ColorBufferFormat);
                 m_RTHandle = RTHandles.Alloc(m_RenderTarget);
+            }
 
+            if (m_OutputTarget != OutputTarget.CameraStack && m_AOVBitmask != MaterialSharedProperty.None)
+            {
                 int aovMask = (1 << (int)m_AOVBitmask);
                 if (aovMask > 1)
                 {
@@ -263,6 +266,22 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                             outputIndex++;
                         }
                     }
+                }
+            }
+            else
+            {
+                if (m_AOVRenderTargets != null)
+                {
+                    foreach (var rt in m_AOVRenderTargets)
+                    {
+                        CoreUtils.Destroy(rt);
+                    }
+                    m_AOVRenderTargets.Clear();
+                }
+                if(m_AOVMap != null)
+                {
+                    m_AOVMap.Clear();
+                    m_AOVMap = null;
                 }
             }
 
@@ -494,7 +513,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             }
             m_InputFilters.Add(filter);
         }
-        public void SetupLayerCamera(CompositorLayer targetLayer, bool shouldClearColor = false)
+        public void SetupLayerCamera(CompositorLayer targetLayer, bool isFirstLayer = false)
         {
             if (targetLayer.GetRenderTarget() == null)
             {
@@ -503,13 +522,11 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             }
 
             var cameraData = m_LayerCamera.GetComponent<HDAdditionalCameraData>();
-            cameraData.clearDepth = m_ClearDepth;
-
             m_LayerCamera.targetTexture = targetLayer.GetRenderTarget(false);
 
             if (targetLayer.m_AOVBitmask == 0)
             {
-                if (!shouldClearColor)
+                if (!isFirstLayer)
                 {
                     // The next layer in the stack should clear with the texture of the previous layer: this will copy the content of the target RT to the RTHandle and preserve post process
                     cameraData.clearColorMode = HDAdditionalCameraData.ClearColorMode.None;
@@ -521,7 +538,12 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                     compositorData.m_clearColorTexture = targetLayer.GetRenderTarget(false);
                     cameraData.volumeLayerMask |= 1 << 31;
                 }
+                else
+                {
+                    m_ClearDepth = true;
+                }
             }
+            cameraData.clearDepth = m_ClearDepth;
 
             // The target layer expects AOVs, so this stacked layer should also generate AOVs
             int aovMask = (1 << (int)targetLayer.m_AOVBitmask);
@@ -559,6 +581,10 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
                 cameraData.SetAOVRequests(aovRequestBuilder.Build());
                 m_LayerCamera.enabled = true;
+            }
+            else
+            {
+                cameraData.SetAOVRequests(null);
             }
         }
 
