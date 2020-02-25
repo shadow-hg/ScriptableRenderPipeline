@@ -513,7 +513,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         public void AddNewLayer(int index, CompositorLayer.LayerType type = CompositorLayer.LayerType.Camera)
         {
-            var newLayer = CompositorLayer.CreateStackLayer(type, "New Layer");
+            var newLayer = CompositorLayer.CreateStackLayer(type, "New SubLayer");
             m_CompositionProfile.AddNewLayerAtIndex(newLayer, index);
         }
 
