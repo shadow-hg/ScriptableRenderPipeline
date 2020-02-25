@@ -12,11 +12,6 @@ namespace UnityEditor.ShaderGraph
 			UpdateNodeAfterDeserialization();
 		}
 
-		public override string documentationURL
-		{
-			get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Is-Front-Face-Node"; }
-		}
-
 		public override bool hasPreview { get { return false; } }
 
 		public const int OutputSlotId = 0;
@@ -28,7 +23,7 @@ namespace UnityEditor.ShaderGraph
             RemoveSlotsNameNotMatching(new[] { OutputSlotId });
         }
 
-        public void GenerateNodeCode(ShaderStringBuilder sb, GraphContext graphContext, GenerationMode generationMode)
+        public void GenerateNodeCode(ShaderStringBuilder sb, GenerationMode generationMode)
         {
             sb.AppendLine(string.Format("$precision {0} = max(0, IN.{1});", GetVariableNameForSlot(OutputSlotId), ShaderGeneratorNames.FaceSign));
         }

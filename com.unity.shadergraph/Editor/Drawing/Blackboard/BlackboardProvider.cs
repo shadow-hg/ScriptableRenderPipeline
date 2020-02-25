@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor.Graphing;
 using UnityEngine;
 using UnityEditor.Experimental.GraphView;
+using UnityEditor.ShaderGraph.Internal;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.ShaderGraph.Drawing
@@ -14,15 +15,16 @@ namespace UnityEditor.ShaderGraph.Drawing
         public static readonly Texture2D exposedIcon = Resources.Load<Texture2D>("GraphView/Nodes/BlackboardFieldExposed");
         readonly Dictionary<Guid, BlackboardRow> m_InputRows;
         readonly BlackboardSection m_PropertySection;
+        readonly BlackboardSection m_KeywordSection;
         public Blackboard blackboard { get; private set; }
         Label m_PathLabel;
         TextField m_PathLabelTextField;
         bool m_EditPathCancelled = false;
         List<Node> m_SelectedNodes = new List<Node>();
 
-        Dictionary<ShaderInput, bool> m_ExpandedInputs = new Dictionary<ShaderInput, bool>();
+        Dictionary<Guid, bool> m_ExpandedInputs = new Dictionary<Guid, bool>();
 
-        public Dictionary<ShaderInput, bool> expandedInputs
+        public Dictionary<Guid, bool> expandedInputs
         {
             get { return m_ExpandedInputs; }
         }
@@ -58,10 +60,15 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_PathLabelTextField.Q("unity-text-input").RegisterCallback<KeyDownEvent>(OnPathTextFieldKeyPressed);
             blackboard.hierarchy.Add(m_PathLabelTextField);
 
-            m_PropertySection = new BlackboardSection { headerVisible = false };
+            m_PropertySection = new BlackboardSection { title = "Properties" };
             foreach (var property in graph.properties)
                 AddInputRow(property);
             blackboard.Add(m_PropertySection);
+
+            m_KeywordSection = new BlackboardSection { title = "Keywords" };
+            foreach (var keyword in graph.keywords)
+                AddInputRow(keyword);
+            blackboard.Add(m_KeywordSection);
         }
 
         void OnDragUpdatedEvent(DragUpdatedEvent evt)
@@ -175,6 +182,9 @@ namespace UnityEditor.ShaderGraph.Drawing
                 case AbstractShaderProperty property:
                     m_Graph.MoveProperty(property, newIndex);
                     break;
+                case ShaderKeyword keyword:
+                    m_Graph.MoveKeyword(keyword, newIndex);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -184,6 +194,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             var gm = new GenericMenu();
             AddPropertyItems(gm);
+            AddKeywordItems(gm);
             gm.ShowAsContext();
         }
 
@@ -194,7 +205,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             gm.AddItem(new GUIContent($"Vector3"), false, () => AddInputRow(new Vector3ShaderProperty(), true));
             gm.AddItem(new GUIContent($"Vector4"), false, () => AddInputRow(new Vector4ShaderProperty(), true));
             gm.AddItem(new GUIContent($"Color"), false, () => AddInputRow(new ColorShaderProperty(), true));
-            gm.AddItem(new GUIContent($"Texture2D"), false, () => AddInputRow(new TextureShaderProperty(), true));
+            gm.AddItem(new GUIContent($"Texture2D"), false, () => AddInputRow(new Texture2DShaderProperty(), true));
             gm.AddItem(new GUIContent($"Texture2D Array"), false, () => AddInputRow(new Texture2DArrayShaderProperty(), true));
             gm.AddItem(new GUIContent($"Texture3D"), false, () => AddInputRow(new Texture3DShaderProperty(), true));
             gm.AddItem(new GUIContent($"Cubemap"), false, () => AddInputRow(new CubemapShaderProperty(), true));
@@ -204,6 +215,31 @@ namespace UnityEditor.ShaderGraph.Drawing
             gm.AddItem(new GUIContent($"Matrix4x4"), false, () => AddInputRow(new Matrix4ShaderProperty(), true));
             gm.AddItem(new GUIContent($"SamplerState"), false, () => AddInputRow(new SamplerStateShaderProperty(), true));
             gm.AddItem(new GUIContent($"Gradient"), false, () => AddInputRow(new GradientShaderProperty(), true));
+            gm.AddSeparator($"/");
+        }
+
+        void AddKeywordItems(GenericMenu gm)
+        {
+            gm.AddItem(new GUIContent($"Keyword/Boolean"), false, () => AddInputRow(new ShaderKeyword(KeywordType.Boolean), true));
+            gm.AddItem(new GUIContent($"Keyword/Enum"), false, () => AddInputRow(new ShaderKeyword(KeywordType.Enum), true));
+            gm.AddSeparator($"Keyword/");
+            foreach (var builtinKeywordDescriptor in KeywordUtil.GetBuiltinKeywordDescriptors())
+            {
+                var keyword = ShaderKeyword.Create(builtinKeywordDescriptor);
+                AddBuiltinKeyword(gm, keyword);
+            }
+        }
+
+        void AddBuiltinKeyword(GenericMenu gm, ShaderKeyword keyword)
+        {
+            if(m_Graph.keywords.Where(x => x.referenceName == keyword.referenceName).Any())
+            {
+                gm.AddDisabledItem(new GUIContent($"Keyword/{keyword.displayName}"));
+            }
+            else
+            {
+                gm.AddItem(new GUIContent($"Keyword/{keyword.displayName}"), false, () => AddInputRow(keyword.Copy(), true));
+            }
         }
 
         void EditTextRequested(Blackboard blackboard, VisualElement visualElement, string newText)
@@ -213,8 +249,8 @@ namespace UnityEditor.ShaderGraph.Drawing
             if (!string.IsNullOrEmpty(newText) && newText != input.displayName)
             {
                 m_Graph.owner.RegisterCompleteObjectUndo("Edit Graph Input Name");
-                m_Graph.SanitizeGraphInputName(input);
                 input.displayName = newText;
+                m_Graph.SanitizeGraphInputName(input);
                 field.text = input.displayName;
                 DirtyNodes();
             }
@@ -237,7 +273,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             foreach (var expandedInput in expandedInputs)
             {
-                SessionState.SetBool(expandedInput.Key.guid.ToString(), expandedInput.Value);
+                SessionState.SetBool($"Unity.ShaderGraph.Input.{expandedInput.Key}.isExpanded", expandedInput.Value);
             }
 
             if (m_Graph.movedInputs.Any())
@@ -247,6 +283,9 @@ namespace UnityEditor.ShaderGraph.Drawing
 
                 foreach (var property in m_Graph.properties)
                     m_PropertySection.Add(m_InputRows[property.guid]);
+
+                foreach (var keyword in m_Graph.keywords)
+                    m_KeywordSection.Add(m_InputRows[keyword.guid]);
             }
             m_ExpandedInputs.Clear();
         }
@@ -257,10 +296,10 @@ namespace UnityEditor.ShaderGraph.Drawing
                 return;
 
             if (create)
+            {
                 m_Graph.SanitizeGraphInputName(input);
-
-            if (index < 0)
-                index = m_InputRows.Count;
+                input.generatePropertyBlock = input.isExposable;
+            }
 
             BlackboardField field = null;
             BlackboardRow row = null;
@@ -273,16 +312,33 @@ namespace UnityEditor.ShaderGraph.Drawing
                     field = new BlackboardField(icon, property.displayName, property.propertyType.ToString()) { userData = property };
                     var propertyView = new BlackboardFieldPropertyView(field, m_Graph, property);
                     row = new BlackboardRow(field, propertyView) { userData = input };
-                    if (index == m_PropertySection.childCount)
+                    if (index < 0)
+                        index = m_InputRows.Count;
+                    if (index == m_InputRows.Count)
                         m_PropertySection.Add(row);
                     else
                         m_PropertySection.Insert(index, row);
                     break;
                 }
+                case ShaderKeyword keyword:
+                {
+                    var icon = (m_Graph.isSubGraph || (keyword.isExposable && keyword.generatePropertyBlock)) ? exposedIcon : null;
+                    var typeText = keyword.isEditable ? keyword.keywordType.ToString() : "Built-in Keyword";
+                    field = new BlackboardField(icon, keyword.displayName, typeText) { userData = keyword };
+                    var keywordView = new BlackboardFieldKeywordView(field, m_Graph, keyword);
+                    row = new BlackboardRow(field, keywordView);
+                    if (index < 0)
+                        index = m_InputRows.Count;
+                    if (index == m_InputRows.Count)
+                        m_KeywordSection.Add(row);
+                    else
+                        m_KeywordSection.Insert(index, row);
+                    break;
+                }
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-            
+
             if(field == null || row == null)
                 return;
 
@@ -295,25 +351,39 @@ namespace UnityEditor.ShaderGraph.Drawing
             expandButton.RegisterCallback<MouseDownEvent>(evt => OnExpanded(evt, input), TrickleDown.TrickleDown);
 
             m_InputRows[input.guid] = row;
-            m_InputRows[input.guid].expanded = SessionState.GetBool(input.guid.ToString(), true);
 
-            if (create)
+            if (!create)
+            {
+                m_InputRows[input.guid].expanded = SessionState.GetBool($"Unity.ShaderGraph.Input.{input.guid.ToString()}.isExpanded", false);
+            }
+            else
             {
                 row.expanded = true;
+                m_ExpandedInputs[input.guid] = true;
                 m_Graph.owner.RegisterCompleteObjectUndo("Create Graph Input");
                 m_Graph.AddGraphInput(input);
                 field.OpenTextEditor();
+
+                if(input as ShaderKeyword != null)
+                {
+                    m_Graph.OnKeywordChangedNoValidate();
+                }
             }
         }
 
         void OnExpanded(MouseDownEvent evt, ShaderInput input)
         {
-            m_ExpandedInputs[input] = !m_InputRows[input.guid].expanded;
+            m_ExpandedInputs[input.guid] = !m_InputRows[input.guid].expanded;
         }
 
         void DirtyNodes()
         {
             foreach (var node in m_Graph.GetNodes<PropertyNode>())
+            {
+                node.OnEnable();
+                node.Dirty(ModificationScope.Node);
+            }
+            foreach (var node in m_Graph.GetNodes<KeywordNode>())
             {
                 node.OnEnable();
                 node.Dirty(ModificationScope.Node);
@@ -337,6 +407,17 @@ namespace UnityEditor.ShaderGraph.Drawing
                         if (node.userData is PropertyNode propertyNode)
                         {
                             if (propertyNode.propertyGuid == input.guid)
+                            {
+                                m_SelectedNodes.Add(node);
+                                node.AddToClassList("hovered");
+                            }
+                        }
+                    }
+                    else if(input is ShaderKeyword keyword)
+                    {
+                        if (node.userData is KeywordNode keywordNode)
+                        {
+                            if (keywordNode.keywordGuid == input.guid)
                             {
                                 m_SelectedNodes.Add(node);
                                 node.AddToClassList("hovered");

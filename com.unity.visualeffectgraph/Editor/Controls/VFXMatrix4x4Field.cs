@@ -2,9 +2,9 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 
-using FloatField = UnityEditor.VFX.UIElements.VFXLabeledField<UnityEditor.UIElements.FloatField, float>;
+using FloatField = UnityEditor.VFX.UI.VFXLabeledField<UnityEditor.UIElements.FloatField, float>;
 
-namespace UnityEditor.VFX.UIElements
+namespace UnityEditor.VFX.UI
 {
     class VFXMatrix4x4Field : VFXControl<Matrix4x4>
     {
@@ -73,6 +73,16 @@ namespace UnityEditor.VFX.UIElements
                 SetValueAndNotify(newValue);
             }
         }
+        public override void SetEnabled(bool value)
+        {
+            for (int i = 0; i < m_FloatFields.GetLength(0); ++i)
+            {
+                for (int j = 0; j < m_FloatFields.GetLength(1); ++j)
+                {
+                    m_FloatFields[i, j].SetEnabled(value);
+                }
+            }
+        }
 
         public VFXMatrix4x4Field()
         {
@@ -102,7 +112,9 @@ namespace UnityEditor.VFX.UIElements
                 for (int j = 0; j < m_FloatFields.GetLength(1); ++j)
                 {
                     if (!m_FloatFields[i, j].control.HasFocus() || force)
+                    {
                         m_FloatFields[i, j].value = value[i, j];
+                    }
                 }
             }
         }

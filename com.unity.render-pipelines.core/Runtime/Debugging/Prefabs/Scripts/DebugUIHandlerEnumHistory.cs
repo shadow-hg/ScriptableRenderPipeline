@@ -1,7 +1,11 @@
+using System.Collections;
 using UnityEngine.UI;
 
 namespace UnityEngine.Rendering.UI
 {
+    /// <summary>
+    /// DebugUIHandler for enum with history widget.
+    /// </summary>
     public class DebugUIHandlerEnumHistory : DebugUIHandlerEnumField
     {
         Text[] historyValues;
@@ -26,6 +30,9 @@ namespace UnityEngine.Rendering.UI
             base.SetWidget(widget);
         }
 
+        /// <summary>
+        /// Update the label of the widget.
+        /// </summary>
         protected override void UpdateValueLabel()
         {
             int index = m_Field.currentIndex;
@@ -43,6 +50,16 @@ namespace UnityEngine.Rendering.UI
                 if (indexHistory < historyValues.Length && historyValues[indexHistory] != null)
                     historyValues[indexHistory].text = field.enumNames[field.GetHistoryValue(indexHistory)].text;
             }
+
+            if (isActiveAndEnabled)
+                StartCoroutine(RefreshAfterSanitization());
+        }
+
+        IEnumerator RefreshAfterSanitization()
+        {
+            yield return null; //wait one frame
+            m_Field.currentIndex = m_Field.getIndex();
+            valueLabel.text = m_Field.enumNames[m_Field.currentIndex].text;
         }
     }
 }

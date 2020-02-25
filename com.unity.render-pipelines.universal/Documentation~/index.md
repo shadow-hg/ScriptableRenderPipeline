@@ -1,22 +1,26 @@
-# About the Universal Render Pipeline
+#  Universal Render Pipeline overview
 
 ![Universal Render Pipeline in action](Images/AssetShots/Beauty/Overview.png)
 
-The Universal Render Pipeline (UniversalRP) is a prebuilt Scriptable Render Pipeline, made by Unity. The technology offers graphics that are scalable to mobile platforms, and you can also use it for higher-end consoles and PCs. You’re able to achieve quick rendering at a high quality without needing compute shader technology. UniversalRP uses simplified, physically based Lighting and Materials.
+The Universal Render Pipeline (URP) is a prebuilt Scriptable Render Pipeline, made by Unity. URP provides artist-friendly workflows that let you quickly and easily create optimized graphics across a range of platforms, from mobile to high-end consoles and PCs.
 
-The UniversalRP uses single-pass forward rendering. Use this pipeline to get optimized real-time performance on several platforms. 
-
-The UniversalRP is supported on the following platforms:
+URP is supported on the following platforms:
 * Windows and UWP
 * Mac and iOS
 * Android
 * XBox One
 * PlayStation4
 * Nintendo Switch
+* WebGL
 * All current VR platforms
 
-The Universal Render Pipeline is available via two templates: UniversalRP and UniversalRP-VR. The  UniversalRP-VR comes with pre-enabled settings specifically for VR. The documentation for both render pipelines is the same. For any questions regarding UniversalRP-VR, see the UniversalRP documentation.
+**Note:** Projects made using URP are not compatible with the High Definition Render Pipeline (HDRP) or the Built-in Render Pipeline. Before you start development, you must decide which render pipeline to use in your Project. For information on choosing a render pipeline, see [the Render Pipelines section of the Unity Manual](https://docs.unity3d.com/2019.3/Documentation/Manual/render-pipelines.html).
 
-**Note:**  Built-in and custom Lit Shaders do not work with the Universal Render Pipeline. Instead, UniversalRP has a new set of standard shaders. If you upgrade a current Project to UniversalRP, you can upgrade built-in shaders to the new ones.
+## What's new in URP 
+For information on what's new in the latest version of URP, see the [Changelog](../changelog/CHANGELOG.html).
 
-**Note:** Projects made using UniversalRP are not compatible with the High Definition Render Pipeline or the built-in Unity rendering pipeline. Before you start development, you must decide which render pipeline to use in your Project. 
+## Getting started with URP
+For information on starting a new URP Project from scratch, or about installing URP in an existing Unity Project, see [Getting started](InstallingAndConfiguringURP.md).
+
+## Upgrading
+For information on upgrading from a previous version of URP to the current version, or for information about upgrading from the Lightweight Render Pipeline (LWRP) to URP, see  [Upgrade guides](upgrade-guides.md).

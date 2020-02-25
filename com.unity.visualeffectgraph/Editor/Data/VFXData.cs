@@ -10,14 +10,14 @@ namespace UnityEditor.VFX
 {
     // TODO Move this
     // Must match enum in C++
-    public enum VFXCoordinateSpace
+    enum VFXCoordinateSpace
     {
         Local = 0,
         World = 1,
     }
 
     // TODO Move this
-    public interface ISpaceable
+    interface ISpaceable
     {
         VFXCoordinateSpace space { get; set; }
     }
@@ -48,12 +48,12 @@ namespace UnityEditor.VFX
 
         public string fileName {
             get {
-                if( ! string.IsNullOrWhiteSpace(title))
+                if(!string.IsNullOrWhiteSpace(title))
                     return title;
                 int i = this.index;
                 if (i < 0)
                     return string.Empty;
-                return string.IsNullOrEmpty(title)?string.Format("System {0}",i):title;
+                return string.Format("System {0}", i);
             }
         }
 
@@ -113,8 +113,9 @@ namespace UnityEditor.VFX
         {
             base.Invalidate(model, cause);
 
-            foreach (VFXContext owner in owners)
-                owner.Invalidate(model, cause);
+            if (cause == InvalidationCause.kSettingChanged) // As data settings are supposed to be implicitely context settings at the same time, throw an invalidate for each contexts
+                foreach (VFXContext owner in owners)
+                    owner.Invalidate(owner, cause);
         }
 
         public override void Sanitize(int version)
@@ -142,9 +143,10 @@ namespace UnityEditor.VFX
             VFXExpressionGraph expressionGraph,
             Dictionary<VFXContext, VFXContextCompiledData> contextToCompiledData,
             Dictionary<VFXContext, int> contextSpawnToBufferIndex,
-            Dictionary<VFXData, int> attributeBuffer,
-            Dictionary<VFXData, int> eventBuffer,
-            Dictionary<VFXContext, List<VFXContextLink>[]> effectiveFlowInputLinks)
+            VFXDependentBuffersData dependentBuffers,
+            Dictionary<VFXContext, List<VFXContextLink>[]> effectiveFlowInputLinks,
+            VFXSystemNames systemNames = null)
+
         {
             // Empty implementation by default
         }
@@ -177,6 +179,7 @@ namespace UnityEditor.VFX
         public bool IsAttributeUsed(VFXAttribute attrib, VFXContext context)            { return GetAttributeMode(attrib, context) != VFXAttributeMode.None; }
 
         public bool IsCurrentAttributeUsed(VFXAttribute attrib)                         { return (GetAttributeMode(attrib) & VFXAttributeMode.ReadWrite) != 0; }
+        public bool IsCurrentAttributeUsed(VFXAttribute attrib, VFXContext context)     { return (GetAttributeMode(attrib, context) & VFXAttributeMode.ReadWrite) != 0; }
 
         public bool IsSourceAttributeUsed(VFXAttribute attrib)                          { return (GetAttributeMode(attrib) & VFXAttributeMode.ReadSource) != 0; }
         public bool IsSourceAttributeUsed(VFXAttribute attrib, VFXContext context)      { return (GetAttributeMode(attrib, context) & VFXAttributeMode.ReadSource) != 0; }

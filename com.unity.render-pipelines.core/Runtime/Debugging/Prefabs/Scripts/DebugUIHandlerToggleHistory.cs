@@ -1,7 +1,11 @@
+using System.Collections;
 using UnityEngine.UI;
 
 namespace UnityEngine.Rendering.UI
 {
+    /// <summary>
+    /// DebugUIHandler for toggle with history widget.
+    /// </summary>
     public class DebugUIHandlerToggleHistory : DebugUIHandlerToggle
     {
         Toggle[] historyToggles;
@@ -29,6 +33,9 @@ namespace UnityEngine.Rendering.UI
             base.SetWidget(widget);
         }
 
+        /// <summary>
+        /// Update the label.
+        /// </summary>
         protected override void UpdateValueLabel()
         {
             base.UpdateValueLabel();
@@ -39,6 +46,15 @@ namespace UnityEngine.Rendering.UI
                 if (index < historyToggles.Length && historyToggles[index] != null)
                     historyToggles[index].isOn = field.GetHistoryValue(index);
             }
+
+            if (isActiveAndEnabled)
+                StartCoroutine(RefreshAfterSanitization());
+        }
+
+        IEnumerator RefreshAfterSanitization()
+        {
+            yield return null; //wait one frame
+            valueToggle.isOn = m_Field.getter();
         }
     }
 }

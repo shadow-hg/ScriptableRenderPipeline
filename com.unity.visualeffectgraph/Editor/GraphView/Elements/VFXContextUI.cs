@@ -56,6 +56,16 @@ namespace UnityEditor.VFX.UI
             return name.ToLower();
         }
 
+        public void UpdateLabel()
+        {
+            var graph = controller.model.GetGraph();
+
+            if (graph != null && controller.model.contextType == VFXContextType.Spawner)
+                m_Label.text = graph.systemNames.GetUniqueSystemName(controller.model);
+            else
+                m_Label.text = controller.model.label;
+        }
+
         protected override void SelfChange()
         {
             base.SelfChange();
@@ -207,7 +217,8 @@ namespace UnityEditor.VFX.UI
             }
             Profiler.EndSample();
 
-            m_Label.text = controller.model.label;
+            UpdateLabel();
+
             if (string.IsNullOrEmpty(m_Label.text))
             {
                 m_Label.AddToClassList("empty");
@@ -231,8 +242,8 @@ namespace UnityEditor.VFX.UI
         {
             capabilities |= Capabilities.Selectable | Capabilities.Movable | Capabilities.Deletable | Capabilities.Ascendable;
 
-            styleSheets.Add(Resources.Load<StyleSheet>("VFXContext"));
-            styleSheets.Add(Resources.Load<StyleSheet>("Selectable"));
+            styleSheets.Add(VFXView.LoadStyleSheet("VFXContext"));
+            styleSheets.Add(VFXView.LoadStyleSheet("Selectable"));
 
             AddToClassList("VFXContext");
             AddToClassList("selectable");
@@ -597,10 +608,11 @@ namespace UnityEditor.VFX.UI
             switch (type)
             {
                 case VFXDataType.SpawnEvent:
-                    return Resources.Load<Texture2D>("VFX/Execution");
+                    return VFXView.LoadImage("Execution");
                 case VFXDataType.Particle:
-                case VFXDataType.ParticleStrip: // TODO Add an icon
-                    return Resources.Load<Texture2D>("VFX/Particles");
+                    return VFXView.LoadImage("Particles");
+                case VFXDataType.ParticleStrip:
+                    return VFXView.LoadImage("ParticleStrips");
             }
             return null;
         }
@@ -761,14 +773,18 @@ namespace UnityEditor.VFX.UI
             var contextType = controller.model.GetType();
             foreach (var setting in newContextController.model.GetSettings(true))
             {
-                if(newContextController.model is VFXPlanarPrimitiveOutput && setting.field.Name == "primitiveType")
+                if((newContextController.model is VFXPlanarPrimitiveOutput || newContextController.model.GetType().Name == "VFXLitPlanarPrimitiveOutput") && setting.field.Name == "primitiveType")
                     continue;
                 
                 if (!setting.valid || setting.field.GetCustomAttributes(typeof(VFXSettingAttribute), true).Length == 0)
                     continue;
 
+                var sourceSetting = controller.model.GetSetting(setting.name);
+                if (!sourceSetting.valid)
+                    continue;
+
                 object value;
-                if (VFXConverter.TryConvertTo(setting.value, setting.field.FieldType, out value))
+                if (VFXConverter.TryConvertTo(sourceSetting.value, setting.field.FieldType, out value))
                     newContextController.model.SetSettingValue(setting.field.Name, value);
             }
 

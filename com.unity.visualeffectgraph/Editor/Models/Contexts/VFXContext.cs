@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 namespace UnityEditor.VFX
 {
     [Flags]
-    public enum VFXContextType
+    enum VFXContextType
     {
         None = 0,
 
@@ -26,11 +26,11 @@ namespace UnityEditor.VFX
         InitAndUpdate = Init | Update,
         InitAndUpdateAndOutput = Init | Update | Output,
         UpdateAndOutput = Update | Output,
-        All = Init | Update | Output | Spawner | SpawnerGPU | Subgraph,
+        All = Init | Update | Output | Spawner | Subgraph,
     };
 
     [Flags]
-    public enum VFXDataType
+    enum VFXDataType
     {
         None =          0,
         SpawnEvent =    1 << 0,
@@ -66,8 +66,11 @@ namespace UnityEditor.VFX
         {
             get { return m_Label; }
             set {
+                var invalidationCause = InvalidationCause.kUIChanged;
+                if (contextType == VFXContextType.Spawner && m_Label != value)
+                    invalidationCause = InvalidationCause.kSettingChanged;
                 m_Label = value;
-                Invalidate(InvalidationCause.kUIChanged);
+                Invalidate(invalidationCause);
             }
         }
 
@@ -131,6 +134,7 @@ namespace UnityEditor.VFX
         public virtual IEnumerable<string> additionalDataHeaders        { get { return GetData().additionalHeaders; } }
         public virtual IEnumerable<string> additionalDefines            { get { return Enumerable.Empty<string>(); } }
         public virtual IEnumerable<KeyValuePair<string, VFXShaderWriter>> additionalReplacements { get { return Enumerable.Empty<KeyValuePair<string, VFXShaderWriter>>(); } }
+        public virtual IEnumerable<string> fragmentParameters           { get { return Enumerable.Empty<string>(); } }
 
         public virtual bool CanBeCompiled()
         {
@@ -166,16 +170,22 @@ namespace UnityEditor.VFX
             }
         }
 
+        public virtual bool SetupCompilation() { return true; }
+        public virtual void EndCompilation() {}
+
 
         public void RefreshInputFlowSlots()
         {
             //Unlink all existing links. It is up to the user of this method to backup and restore links.
-            for (int slot = 0; slot < m_InputFlowSlot.Length; slot++)
+            if (m_InputFlowSlot != null)
             {
-                while (m_InputFlowSlot[slot].link.Count > 0)
+                for (int slot = 0; slot < m_InputFlowSlot.Length; slot++)
                 {
-                    var clean = m_InputFlowSlot[slot].link.Last();
-                    InnerUnlink(clean.context, this, clean.slotIndex, slot);
+                    while (m_InputFlowSlot[slot].link.Count > 0)
+                    {
+                        var clean = m_InputFlowSlot[slot].link.Last();
+                        InnerUnlink(clean.context, this, clean.slotIndex, slot);
+                    }
                 }
             }
 
@@ -325,9 +335,8 @@ namespace UnityEditor.VFX
 
             if (notify)
             {
-                // TODO Might need a specific event ?
-                from.Invalidate(InvalidationCause.kStructureChanged);
-                to.Invalidate(InvalidationCause.kStructureChanged);
+                from.Invalidate(InvalidationCause.kConnectionChanged);
+                to.Invalidate(InvalidationCause.kConnectionChanged);
             }
         }
 
@@ -336,14 +345,13 @@ namespace UnityEditor.VFX
             if (from.GetData() == to.GetData() && from.GetData() != null)
                 to.SetDefaultData(false);
 
-            from.m_OutputFlowSlot[fromIndex].link.RemoveAll(o => o.context == to && o.slotIndex == toIndex);
-            to.m_InputFlowSlot[toIndex].link.RemoveAll(o => o.context == from && o.slotIndex == fromIndex);
+            int count = from.m_OutputFlowSlot[fromIndex].link.RemoveAll(o => o.context == to && o.slotIndex == toIndex);
+            count += to.m_InputFlowSlot[toIndex].link.RemoveAll(o => o.context == from && o.slotIndex == fromIndex);
 
-            // TODO Might need a specific event ?
-            if (notify)
+            if (count > 0 && notify)
             {
-                from.Invalidate(InvalidationCause.kStructureChanged);
-                to.Invalidate(InvalidationCause.kStructureChanged);
+                from.Invalidate(InvalidationCause.kConnectionChanged);
+                to.Invalidate(InvalidationCause.kConnectionChanged);
             }
         }
 
@@ -430,7 +438,54 @@ namespace UnityEditor.VFX
         public IEnumerable<VFXBlock> activeFlattenedChildrenWithImplicit
         {
             get{
-                return implicitPreBlock.Concat(children.SelectMany(t => t is VFXSubgraphBlock ? (t.enabled ? (t as VFXSubgraphBlock).recursiveSubBlocks : Enumerable.Empty<VFXBlock>()): Enumerable.Repeat(t, 1))).Concat(implicitPostBlock).Where(o => o.enabled);
+                List<VFXBlock> blocks = new List<VFXBlock>();
+                
+                foreach(var ctxblk in implicitPreBlock)
+                {
+                    if (ctxblk is VFXSubgraphBlock subgraphBlk)
+                        foreach (var blk in subgraphBlk.recursiveSubBlocks)
+                        {
+                            if (blk.enabled)
+                             blocks.Add(blk);
+                        }
+                    else
+                    {
+                        if (ctxblk.enabled)
+                                blocks.Add(ctxblk);
+                    }
+                }
+
+                foreach( var ctxblk in children )
+                {
+                    if (ctxblk is VFXSubgraphBlock subgraphBlk)
+                        foreach (var blk in subgraphBlk.recursiveSubBlocks)
+                        {
+                            if (blk.enabled)
+                             blocks.Add(blk);
+                        }
+                    else
+                    {
+                        if (ctxblk.enabled)
+                                blocks.Add(ctxblk);
+                    }
+
+                }
+
+                foreach(var ctxblk in implicitPostBlock)
+                {
+                    if (ctxblk is VFXSubgraphBlock subgraphBlk)
+                        foreach (var blk in subgraphBlk.recursiveSubBlocks)
+                        {
+                            if (blk.enabled)
+                             blocks.Add(blk);
+                        }
+                    else
+                    {
+                        if (ctxblk.enabled)
+                                blocks.Add(ctxblk);
+                    }
+                }
+                return blocks;
             }
         }
 
@@ -486,7 +541,10 @@ namespace UnityEditor.VFX
                 string assetName = string.Empty;
                 try
                 {
-                    assetName = GetGraph().visualEffectResource.asset.name;
+                    var resource = GetGraph().visualEffectResource;
+                    var asset = resource.asset;
+
+                    assetName = asset!= null ? asset.name : resource.name;
                 }
                 catch(Exception e)
                 {

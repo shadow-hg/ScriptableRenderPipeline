@@ -1,8 +1,11 @@
 using System;
 
-namespace UnityEngine.Rendering.Universal
+namespace UnityEngine.Rendering.Universal.Internal
 {
-    internal class MainLightShadowCasterPass : ScriptableRenderPass
+    /// <summary>
+    /// Renders a shadow map for the main Light.
+    /// </summary>
+    public class MainLightShadowCasterPass : ScriptableRenderPass
     {
         private static class MainLightShadowConstantBuffer
         {
@@ -35,6 +38,7 @@ namespace UnityEngine.Rendering.Universal
         Vector4[] m_CascadeSplitDistances;
 
         const string m_ProfilerTag = "Render Main Shadowmap";
+        ProfilingSampler m_ProfilingSampler = new ProfilingSampler(m_ProfilerTag);
 
         public MainLightShadowCasterPass(RenderPassEvent evt)
         {
@@ -157,7 +161,7 @@ namespace UnityEngine.Rendering.Universal
             VisibleLight shadowLight = lightData.visibleLights[shadowLightIndex];
 
             CommandBuffer cmd = CommandBufferPool.Get(m_ProfilerTag);
-            using (new ProfilingSample(cmd, m_ProfilerTag))
+            using (new ProfilingScope(cmd, m_ProfilingSampler))
             {
                 var settings = new ShadowDrawingSettings(cullResults, shadowLightIndex);
 

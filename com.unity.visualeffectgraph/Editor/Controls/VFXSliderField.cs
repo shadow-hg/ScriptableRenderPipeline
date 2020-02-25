@@ -3,7 +3,7 @@ using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 using System.Collections.Generic;
 
-namespace UnityEditor.VFX.UIElements
+namespace UnityEditor.VFX.UI
 {
     abstract class VFXBaseSliderField<T> : VisualElement, INotifyValueChanged<T>
     {
@@ -106,6 +106,7 @@ namespace UnityEditor.VFX.UIElements
         {
             m_IgnoreNotification = true;
             m_Value = newValue;
+            tooltip = newValue.ToString();
             if (!hasFocus)
                 m_Field.value = newValue;
             m_Slider.value = ValueToFloat(value);

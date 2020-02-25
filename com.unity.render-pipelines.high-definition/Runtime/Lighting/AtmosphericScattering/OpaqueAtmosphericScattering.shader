@@ -2,6 +2,7 @@ Shader "Hidden/HDRP/OpaqueAtmosphericScattering"
 {
     HLSLINCLUDE
         #pragma target 4.5
+        #pragma editor_sync_compilation
         #pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
 
         #pragma multi_compile _ DEBUG_DISPLAY
@@ -67,7 +68,7 @@ Shader "Hidden/HDRP/OpaqueAtmosphericScattering"
             float3 volColor, volOpacity;
             AtmosphericScatteringCompute(input, V, depth, volColor, volOpacity);
 
-            return float4(volColor + (1 - volOpacity) * surfColor, 1); // Premultiplied alpha (over operator)
+            return float4(volColor, volOpacity.x);
         }
 
         float4 FragMSAA(Varyings input, uint sampleIndex: SV_SampleIndex) : SV_Target
@@ -81,6 +82,34 @@ Shader "Hidden/HDRP/OpaqueAtmosphericScattering"
             float3 volColor, volOpacity;
             AtmosphericScatteringCompute(input, V, depth, volColor, volOpacity);
 
+            return float4(volColor, volOpacity.x);
+        }
+
+        float4 FragPBRFog(Varyings input) : SV_Target
+        {
+            UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+            float2 positionSS = input.positionCS.xy;
+            float3 V = GetSkyViewDirWS(positionSS);
+            float  depth = LoadCameraDepth(positionSS);
+            float3 surfColor = LOAD_TEXTURE2D_X(_ColorTexture, (int2)positionSS).rgb;
+
+            float3 volColor, volOpacity;
+            AtmosphericScatteringCompute(input, V, depth, volColor, volOpacity);
+
+            return float4(volColor + (1 - volOpacity) * surfColor, 1); // Premultiplied alpha (over operator)
+        }
+
+            float4 FragMSAAPBRFog(Varyings input, uint sampleIndex: SV_SampleIndex) : SV_Target
+        {
+            UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+            float2 positionSS = input.positionCS.xy;
+            float3 V = GetSkyViewDirWS(positionSS);
+            float  depth = LOAD_TEXTURE2D_X_MSAA(_DepthTextureMS, (int2)positionSS, sampleIndex).x;
+            float3 surfColor = LOAD_TEXTURE2D_X_MSAA(_ColorTextureMS, (int2)positionSS, sampleIndex).rgb;
+
+            float3 volColor, volOpacity;
+            AtmosphericScatteringCompute(input, V, depth, volColor, volOpacity);
+
             return float4(volColor + (1 - volOpacity) * surfColor, 1); // Premultiplied alpha (over operator)
         }
     ENDHLSL
@@ -90,7 +119,9 @@ Shader "Hidden/HDRP/OpaqueAtmosphericScattering"
         // 0: NOMSAA
         Pass
         {
-            Cull Off    ZTest Always    ZWrite Off    Blend Off // Manual blending
+            Cull Off    ZWrite Off
+            Blend One OneMinusSrcAlpha // Premultiplied alpha
+            ZTest Less  // Required for XR occlusion mesh optimization
 
             HLSLPROGRAM
                 #pragma vertex Vert
@@ -101,11 +132,39 @@ Shader "Hidden/HDRP/OpaqueAtmosphericScattering"
         // 1: MSAA
         Pass
         {
-            Cull Off    ZTest Always    ZWrite Off    Blend Off // Manual blending
+            Cull Off    ZWrite Off
+            Blend One OneMinusSrcAlpha // Premultiplied alpha
+            ZTest Less  // Required for XR occlusion mesh optimization
 
             HLSLPROGRAM
                 #pragma vertex Vert
                 #pragma fragment FragMSAA
+            ENDHLSL
+        }
+
+            // 2: NOMSAA PBR FOG
+            Pass
+        {
+            Cull Off    ZWrite Off
+            Blend Off   // Manual blending
+            ZTest Less  // Required for XR occlusion mesh optimization
+
+            HLSLPROGRAM
+                #pragma vertex Vert
+                #pragma fragment FragPBRFog
+            ENDHLSL
+        }
+
+            // 3: MSAA PBR FOG
+            Pass
+        {
+            Cull Off    ZWrite Off
+            Blend Off   // Manual blending
+            ZTest Less  // Required for XR occlusion mesh optimization
+
+            HLSLPROGRAM
+                #pragma vertex Vert
+                #pragma fragment FragMSAAPBRFog
             ENDHLSL
         }
     }

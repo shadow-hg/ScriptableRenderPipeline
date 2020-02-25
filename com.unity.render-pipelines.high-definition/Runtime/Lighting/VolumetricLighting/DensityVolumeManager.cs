@@ -65,10 +65,12 @@ namespace UnityEngine.Rendering.HighDefinition
             TriggerVolumeAtlasRefresh();
         }
 
-        public DensityVolume[] PrepareDensityVolumeData(CommandBuffer cmd, Camera currentCam, float time)
+        public bool ContainsVolume(DensityVolume volume) => volumes.Contains(volume);
+
+        public List<DensityVolume> PrepareDensityVolumeData(CommandBuffer cmd, HDCamera currentCam, float time)
         {
             //Update volumes
-            bool animate = CoreUtils.AreAnimatedMaterialsEnabled(currentCam);
+            bool animate = currentCam.animateMaterials;
             foreach (DensityVolume volume in volumes)
             {
                 volume.PrepareParameters(animate, time);
@@ -82,9 +84,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
             volumeAtlas.GenerateAtlas(cmd);
 
-            // GC.Alloc
-            // List`1.ToArray()
-            return volumes.ToArray();
+            return volumes;
         }
 
         private void VolumeAtlasRefresh()

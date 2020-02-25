@@ -5,9 +5,11 @@ using UnityEditor.VFX;
 using UnityEngine;
 using UnityEngine.VFX;
 
+using UnityObject = UnityEngine.Object;
+
 namespace UnityEditor.VFX
 {
-    public static class VFXReflectionHelper
+    static class VFXReflectionHelper
     {
         public static T[] CollectStaticReadOnlyExpression<T>(Type expressionType, System.Reflection.BindingFlags additionnalFlag = System.Reflection.BindingFlags.Public)
         {

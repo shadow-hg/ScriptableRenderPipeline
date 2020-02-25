@@ -6,6 +6,7 @@ using UnityEditor.ShaderGraph.Drawing.Controls;
 using UnityEngine.Rendering.HighDefinition;
 using System;
 using System.Linq;
+using UnityEditor.ShaderGraph.Internal;
 using UnityEngine.Rendering;
 
 namespace UnityEditor.Rendering.HighDefinition
@@ -20,11 +21,7 @@ namespace UnityEditor.Rendering.HighDefinition
             UpdateNodeAfterDeserialization();
         }
 
-        public override string documentationURL
-        {
-            // This still needs to be added.
-            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Parallax-Occlusion-Mapping-Node"; }
-        }
+        public override string documentationURL => Documentation.GetPageLink("SGNode-Parallax-Occlusion-Mapping");
 
         // Input slots
         private const int kHeightmapSlotId = 2;
@@ -84,12 +81,12 @@ namespace UnityEditor.Rendering.HighDefinition
         public override void ValidateNode()
         {
             var textureSlot = FindInputSlot<Texture2DInputMaterialSlot>(kHeightmapSlotId);
-            textureSlot.defaultType = TextureShaderProperty.DefaultType.Black;
+            textureSlot.defaultType = Texture2DShaderProperty.DefaultType.Black;
 
             base.ValidateNode();
         }
 
-        public void GenerateNodeFunction(FunctionRegistry registry, GraphContext graphContext, GenerationMode generationMode)
+        public void GenerateNodeFunction(FunctionRegistry registry, GenerationMode generationMode)
         {
             string perPixelDisplacementInclude = @"#include ""Packages/com.unity.render-pipelines.core/ShaderLibrary/PerPixelDisplacement.hlsl""";
 
@@ -130,7 +127,7 @@ return objectScale;");
                 });
         }
 
-        public void GenerateNodeCode(ShaderStringBuilder sb, GraphContext graphContext, GenerationMode generationMode)
+        public void GenerateNodeCode(ShaderStringBuilder sb, GenerationMode generationMode)
         {
             string amplitude = GetSlotValue(kAmplitudeSlotId, generationMode);
             string steps = GetSlotValue(kStepsSlotId, generationMode);

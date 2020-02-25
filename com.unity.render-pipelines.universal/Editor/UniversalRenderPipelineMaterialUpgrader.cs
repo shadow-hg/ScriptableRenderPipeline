@@ -19,7 +19,10 @@ namespace UnityEditor.Rendering.Universal
             List<MaterialUpgrader> upgraders = new List<MaterialUpgrader>();
             GetUpgraders(ref upgraders);
 
-            MaterialUpgrader.UpgradeProjectFolder(upgraders, "Upgrade to UniversalRP Materials", MaterialUpgrader.UpgradeFlags.LogMessageWhenNoUpgraderFound);
+            HashSet<string> shaderNamesToIgnore = new HashSet<string>();
+            GetShaderNamesToIgnore(ref shaderNamesToIgnore);
+
+            MaterialUpgrader.UpgradeProjectFolder(upgraders, shaderNamesToIgnore, "Upgrade to UniversalRP Materials", MaterialUpgrader.UpgradeFlags.LogMessageWhenNoUpgraderFound);
         }
 
         [MenuItem("Edit/Render Pipeline/Universal Render Pipeline/Upgrade Selected Materials to UniversalRP Materials", priority = CoreUtils.editMenuPriority2)]
@@ -28,7 +31,27 @@ namespace UnityEditor.Rendering.Universal
             List<MaterialUpgrader> upgraders = new List<MaterialUpgrader>();
             GetUpgraders(ref upgraders);
 
-            MaterialUpgrader.UpgradeSelection(upgraders, "Upgrade to UniversalRP Materials", MaterialUpgrader.UpgradeFlags.LogMessageWhenNoUpgraderFound);
+            HashSet<string> shaderNamesToIgnore = new HashSet<string>();
+            GetShaderNamesToIgnore(ref shaderNamesToIgnore);
+
+            MaterialUpgrader.UpgradeSelection(upgraders, shaderNamesToIgnore, "Upgrade to UniversalRP Materials", MaterialUpgrader.UpgradeFlags.LogMessageWhenNoUpgraderFound);
+        }
+
+        private static void GetShaderNamesToIgnore(ref HashSet<string> shadersToIgnore)
+        {
+            shadersToIgnore.Add("Universal Render Pipeline/Baked Lit");
+            shadersToIgnore.Add("Universal Render Pipeline/Lit");
+            shadersToIgnore.Add("Universal Render Pipeline/Particles/Lit");
+            shadersToIgnore.Add("Universal Render Pipeline/Particles/Simple Lit");
+            shadersToIgnore.Add("Universal Render Pipeline/Particles/Unlit");
+            shadersToIgnore.Add("Universal Render Pipeline/Simple Lit");
+            shadersToIgnore.Add("Universal Render Pipeline/Nature/SpeedTree7");
+            shadersToIgnore.Add("Universal Render Pipeline/Nature/SpeedTree7 Billboard");
+            shadersToIgnore.Add("Universal Render Pipeline/Nature/SpeedTree8");
+            shadersToIgnore.Add("Universal Render Pipeline/2D/Sprite-Lit-Default");
+            shadersToIgnore.Add("Universal Render Pipeline/Terrain/Lit");
+            shadersToIgnore.Add("Universal Render Pipeline/Unlit");
+            shadersToIgnore.Add("Sprites/Default");
         }
 
         private static void GetUpgraders(ref List<MaterialUpgrader> upgraders)
@@ -233,6 +256,14 @@ namespace UnityEditor.Rendering.Universal
 
     [MovedFrom("UnityEditor.Rendering.LWRP")] public class StandardUpgrader : MaterialUpgrader
     {
+        enum LegacyRenderingMode
+        {
+            Opaque,
+            Cutout,
+            Fade,   // Old school alpha-blending mode, fresnel does not affect amount of transparency
+            Transparent // Physically plausible transparency mode, implemented as alpha pre-multiply
+        }
+
         public static void UpdateStandardMaterialKeywords(Material material)
         {
             if (material == null)
@@ -246,6 +277,8 @@ namespace UnityEditor.Rendering.Universal
             material.SetFloat("_WorkflowMode", 1.0f);
             CoreUtils.SetKeyword(material, "_OCCLUSIONMAP", material.GetTexture("_OcclusionMap"));
             CoreUtils.SetKeyword(material, "_METALLICSPECGLOSSMAP", material.GetTexture("_MetallicGlossMap"));
+            UpdateSurfaceTypeAndBlendMode(material);
+            BaseShaderGUI.SetupMaterialBlendMode(material);
         }
 
         public static void UpdateStandardSpecularMaterialKeywords(Material material)
@@ -262,6 +295,29 @@ namespace UnityEditor.Rendering.Universal
             CoreUtils.SetKeyword(material, "_OCCLUSIONMAP", material.GetTexture("_OcclusionMap"));
             CoreUtils.SetKeyword(material, "_METALLICSPECGLOSSMAP", material.GetTexture("_SpecGlossMap"));
             CoreUtils.SetKeyword(material, "_SPECULAR_SETUP", true);
+            UpdateSurfaceTypeAndBlendMode(material);
+            BaseShaderGUI.SetupMaterialBlendMode(material);
+        }
+
+        // Converts from legacy RenderingMode to new SurfaceType and BlendMode
+        static void UpdateSurfaceTypeAndBlendMode(Material material)
+        {
+            // Property _Mode is already renamed to _Surface at this point
+            var legacyRenderingMode = (LegacyRenderingMode)material.GetFloat("_Surface");
+            if (legacyRenderingMode == LegacyRenderingMode.Transparent)
+            {
+                material.SetInt("_Surface", (int)BaseShaderGUI.SurfaceType.Transparent);
+                material.SetInt("_Blend", (int)BaseShaderGUI.BlendMode.Premultiply);
+            }
+            else if (legacyRenderingMode == LegacyRenderingMode.Fade)
+            {
+                material.SetInt("_Surface", (int)BaseShaderGUI.SurfaceType.Transparent);
+                material.SetInt("_Blend", (int)BaseShaderGUI.BlendMode.Alpha);
+            }
+            else
+            {
+                material.SetInt("_Surface", (int)BaseShaderGUI.SurfaceType.Opaque);
+            }
         }
 
         public StandardUpgrader(string oldShaderName)
@@ -280,6 +336,7 @@ namespace UnityEditor.Rendering.Universal
                 RenameShader(oldShaderName, standardShaderPath, UpdateStandardMaterialKeywords);
             }
 
+            RenameFloat("_Mode", "_Surface");
             RenameTexture("_MainTex", "_BaseMap");
             RenameColor("_Color", "_BaseColor");
             RenameFloat("_GlossyReflections", "_EnvironmentReflections");

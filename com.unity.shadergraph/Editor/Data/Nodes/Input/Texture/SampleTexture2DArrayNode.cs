@@ -2,6 +2,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEditor.Graphing;
 using UnityEditor.ShaderGraph.Drawing.Controls;
+using UnityEditor.ShaderGraph.Internal;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -52,7 +53,7 @@ namespace UnityEditor.ShaderGraph
         }
 
         // Node generations
-        public virtual void GenerateNodeCode(ShaderStringBuilder sb, GraphContext graphContext, GenerationMode generationMode)
+        public virtual void GenerateNodeCode(ShaderStringBuilder sb, GenerationMode generationMode)
         {
             var uvName = GetSlotValue(UVInput, generationMode);
             var indexName = GetSlotValue(IndexInputId, generationMode);
@@ -79,14 +80,22 @@ namespace UnityEditor.ShaderGraph
 
         public bool RequiresMeshUV(UVChannel channel, ShaderStageCapability stageCapability)
         {
-            s_TempSlots.Clear();
-            GetInputSlots(s_TempSlots);
-            foreach (var slot in s_TempSlots)
+            using (var tempSlots = PooledList<MaterialSlot>.Get())
             {
-                if (slot.RequiresMeshUV(channel))
-                    return true;
+                GetInputSlots(tempSlots);
+                var result = false;
+                foreach (var slot in tempSlots)
+                {
+                    if (slot.RequiresMeshUV(channel))
+                    {
+                        result = true;
+                        break;
+                    }
+                }
+
+                tempSlots.Clear();
+                return result;
             }
-            return false;
         }
     }
 }

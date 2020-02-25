@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
+using Data.Util;
 using UnityEditor.Graphing;
 using UnityEditor.ShaderGraph;
+using UnityEditor.ShaderGraph.Internal;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Rendering;
 
@@ -54,7 +56,9 @@ namespace UnityEditor.Rendering.HighDefinition
             },
             VertexShaderSlots = new List<int>()
             {
-                PBRMasterNode.PositionSlotId
+                PBRMasterNode.PositionSlotId,
+                PBRMasterNode.VertNormalSlotId,
+                PBRMasterNode.VertTangentSlotId
             },
             UseInPreview = true,
 
@@ -62,6 +66,7 @@ namespace UnityEditor.Rendering.HighDefinition
             {
                 var masterNode = node as PBRMasterNode;
                 GetStencilStateForGBuffer(true, false, ref pass);
+                GetCullMode(masterNode.twoSided.isOn, ref pass);
 
                 // When we have alpha test, we will force a depth prepass so we always bypass the clip instruction in the GBuffer
                 // Don't do it with debug display mode as it is possible there is no depth prepass in this case
@@ -143,9 +148,16 @@ namespace UnityEditor.Rendering.HighDefinition
             },
             VertexShaderSlots = new List<int>()
             {
-                PBRMasterNode.PositionSlotId
+                PBRMasterNode.PositionSlotId,
+                PBRMasterNode.VertNormalSlotId,
+                PBRMasterNode.VertTangentSlotId
             },
-            UseInPreview = false
+            UseInPreview = false,
+            OnGeneratePassImpl = (IMasterNode node, ref Pass pass) =>
+            {
+                var masterNode = node as PBRMasterNode;
+                GetCullMode(masterNode.twoSided.isOn, ref pass);
+            }
         };
 
         Pass m_SceneSelectionPass = new Pass()
@@ -172,7 +184,9 @@ namespace UnityEditor.Rendering.HighDefinition
             },
             VertexShaderSlots = new List<int>()
             {
-                PBRMasterNode.PositionSlotId
+                PBRMasterNode.PositionSlotId,
+                PBRMasterNode.VertNormalSlotId,
+                PBRMasterNode.VertTangentSlotId
             },
             UseInPreview = false,
             OnGeneratePassImpl = (IMasterNode node, ref Pass pass) =>
@@ -228,7 +242,9 @@ namespace UnityEditor.Rendering.HighDefinition
             },
             VertexShaderSlots = new List<int>()
             {
-                PBRMasterNode.PositionSlotId
+                PBRMasterNode.PositionSlotId,
+                PBRMasterNode.VertNormalSlotId,
+                PBRMasterNode.VertTangentSlotId
             },
             UseInPreview = true,
 
@@ -236,6 +252,7 @@ namespace UnityEditor.Rendering.HighDefinition
             {
                 var masterNode = node as PBRMasterNode;
                 GetStencilStateForDepthOrMV(false, true, false, ref pass);
+                GetCullMode(masterNode.twoSided.isOn, ref pass);
             }
         };
 
@@ -264,7 +281,9 @@ namespace UnityEditor.Rendering.HighDefinition
             },
             VertexShaderSlots = new List<int>()
             {
-                PBRMasterNode.PositionSlotId
+                PBRMasterNode.PositionSlotId,
+                PBRMasterNode.VertNormalSlotId,
+                PBRMasterNode.VertTangentSlotId
             },
             UseInPreview = false,
 
@@ -272,6 +291,7 @@ namespace UnityEditor.Rendering.HighDefinition
             {
                 var masterNode = node as PBRMasterNode;
                 GetStencilStateForDepthOrMV(false, true, true, ref pass);
+                GetCullMode(masterNode.twoSided.isOn, ref pass);
             }
         };
 
@@ -300,8 +320,8 @@ namespace UnityEditor.Rendering.HighDefinition
                 "// Stencil setup",
                 "Stencil",
                 "{",
-                string.Format("   WriteMask {0}", (int) HDRenderPipeline.StencilBitMask.LightingMask),
-                string.Format("   Ref  {0}", (int)StencilLightingUsage.RegularLighting),
+                string.Format("   WriteMask {0}", (int) StencilUsage.RequiresDeferredLighting | (int) StencilUsage.SubsurfaceScattering),
+                string.Format("   Ref  {0}", (int)StencilUsage.Clear),
                 "   Comp Always",
                 "   Pass Replace",
                 "}"
@@ -320,7 +340,9 @@ namespace UnityEditor.Rendering.HighDefinition
             },
             VertexShaderSlots = new List<int>()
             {
-                PBRMasterNode.PositionSlotId
+                PBRMasterNode.PositionSlotId,
+                PBRMasterNode.VertNormalSlotId,
+                PBRMasterNode.VertTangentSlotId
             },
 
             OnGeneratePassImpl = (IMasterNode node, ref Pass pass) =>
@@ -328,6 +350,7 @@ namespace UnityEditor.Rendering.HighDefinition
                 var masterNode = node as PBRMasterNode;
 
                 GetBlendMode(masterNode.surfaceType, masterNode.alphaMode, ref pass);
+                GetCullMode(masterNode.twoSided.isOn, ref pass);
 
                 pass.ExtraDefines.Remove("#ifndef DEBUG_DISPLAY\n#define SHADERPASS_FORWARD_BYPASS_ALPHA_TEST\n#endif");
 
@@ -351,13 +374,15 @@ namespace UnityEditor.Rendering.HighDefinition
         // These functions are still required because for the PBR shader use hardcoded stencil and render queues
         public static void GetStencilStateForGBuffer(bool receiveSSR, bool useSplitLighting, ref Pass pass)
         {
-            int stencilWriteMask = (int)HDRenderPipeline.StencilBitMask.LightingMask;
-            int stencilRef = useSplitLighting ? (int)StencilLightingUsage.SplitLighting : (int)StencilLightingUsage.RegularLighting;
+            int stencilWriteMask = (int)StencilUsage.RequiresDeferredLighting | (int)StencilUsage.SubsurfaceScattering;
+            int stencilRef = (int)StencilUsage.RequiresDeferredLighting;
+            if(useSplitLighting)
+            {
+                stencilRef |= (int)StencilUsage.SubsurfaceScattering;
+            }
 
-            stencilWriteMask |= (int)HDRenderPipeline.StencilBitMask.DoesntReceiveSSR;
-            stencilRef |= !receiveSSR ? (int)HDRenderPipeline.StencilBitMask.DoesntReceiveSSR : 0;
-
-            stencilWriteMask |= (int)HDRenderPipeline.StencilBitMask.DecalsForwardOutputNormalBuffer;
+            stencilWriteMask |= (int)StencilUsage.TraceReflectionRay;
+            stencilRef |= receiveSSR ? (int)StencilUsage.TraceReflectionRay : 0;
 
             pass.StencilOverride = new List<string>()
             {
@@ -374,14 +399,14 @@ namespace UnityEditor.Rendering.HighDefinition
 
         public static void GetStencilStateForDepthOrMV(bool receiveDecals, bool receiveSSR, bool useObjectMotionVector, ref Pass pass)
         {
-            int stencilWriteMask = (int)HDRenderPipeline.StencilBitMask.DecalsForwardOutputNormalBuffer;
-            int stencilRef = receiveDecals ? (int)HDRenderPipeline.StencilBitMask.DecalsForwardOutputNormalBuffer : 0;
+            int stencilWriteMask = 0;
+            int stencilRef = 0;
 
-            stencilWriteMask |= (int)HDRenderPipeline.StencilBitMask.DoesntReceiveSSR;
-            stencilRef |= !receiveSSR ? (int)HDRenderPipeline.StencilBitMask.DoesntReceiveSSR : 0;
+            stencilWriteMask |= (int)StencilUsage.TraceReflectionRay;
+            stencilRef |= receiveSSR ? (int)StencilUsage.TraceReflectionRay : 0;
 
-            stencilWriteMask |= useObjectMotionVector ? (int)HDRenderPipeline.StencilBitMask.ObjectMotionVectors : 0;
-            stencilRef |= useObjectMotionVector ? (int)HDRenderPipeline.StencilBitMask.ObjectMotionVectors : 0;
+            stencilWriteMask |= useObjectMotionVector ? (int)StencilUsage.ObjectMotionVector : 0;
+            stencilRef |= useObjectMotionVector ? (int)StencilUsage.ObjectMotionVector : 0;
 
             if (stencilWriteMask != 0)
             {
@@ -447,9 +472,10 @@ namespace UnityEditor.Rendering.HighDefinition
 
         public int GetPreviewPassIndex() { return 0; }
 
-        private static HashSet<string> GetActiveFieldsFromMasterNode(AbstractMaterialNode iMasterNode, Pass pass)
+        private static ActiveFields GetActiveFieldsFromMasterNode(AbstractMaterialNode iMasterNode, Pass pass)
         {
-            HashSet<string> activeFields = new HashSet<string>();
+            var activeFields = new ActiveFields();
+            var baseActiveFields = activeFields.baseInstance;
 
             PBRMasterNode masterNode = iMasterNode as PBRMasterNode;
             if (masterNode == null)
@@ -459,12 +485,12 @@ namespace UnityEditor.Rendering.HighDefinition
 
             if (masterNode.twoSided.isOn)
             {
-                activeFields.Add("DoubleSided");
+                baseActiveFields.Add("DoubleSided");
                 if (pass.ShaderPassName != "SHADERPASS_MOTION_VECTORS")   // HACK to get around lack of a good interpolator dependency system
                 {                                                   // we need to be able to build interpolators using multiple input structs
                                                                     // also: should only require isFrontFace if Normals are required...
-                    activeFields.Add("DoubleSided.Mirror");         // TODO: change this depending on what kind of normal flip you want..
-                    activeFields.Add("FragInputs.isFrontFace");     // will need this for determining normal flip mode
+                    baseActiveFields.Add("DoubleSided.Mirror");         // TODO: change this depending on what kind of normal flip you want..
+                    baseActiveFields.Add("FragInputs.isFrontFace");     // will need this for determining normal flip mode
                 }
             }
 
@@ -473,7 +499,7 @@ namespace UnityEditor.Rendering.HighDefinition
                 case PBRMasterNode.Model.Metallic:
                     break;
                 case PBRMasterNode.Model.Specular:
-                    activeFields.Add("Material.SpecularColor");
+                    baseActiveFields.Add("Material.SpecularColor");
                     break;
                 default:
                     // TODO: error!
@@ -483,24 +509,40 @@ namespace UnityEditor.Rendering.HighDefinition
             if (masterNode.IsSlotConnected(PBRMasterNode.AlphaThresholdSlotId) ||
                 masterNode.GetInputSlots<Vector1MaterialSlot>().First(x => x.id == PBRMasterNode.AlphaThresholdSlotId).value > 0.0f)
             {
-                activeFields.Add("AlphaTest");
+                baseActiveFields.Add("AlphaTest");
+            }
+            
+            switch(masterNode.normalDropOffSpace)
+            {
+                case NormalDropOffSpace.Tangent:
+                    baseActiveFields.AddAll("features.NormalDropOffTS");
+                    break;
+                case NormalDropOffSpace.Object:
+                    baseActiveFields.AddAll("features.NormalDropOffOS");
+                    break;
+                case NormalDropOffSpace.World:
+                    baseActiveFields.AddAll("features.NormalDropOffWS");
+                    break;
+                default:
+                    UnityEngine.Debug.LogError("Unknown normal drop off space: " + masterNode.normalDropOffSpace);
+                    break;
             }
 
             if (masterNode.surfaceType != UnityEditor.ShaderGraph.SurfaceType.Opaque)
             {
-                activeFields.Add("SurfaceType.Transparent");
+                baseActiveFields.Add("SurfaceType.Transparent");
 
                 if (masterNode.alphaMode == AlphaMode.Alpha)
                 {
-                    activeFields.Add("BlendMode.Alpha");
+                    baseActiveFields.Add("BlendMode.Alpha");
                 }
                 else if (masterNode.alphaMode == AlphaMode.Additive)
                 {
-                    activeFields.Add("BlendMode.Add");
+                    baseActiveFields.Add("BlendMode.Add");
                 }
 
                 // By default PBR node will take the fog
-                activeFields.Add("AlphaFog");
+                baseActiveFields.Add("AlphaFog");
             }
             else
             {
@@ -517,10 +559,16 @@ namespace UnityEditor.Rendering.HighDefinition
                 pass.OnGeneratePass(masterNode as PBRMasterNode);
 
                 // apply master node options to active fields
-                HashSet<string> activeFields = GetActiveFieldsFromMasterNode(masterNode, pass);
+                var activeFields = GetActiveFieldsFromMasterNode(masterNode, pass);
 
                 // use standard shader pass generation
-                bool vertexActive = masterNode.IsSlotConnected(PBRMasterNode.PositionSlotId);
+                bool vertexActive = false;
+                if (masterNode.IsSlotConnected(PBRMasterNode.PositionSlotId) ||
+                    masterNode.IsSlotConnected(PBRMasterNode.VertNormalSlotId) ||
+                    masterNode.IsSlotConnected(PBRMasterNode.VertTangentSlotId))
+                {
+                    vertexActive = true;
+                }
                 return HDSubShaderUtilities.GenerateShaderPass(masterNode, pass, mode, activeFields, result, sourceAssetDependencyPaths, vertexActive);
             }
             else

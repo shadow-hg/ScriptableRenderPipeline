@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.VFX;
 using UnityEngine.UIElements;
 using UnityEditor.VFX.UIElements;
-using VFXVector3Field = UnityEditor.VFX.UIElements.VFXVector3Field;
+using VFXVector3Field = UnityEditor.VFX.UI.VFXVector3Field;
 
 namespace UnityEditor.VFX.UI
 {
@@ -105,7 +105,7 @@ namespace UnityEditor.VFX.UI
         protected override void UpdateEnabled()
         {
             base.UpdateEnabled();
-            m_VectorField.SetEnabled(propertyEnabled);
+            m_VectorField.control.SetEnabled(propertyEnabled);
         }
 
         protected override void UpdateIndeterminate()

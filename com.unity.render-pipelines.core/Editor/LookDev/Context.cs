@@ -1,5 +1,7 @@
 using System;
 using UnityEngine;
+using System.Collections.Generic;
+using System.Collections;
 
 namespace UnityEditor.Rendering.LookDev
 {
@@ -8,7 +10,9 @@ namespace UnityEditor.Rendering.LookDev
     /// </summary>
     public enum ViewIndex
     {
+        /// <summary>First view</summary>
         First,
+        /// <summary>Second view</summary>
         Second
     };
 
@@ -17,8 +21,11 @@ namespace UnityEditor.Rendering.LookDev
     /// </summary>
     public enum ViewCompositionIndex
     {
+        /// <summary>First view</summary>
         First = ViewIndex.First,
+        /// <summary>Second view</summary>
         Second = ViewIndex.Second,
+        /// <summary>Composite view (Several view on screen)</summary>
         Composite
     };
 
@@ -29,22 +36,43 @@ namespace UnityEditor.Rendering.LookDev
     /// </summary>
     public enum Layout
     {
+        /// <summary>First view display fully</summary>
         FullFirstView,
+        /// <summary>Second view display fully</summary>
         FullSecondView,
+        /// <summary>First and second views displayed splitted horizontally</summary>
         HorizontalSplit,
+        /// <summary>First and second views displayed splitted vertically</summary>
         VerticalSplit,
+        /// <summary>First and second views displayed with stacking and orientation customizable  split</summary>
         CustomSplit
     }
 
     /// <summary>
-    /// Statis of the side panel of the LookDev window
+    /// Status of the side panel of the LookDev window
     /// </summary>
     public enum SidePanel
     {
+        /// <summary>No side panel</summary>
         None = -1,
+        /// <summary>Environment side panel</summary>
         Environment,
-        Debug
+        /// <summary>Debug side panel</summary>
+        Debug,
     }
+
+    /// <summary>
+    /// The target views of the debug panel
+    /// </summary>
+    public enum TargetDebugView
+    {
+        /// <summary>First Debug view</summary>
+        First,
+        /// <summary>Both Debug view</summary>
+        Both,
+        /// <summary>Second Debug view</summary>
+        Second
+    };
 
     /// <summary>
     /// Class containing all data used by the LookDev Window to render
@@ -58,8 +86,27 @@ namespace UnityEditor.Rendering.LookDev
         [SerializeField]
         bool m_CameraSynced = true;
 
+        EnvironmentLibrary m_EnvironmentLibrary;
+
         /// <summary>The currently used Environment</summary>
-        public EnvironmentLibrary environmentLibrary { get; private set; }
+        public EnvironmentLibrary environmentLibrary
+        {
+            get
+            {
+                //check if asset deleted by user
+                if (m_EnvironmentLibrary != null && AssetDatabase.Contains(m_EnvironmentLibrary))
+                    return m_EnvironmentLibrary;
+
+                if (!String.IsNullOrEmpty(m_EnvironmentLibraryGUID))
+                {
+                    //user deleted the EnvironmentLibrary asset
+                    m_EnvironmentLibraryGUID = ""; //Empty GUID
+                    LookDev.currentEnvironmentDisplayer.Repaint();
+                }
+                return null;
+            }
+            private set => m_EnvironmentLibrary = value;
+        }
 
         /// <summary>The currently used layout</summary>
         [field: SerializeField]
@@ -92,6 +139,36 @@ namespace UnityEditor.Rendering.LookDev
         };
 
         /// <summary>
+        /// Helper class to iterate on views
+        /// </summary>
+        public struct ViewIterator : IEnumerable<ViewContext>
+        {
+            ViewContext[] m_Views;
+            internal ViewIterator(ViewContext[] views)
+                => m_Views = views;
+
+            /// <summary>
+            /// Helper function to enumerates on ViewContexts
+            /// </summary>
+            /// <returns>Enumerator on ViewContext</returns>
+            IEnumerator IEnumerable.GetEnumerator()
+                => m_Views.GetEnumerator();
+
+            /// <summary>
+            /// Helper function to enumerates on ViewContexts
+            /// </summary>
+            /// <returns>Enumerator on ViewContext</returns>
+            IEnumerator<ViewContext> IEnumerable<ViewContext>.GetEnumerator()
+                => ((IEnumerable<ViewContext>)m_Views).GetEnumerator();
+        }
+
+        /// <summary>
+        /// Helper function to get ViewIterator on ViewContexts
+        /// </summary>
+        public ViewIterator viewContexts
+            => new ViewIterator(m_Views);
+
+        /// <summary>
         /// Get datas relative to a view
         /// </summary>
         /// <param name="index">The view index to look at</param>
@@ -110,12 +187,8 @@ namespace UnityEditor.Rendering.LookDev
                 EditorApplication.update += SynchronizeCameraStates;
         }
 
-        /// <summary>Update the environment used.</summary>
-        /// <param name="environmentOrCubemapAsset">
-        /// The new <see cref="Environment"/> to use.
-        /// Or the <see cref="Cubemap"/> to use to build a new one.
-        /// Other types will raise an ArgumentException.
-        /// </param>
+        /// <summary>Update the environment library used.</summary>
+        /// <param name="library">The new EnvironmentLibrary</param>
         public void UpdateEnvironmentLibrary(EnvironmentLibrary library)
         {
             m_EnvironmentLibraryGUID = "";
@@ -172,6 +245,7 @@ namespace UnityEditor.Rendering.LookDev
 
 
         private bool disposedValue = false; // To detect redundant calls
+        /// <summary>Disposable behaviour</summary>
         void IDisposable.Dispose()
         {
             if (!disposedValue)
@@ -181,6 +255,14 @@ namespace UnityEditor.Rendering.LookDev
 
                 disposedValue = true;
             }
+        }
+
+        internal bool HasLibraryAssetChanged(EnvironmentLibrary environmentLibrary)
+        {
+            if (environmentLibrary == null)
+                return !String.IsNullOrEmpty(m_EnvironmentLibraryGUID);
+
+            return m_EnvironmentLibraryGUID != AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(environmentLibrary));
         }
     }
 
@@ -196,10 +278,13 @@ namespace UnityEditor.Rendering.LookDev
         public ViewIndex lastFocusedView = ViewIndex.First;
         /// <summary>The state of the side panel</summary>
         public SidePanel showedSidePanel;
+        /// <summary>The view to change when manipulating the Debug side panel</summary>
+        [NonSerialized]
+        public TargetDebugView debugPanelSource = TargetDebugView.Both;
 
         [SerializeField]
         internal ComparisonGizmoState gizmoState = new ComparisonGizmoState();
-        
+
         internal bool isSimpleView => viewLayout == Layout.FullFirstView || viewLayout == Layout.FullSecondView;
         internal bool isMultiView => viewLayout == Layout.HorizontalSplit || viewLayout == Layout.VerticalSplit;
         internal bool isCombinedView => viewLayout == Layout.CustomSplit;
@@ -214,20 +299,19 @@ namespace UnityEditor.Rendering.LookDev
         /// <summary>The position and rotation of the camera</summary>
         [field: SerializeField]
         public CameraState camera { get; private set; } = new CameraState();
-        
+
         /// <summary>The currently viewed debugState</summary>
-        [field: SerializeField]
         public DebugContext debug { get; private set; } = new DebugContext();
 
         //Environment asset, sub-asset (under a library) or cubemap
         [SerializeField]
-        string environmentGUID = ""; //Empty GUID
+        string m_EnvironmentGUID = ""; //Empty GUID
 
         /// <summary>
         /// Check if an Environment is registered for this view.
         /// The result will be accurate even if the Environment have not been reloaded yet.
         /// </summary>
-        public bool hasEnvironment => !String.IsNullOrEmpty(environmentGUID);
+        public bool hasEnvironment => !String.IsNullOrEmpty(m_EnvironmentGUID);
 
         /// <summary>The currently used Environment</summary>
         public Environment environment { get; private set; }
@@ -267,7 +351,7 @@ namespace UnityEditor.Rendering.LookDev
         /// </param>
         public void UpdateEnvironment(UnityEngine.Object environmentOrCubemapAsset)
         {
-            environmentGUID = "";
+            m_EnvironmentGUID = "";
             environment = null;
             if (environmentOrCubemapAsset == null || environmentOrCubemapAsset.Equals(null))
                 return;
@@ -279,15 +363,12 @@ namespace UnityEditor.Rendering.LookDev
             string GUID;
             long localIDInFile;
             AssetDatabase.TryGetGUIDAndLocalFileIdentifier(environmentOrCubemapAsset, out GUID, out localIDInFile);
-            environmentGUID = $"{GUID},{localIDInFile}";
+            m_EnvironmentGUID = $"{GUID},{localIDInFile}";
 
             if (environmentOrCubemapAsset is Environment)
                 environment = environmentOrCubemapAsset as Environment;
             else //Cubemap
-            {
-                environment = new Environment();
-                environment.sky.cubemap = environmentOrCubemapAsset as Cubemap;
-            }
+                environment = Environment.GetTemporaryEnvironmentForCubemap(environmentOrCubemapAsset as Cubemap);
         }
 
         void LoadEnvironmentFromGUID()
@@ -295,7 +376,7 @@ namespace UnityEditor.Rendering.LookDev
             environment = null;
 
             GUID storedGUID;
-            string[] GUIDAndLocalIDInFile = environmentGUID.Split(new[] { ',' });
+            string[] GUIDAndLocalIDInFile = m_EnvironmentGUID.Split(new[] { ',' });
             GUID.TryParse(GUIDAndLocalIDInFile[0], out storedGUID);
             if (storedGUID.Empty())
                 return;
@@ -324,8 +405,7 @@ namespace UnityEditor.Rendering.LookDev
             else if (savedType == typeof(Cubemap))
             {
                 Cubemap cubemap = AssetDatabase.LoadAssetAtPath<Cubemap>(path);
-                environment = new Environment();
-                environment.sky.cubemap = cubemap;
+                environment = Environment.GetTemporaryEnvironmentForCubemap(cubemap);
             }
         }
 
@@ -385,9 +465,14 @@ namespace UnityEditor.Rendering.LookDev
     /// <summary>
     /// Class that will contain debug value used.
     /// </summary>
-    [System.Serializable]
     public class DebugContext
     {
+        /// <summary>Display shadows in view.</summary>
+        public bool shadow = true;
+
+        /// <summary>Debug mode displayed. -1 means none.</summary>
+        public int viewMode = -1;
+
         ///// <summary>Display the debug grey balls</summary>
         //public bool greyBalls;
 

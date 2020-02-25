@@ -9,8 +9,8 @@ using UnityEditor.VFX.UIElements;
 using Object = UnityEngine.Object;
 using Type = System.Type;
 
-using VFXVector3Field = UnityEditor.VFX.UIElements.VFXVector3Field;
-using VFXColorField = UnityEditor.VFX.UIElements.VFXColorField;
+using VFXVector3Field = UnityEditor.VFX.UI.VFXVector3Field;
+using VFXColorField = UnityEditor.VFX.UI.VFXColorField;
 
 namespace UnityEditor.VFX.UI
 {
@@ -78,7 +78,11 @@ namespace UnityEditor.VFX.UI
             m_VectorField.SetEnabled(propertyEnabled);
             if (m_ColorField != null)
                 m_ColorField.SetEnabled(propertyEnabled);
+
+
         }
+
+
 
         protected override void UpdateIndeterminate()
         {
@@ -89,7 +93,7 @@ namespace UnityEditor.VFX.UI
 
         public override float GetPreferredControlWidth()
         {
-            return 140;
+            return 170;
         }
 
         public override bool IsCompatible(IPropertyRMProvider provider)

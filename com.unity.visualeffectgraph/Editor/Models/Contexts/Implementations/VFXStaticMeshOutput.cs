@@ -10,13 +10,13 @@ namespace UnityEditor.VFX
     [VFXInfo]
     class VFXStaticMeshOutput : VFXContext, IVFXSubRenderer
     {
-        [VFXSetting]
+        [VFXSetting, Tooltip("Specifies the shader with which the mesh output is rendered.")]
         private Shader shader; // not serialized here but in VFXDataMesh
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.None), SerializeField, Header("Rendering Options")]
         protected int sortPriority = 0;
 
-        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField]
+        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("When enabled, the mesh output will cast shadows.")]
         protected bool castShadows = false;
 
         // IVFXSubRenderer interface
@@ -48,13 +48,35 @@ namespace UnityEditor.VFX
             base.OnEnable();
             shader = ((VFXDataMesh)GetData()).shader;
         }
+            
+        public override bool SetupCompilation()
+        {
+            shader = ((VFXDataMesh)GetData()).shader;
+
+            return true;
+        }
 
         protected override void OnInvalidate(VFXModel model, VFXModel.InvalidationCause cause)
         {
             if (model == this && cause == VFXModel.InvalidationCause.kSettingChanged)
-                ((VFXDataMesh)GetData()).shader = shader;
+            {
+                var data = (VFXDataMesh)GetData();
+                data.shader = shader;
+            }
 
             base.OnInvalidate(model, cause);
+        }
+
+        public override void GetImportDependentAssets(HashSet<int> dependencies)
+        {
+            base.GetImportDependentAssets(dependencies);
+
+            if (!object.ReferenceEquals(shader,null))
+            {
+                Shader shader = ((VFXDataMesh)GetData()).shader;
+
+                dependencies.Add(shader.GetInstanceID());
+            }
         }
 
         protected override IEnumerable<VFXPropertyWithValue> inputProperties
@@ -65,70 +87,88 @@ namespace UnityEditor.VFX
                 yield return new VFXPropertyWithValue(new VFXProperty(typeof(Transform), "transform"), Transform.defaultValue);
                 yield return new VFXPropertyWithValue(new VFXProperty(typeof(uint), "subMeshMask",new VFXPropertyAttribute(VFXPropertyAttribute.Type.kBitField)), uint.MaxValue);
 
-                if (shader != null)
+
+                if( GetData() != null)
                 {
-                    var propertyAttribs = new List<object>(1);
-                    for (int i = 0; i < ShaderUtil.GetPropertyCount(shader); ++i)
+                    Shader copyShader = ((VFXDataMesh)GetData()).shader;
+
+                    if (copyShader != null)
                     {
-                        if (ShaderUtil.IsShaderPropertyHidden(shader, i) || ShaderUtil.IsShaderPropertyNonModifiableTexureProperty(shader, i))
-                            continue;
-
-                        Type propertyType = null;
-                        propertyAttribs.Clear();
-
-                        switch (ShaderUtil.GetPropertyType(shader, i))
+                        var mat = ((VFXDataMesh)GetData()).GetOrCreateMaterial();
+                        var propertyAttribs = new List<object>(1);
+                        for (int i = 0; i < ShaderUtil.GetPropertyCount(copyShader); ++i)
                         {
-                            case ShaderUtil.ShaderPropertyType.Color:
-                                propertyType = typeof(Color);
-                                break;
-                            case ShaderUtil.ShaderPropertyType.Vector:
-                                propertyType = typeof(Vector4);
-                                break;
-                            case ShaderUtil.ShaderPropertyType.Float:
-                                propertyType = typeof(float);
-                                break;
-                            case ShaderUtil.ShaderPropertyType.Range:
-                                propertyType = typeof(float);
-                                float minRange = ShaderUtil.GetRangeLimits(shader, i, 1);
-                                float maxRange = ShaderUtil.GetRangeLimits(shader, i, 2);
-                                propertyAttribs.Add(new RangeAttribute(minRange, maxRange));
-                                break;
-                            case ShaderUtil.ShaderPropertyType.TexEnv:
+                            if (ShaderUtil.IsShaderPropertyHidden(copyShader, i) || ShaderUtil.IsShaderPropertyNonModifiableTexureProperty(copyShader, i))
+                                continue;
+
+                            Type propertyType = null;
+                            object propertyValue = null;
+
+                            var propertyName = ShaderUtil.GetPropertyName(copyShader, i);
+                            var propertyNameId = Shader.PropertyToID(propertyName);
+
+                            propertyAttribs.Clear();
+
+                            switch (ShaderUtil.GetPropertyType(copyShader, i))
                             {
-                                switch (ShaderUtil.GetTexDim(shader, i))
+                                case ShaderUtil.ShaderPropertyType.Color:
+                                    propertyType = typeof(Color);
+                                    propertyValue = mat.GetColor(propertyNameId);
+                                    break;
+                                case ShaderUtil.ShaderPropertyType.Vector:
+                                    propertyType = typeof(Vector4);
+                                    propertyValue = mat.GetVector(propertyNameId);
+                                    break;
+                                case ShaderUtil.ShaderPropertyType.Float:
+                                    propertyType = typeof(float);
+                                    propertyValue = mat.GetFloat(propertyNameId);
+                                    break;
+                                case ShaderUtil.ShaderPropertyType.Range:
+                                    propertyType = typeof(float);
+                                    float minRange = ShaderUtil.GetRangeLimits(copyShader, i, 1);
+                                    float maxRange = ShaderUtil.GetRangeLimits(copyShader, i, 2);
+                                    propertyAttribs.Add(new RangeAttribute(minRange, maxRange));
+                                    propertyValue = mat.GetFloat(propertyNameId);
+                                    break;
+                                case ShaderUtil.ShaderPropertyType.TexEnv:
                                 {
-                                    case TextureDimension.Tex2D:
-                                        propertyType = typeof(Texture2D);
-                                        break;
-                                    case TextureDimension.Tex3D:
-                                        propertyType = typeof(Texture3D);
-                                        break;
-                                    default:
-                                        break;     // TODO
+                                    switch (ShaderUtil.GetTexDim(copyShader, i))
+                                    {
+                                        case TextureDimension.Tex2D:
+                                            propertyType = typeof(Texture2D);
+                                            break;
+                                        case TextureDimension.Tex3D:
+                                            propertyType = typeof(Texture3D);
+                                            break;
+                                        default:
+                                            break;     // TODO
+                                    }
+                                    propertyValue = mat.GetTexture(propertyNameId);
+                                    break;
                                 }
-                                break;
+                                default:
+                                    break;
                             }
-                            default:
-                                break;
-                        }
 
-                        if (propertyType != null)
-                        {
-                            string propertyName = ShaderUtil.GetPropertyName(shader, i);
-                            propertyAttribs.Add(new TooltipAttribute(ShaderUtil.GetPropertyDescription(shader, i)));
-                            yield return new VFXPropertyWithValue(new VFXProperty(propertyType, propertyName, VFXPropertyAttribute.Create(propertyAttribs.ToArray())));
+                            if (propertyType != null)
+                            {
+                                propertyAttribs.Add(new TooltipAttribute(ShaderUtil.GetPropertyDescription(copyShader, i)));
+                                yield return new VFXPropertyWithValue(new VFXProperty(propertyType, propertyName, VFXPropertyAttribute.Create(propertyAttribs.ToArray())), propertyValue);
+                            }
                         }
                     }
                 }
             }
         }
 
-        public override string name { get { return "Static Mesh Output"; } }
+        public override string name { get { return "Output Mesh"; } }
         public override string codeGeneratorTemplate { get { return null; } }
         public override VFXTaskType taskType { get { return VFXTaskType.Output; } }
 
         public override VFXExpressionMapper GetExpressionMapper(VFXDeviceTarget target)
         {
+            var meshData = (VFXDataMesh)GetData();
+
             switch (target)
             {
                 case VFXDeviceTarget.GPU:
@@ -160,6 +200,38 @@ namespace UnityEditor.VFX
                     mapper.AddExpression(GetInputSlot(0).GetExpression(), "mesh", -1);
                     mapper.AddExpression(GetInputSlot(1).GetExpression(), "transform", -1);
                     mapper.AddExpression(GetInputSlot(2).GetExpression(), "subMeshMask", -1);
+
+                    // TODO Remove this once material are serialized
+                    // Add material properties
+                    if (shader != null)
+                    {
+                        var mat = meshData.GetOrCreateMaterial();
+                        for (int i = 0; i < ShaderUtil.GetPropertyCount(shader); ++i)
+                        {
+                            if (ShaderUtil.IsShaderPropertyHidden(shader, i))
+                            {
+                                var name = ShaderUtil.GetPropertyName(shader, i);
+                                var nameId = Shader.PropertyToID(name);
+                                if (!mat.HasProperty(nameId))
+                                    continue;
+
+                                VFXExpression expr = null;
+                                switch (ShaderUtil.GetPropertyType(shader, i))
+                                {
+                                    case ShaderUtil.ShaderPropertyType.Float:
+                                        expr = VFXValue.Constant<float>(mat.GetFloat(nameId));
+                                        break;
+                                    default:
+                                        break;
+                                }
+
+                                if (expr != null)
+                                    mapper.AddExpression(expr, name, -1);
+
+                            }
+                        }
+                    }
+
                     return mapper;
                 }
 

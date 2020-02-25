@@ -3,24 +3,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using UnityEngine.VFX;
 
 namespace UnityEditor.VFX
 {
     // Attribute used to normalize a Vector or float
     [System.AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
-    public sealed class NormalizeAttribute : PropertyAttribute
+    sealed class NormalizeAttribute : PropertyAttribute
     {
     }
 
     // Attribute used to display a float in degrees in the UI
     [System.AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
-    public sealed class AngleAttribute : PropertyAttribute
+    sealed class AngleAttribute : PropertyAttribute
     {
     }
 
     // Attribute used to constrain a property to a Regex query
     [System.AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
-    public sealed class RegexAttribute : PropertyAttribute
+    sealed class RegexAttribute : PropertyAttribute
     {
         public RegexAttribute(string _pattern, int _maxLength = int.MaxValue) { pattern = _pattern; maxLength = _maxLength; }
 
@@ -46,7 +47,7 @@ namespace UnityEditor.VFX
 
         public static VFXPropertyAttribute[] Create(params object[] attributes)
         {
-            return attributes.SelectMany(a => s_RegisteredAttributes.Where(o => o.Key.IsAssignableFrom(a.GetType()))
+            return attributes.Where(t=> t!= null).SelectMany(a => s_RegisteredAttributes.Where(o => o.Key.IsAssignableFrom(a.GetType()))
                 .Select(o => o.Value(a))).ToArray();
         }
 
@@ -59,10 +60,42 @@ namespace UnityEditor.VFX
                     switch (attribute.m_Type)
                     {
                         case Type.kRange:
-                            exp = VFXOperatorUtility.Clamp(exp, VFXValue.Constant(attribute.m_Min), VFXValue.Constant(attribute.m_Max));
+                            switch (exp.valueType)
+                            {
+                                case VFXValueType.Int32:
+                                    exp = VFXOperatorUtility.Clamp(exp, VFXValue.Constant((int)attribute.m_Min), VFXValue.Constant((int)attribute.m_Max), false);
+                                    break;
+                                case VFXValueType.Uint32:
+                                    exp = VFXOperatorUtility.Clamp(exp, VFXValue.Constant((uint)attribute.m_Min), VFXValue.Constant((uint)attribute.m_Max), false);
+                                    break;
+                                case VFXValueType.Float:
+                                case VFXValueType.Float2:
+                                case VFXValueType.Float3:
+                                case VFXValueType.Float4:
+                                    exp = VFXOperatorUtility.Clamp(exp, VFXValue.Constant(attribute.m_Min), VFXValue.Constant(attribute.m_Max));
+                                    break;
+                                default:
+                                    throw new NotImplementedException(string.Format("Cannot use RangeAttribute on value of type: {0}", exp.valueType));
+                            }
                             break;
                         case Type.kMin:
-                            exp = new VFXExpressionMax(exp, VFXOperatorUtility.CastFloat(VFXValue.Constant(attribute.m_Min), exp.valueType));
+                            switch(exp.valueType)
+                            {
+                                case VFXValueType.Int32:
+                                    exp = new VFXExpressionMax(exp, VFXValue.Constant((int)attribute.m_Min));
+                                    break;
+                                case VFXValueType.Uint32:
+                                    exp = new VFXExpressionMax(exp, VFXValue.Constant((uint)attribute.m_Min));
+                                    break;
+                                case VFXValueType.Float:
+                                case VFXValueType.Float2:
+                                case VFXValueType.Float3:
+                                case VFXValueType.Float4:
+                                    exp = new VFXExpressionMax(exp, VFXOperatorUtility.CastFloat(VFXValue.Constant(attribute.m_Min), exp.valueType));
+                                    break;
+                                default:
+                                    throw new NotImplementedException(string.Format("Cannot use MinAttribute on value of type: {0}", exp.valueType));
+                            }    
                             break;
                         case Type.kNormalize:
                             exp = VFXOperatorUtility.Normalize(exp);

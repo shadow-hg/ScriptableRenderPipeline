@@ -1,8 +1,9 @@
+using UnityEngine;
 using UnityEngine.Experimental.Rendering;
+using System.Collections.Generic;
 
 namespace UnityEngine.Rendering.HighDefinition
 {
-#if ENABLE_RAYTRACING
     public partial class HDRenderPipeline
     {
         // The set of parameters that define our ray tracing deferred lighting pass
@@ -11,16 +12,20 @@ namespace UnityEngine.Rendering.HighDefinition
             // Generic attributes
             public bool rayBinning;
             public LayerMask layerMask;
+            public float rayBias;
             public float maxRayLength;
             public float clampValue;
             public bool includeSky;
             public bool diffuseLightingOnly;
             public bool halfResolution;
-            public HDRaytracingEnvironment rtEnv;
+            public int rayCountFlag;
+            public int rayCountType;
+            public bool preExpose;
 
             // Camera data
             public int width;
             public int height;
+            public int viewCount;
             public float fov;
 
             // Compute buffers
@@ -35,12 +40,13 @@ namespace UnityEngine.Rendering.HighDefinition
             public ComputeShader rayBinningCS;
         }
 
-        public struct DeferredLightingRTResources
+        struct DeferredLightingRTResources
         {
             // Input Buffer
             public RTHandle directionBuffer;
             public RTHandle depthStencilBuffer;
             public RTHandle normalBuffer;
+            public Texture skyTexture;
 
             // Temporary buffers
             public RTHandle gbuffer0;
@@ -48,6 +54,9 @@ namespace UnityEngine.Rendering.HighDefinition
             public RTHandle gbuffer2;
             public RTHandle gbuffer3;
             public RTHandle distanceBuffer;
+
+            // Debug textures
+            public RTHandle rayCountTexture;
 
             // Output Buffer
             public RTHandle litBuffer;
@@ -75,7 +84,6 @@ namespace UnityEngine.Rendering.HighDefinition
             m_RayBinResult = new ComputeBuffer(1, sizeof(uint));
             m_RayBinSizeResult = new ComputeBuffer(1, sizeof(uint));
 
-            // Buffer manager used to do the split integration
             m_RaytracingGBufferManager = new GBufferManager(asset, m_DeferredMaterial);
             m_RaytracingGBufferManager.CreateBuffers();
         }
@@ -88,20 +96,24 @@ namespace UnityEngine.Rendering.HighDefinition
             m_RaytracingGBufferManager.DestroyBuffers();
         }
 
-        DeferredLightingRTResources PrepareDeferredLightingRTResources(RTHandle directionBuffer, RTHandle ouputBuffer)
+        DeferredLightingRTResources PrepareDeferredLightingRTResources(HDCamera hdCamera, RTHandle directionBuffer, RTHandle ouputBuffer)
         {
             DeferredLightingRTResources deferredResources = new DeferredLightingRTResources();
 
             deferredResources.directionBuffer = directionBuffer;
             deferredResources.depthStencilBuffer = m_SharedRTManager.GetDepthStencilBuffer();
             deferredResources.normalBuffer = m_SharedRTManager.GetNormalBuffer();
+            deferredResources.skyTexture = m_SkyManager.GetSkyReflection(hdCamera);
 
             // Temporary buffers
             deferredResources.gbuffer0 = m_RaytracingGBufferManager.GetBuffer(0);
             deferredResources.gbuffer1 = m_RaytracingGBufferManager.GetBuffer(1);
             deferredResources.gbuffer2 = m_RaytracingGBufferManager.GetBuffer(2);
             deferredResources.gbuffer3 = m_RaytracingGBufferManager.GetBuffer(3);
-            deferredResources.distanceBuffer = m_RaytracingDistanceBuffer;
+            deferredResources.distanceBuffer = GetRayTracingBuffer(InternalRayTracingBuffers.Distance);
+
+            // Debug textures
+            deferredResources.rayCountTexture = m_RayCountManager.GetRayCountTexture();
 
             // Output Buffer
             deferredResources.litBuffer = ouputBuffer;
@@ -110,7 +122,7 @@ namespace UnityEngine.Rendering.HighDefinition
         }
 
         void CheckBinningBuffersSize(HDCamera hdCamera)
-            {
+        {
             // Evaluate the dispatch parameters
             int numTilesRayBinX = (hdCamera.actualWidth + (binningTileSize - 1)) / binningTileSize;
             int numTilesRayBinY = (hdCamera.actualHeight + (binningTileSize - 1)) / binningTileSize;
@@ -156,7 +168,7 @@ namespace UnityEngine.Rendering.HighDefinition
             cmd.SetComputeIntParam(config.rayBinningCS, HDShaderIDs._RayBinTileCountX, numTilesRayBinX);
 
             // Run the binning
-            cmd.DispatchCompute(config.rayBinningCS, currentKernel, numTilesRayBinX, numTilesRayBinY, 1);
+            cmd.DispatchCompute(config.rayBinningCS, currentKernel, numTilesRayBinX, numTilesRayBinY, config.viewCount);
         }
 
         static void RenderRaytracingDeferredLighting(CommandBuffer cmd, in DeferredLightingRTParameters parameters, in DeferredLightingRTResources buffers)
@@ -189,14 +201,19 @@ namespace UnityEngine.Rendering.HighDefinition
             // Set the acceleration structure for the pass
             cmd.SetRayTracingAccelerationStructure(parameters.gBufferRaytracingRT, HDShaderIDs._RaytracingAccelerationStructureName, parameters.accelerationStructure);
 
+            // Set ray count tex
+            cmd.SetRayTracingIntParam(parameters.gBufferRaytracingRT, HDShaderIDs._RayCountEnabled, parameters.rayCountFlag);
+            cmd.SetRayTracingIntParam(parameters.gBufferRaytracingRT, HDShaderIDs._RayCountType, parameters.rayCountType);
+            cmd.SetRayTracingTextureParam(parameters.gBufferRaytracingRT, HDShaderIDs._RayCountTexture, buffers.rayCountTexture);
+
             // Bind all input parameter
-            cmd.SetRayTracingFloatParams(parameters.gBufferRaytracingRT, HDShaderIDs._RaytracingRayBias, parameters.rtEnv.rayBias);
+            cmd.SetRayTracingFloatParams(parameters.gBufferRaytracingRT, HDShaderIDs._RaytracingRayBias, parameters.rayBias);
+            cmd.SetRayTracingIntParams(parameters.gBufferRaytracingRT, HDShaderIDs._RayTracingLayerMask, parameters.layerMask);
             cmd.SetRayTracingFloatParams(parameters.gBufferRaytracingRT, HDShaderIDs._RaytracingRayMaxLength, parameters.maxRayLength);
             cmd.SetRayTracingTextureParam(parameters.gBufferRaytracingRT, HDShaderIDs._DepthTexture, buffers.depthStencilBuffer);
             cmd.SetRayTracingTextureParam(parameters.gBufferRaytracingRT, HDShaderIDs._NormalBufferTexture, buffers.normalBuffer);
             cmd.SetRayTracingTextureParam(parameters.gBufferRaytracingRT, HDShaderIDs._RaytracingDirectionBuffer, buffers.directionBuffer);
-            float pixelSpreadAngle = parameters.fov * (Mathf.PI / 180.0f) / Mathf.Min(parameters.width, parameters.height);
-            cmd.SetGlobalFloat(HDShaderIDs._RaytracingPixelSpreadAngle, pixelSpreadAngle);
+            cmd.SetRayTracingFloatParams(parameters.gBufferRaytracingRT, HDShaderIDs._RaytracingPixelSpreadAngle, HDRenderPipeline.GetPixelSpreadAngle(parameters.fov, parameters.width, parameters.height));
 
             // Bind the output textures
             cmd.SetRayTracingTextureParam(parameters.gBufferRaytracingRT, HDShaderIDs._GBufferTextureRW[0], buffers.gbuffer0);
@@ -210,7 +227,8 @@ namespace UnityEngine.Rendering.HighDefinition
             uint heightResolution = (uint)parameters.height;
 
             // Include the sky if required
-            cmd.SetGlobalInt(HDShaderIDs._RaytracingIncludeSky, parameters.includeSky ? 1 : 0);
+            cmd.SetRayTracingIntParam(parameters.gBufferRaytracingRT, HDShaderIDs._RaytracingIncludeSky, parameters.includeSky ? 1 : 0);
+            cmd.SetRayTracingTextureParam(parameters.gBufferRaytracingRT, HDShaderIDs._SkyTexture, buffers.skyTexture);
 
             // Only compute diffuse lighting if required
             CoreUtils.SetKeyword(cmd, "DIFFUSE_LIGHTING_ONLY", parameters.diffuseLightingOnly);
@@ -233,7 +251,7 @@ namespace UnityEngine.Rendering.HighDefinition
             else
             {
                 cmd.SetRayTracingIntParams(parameters.gBufferRaytracingRT, "_RaytracingHalfResolution", parameters.halfResolution ? 1 : 0);
-                cmd.DispatchRays(parameters.gBufferRaytracingRT, m_RayGenGBuffer, widthResolution, heightResolution, 1);
+                cmd.DispatchRays(parameters.gBufferRaytracingRT, m_RayGenGBuffer, widthResolution, heightResolution, (uint)parameters.viewCount);
             }
 
             // Disable the diffuse lighting only flag
@@ -254,7 +272,10 @@ namespace UnityEngine.Rendering.HighDefinition
             cmd.SetComputeTextureParam(parameters.deferredRaytracingCS, currentKernel, HDShaderIDs._GBufferTexture[2], buffers.gbuffer2);
             cmd.SetComputeTextureParam(parameters.deferredRaytracingCS, currentKernel, HDShaderIDs._GBufferTexture[3], buffers.gbuffer3);
             cmd.SetComputeTextureParam(parameters.deferredRaytracingCS, currentKernel, HDShaderIDs._LightLayersTexture, TextureXR.GetWhiteTexture());
+
+            // Inject the other parameters
             cmd.SetComputeFloatParam(parameters.deferredRaytracingCS, HDShaderIDs._RaytracingIntensityClamp, parameters.clampValue);
+            cmd.SetComputeIntParam(parameters.deferredRaytracingCS, HDShaderIDs._RaytracingPreExposition, parameters.preExpose ? 1 : 0);
 
             // Bind the output texture
             cmd.SetComputeTextureParam(parameters.deferredRaytracingCS, currentKernel, HDShaderIDs._RaytracingLitBufferRW, buffers.litBuffer);
@@ -265,8 +286,7 @@ namespace UnityEngine.Rendering.HighDefinition
             int numTilesYHR = (texHeight + (areaTileSize - 1)) / areaTileSize;
 
             // Compute the texture
-            cmd.DispatchCompute(parameters.deferredRaytracingCS, currentKernel, numTilesXHR, numTilesYHR, 1);
+            cmd.DispatchCompute(parameters.deferredRaytracingCS, currentKernel, numTilesXHR, numTilesYHR, parameters.viewCount);
         }
     }
-#endif
 }

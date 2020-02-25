@@ -11,7 +11,7 @@ The Motion Blur effect uses velocities from HDRP's velocity buffer. This means t
 1. In the Scene or Hierarchy view, select a GameObject that contains a Volume component to view it in the Inspector.
 2. In the Inspector, navigate to **Add Override > Post-processing** and click on **Motion Blur**. HDRP now applies **Motion Blur** to any Camera this Volume affects.
 
-Motion Blur includes some [advanced properties](Advanced-Properties.html) that you must manually expose.
+Motion Blur includes [more options](More-Options.html) that you must manually expose.
 
 ## Properties
 
@@ -24,6 +24,7 @@ Motion Blur includes some [advanced properties](Advanced-Properties.html) that y
 | **Maximum Velocity**               | Use the slider to set the maximum velocity, in pixels, that HDRP allows for all sources of motion blur except Camera rotation. This clamps any value above this threshold to the threshold value. Higher values result in a more intense blur, and an increase in resource intensity. |
 | **Minimum Velocity**               | Use the slider to set the minimum velocity, in pixels, that triggers motion blur. Higher values mean that HDRP does not calculate Motion Blur for slow-moving GameObjects. This decreases the resource intensity. |
 | **Camera Rotation Velocity Clamp** | Use the slider to set the maximum velocity that HDRP allows Camera rotation to contribute to the velocities of GameObjects. This value is expressed in terms of screen fraction. Higher values result in Camera rotation giving wider blurs. |
+| **Camera Motion Blur**             | This option can be toggled off to remove the contribution of the camera movement from the motion blur. |
 
 ## Details
 

@@ -5,7 +5,7 @@ namespace UnityEngine.Rendering.Universal
     ///
     /// This pass renders the standard Unity skybox.
     /// </summary>
-    internal class DrawSkyboxPass : ScriptableRenderPass
+    public class DrawSkyboxPass : ScriptableRenderPass
     {
         public DrawSkyboxPass(RenderPassEvent evt)
         {

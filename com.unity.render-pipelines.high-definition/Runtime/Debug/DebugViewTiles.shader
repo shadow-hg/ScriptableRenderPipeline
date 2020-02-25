@@ -19,7 +19,7 @@ Shader "Hidden/HDRP/DebugViewTiles"
 
             #pragma multi_compile USE_FPTL_LIGHTLIST USE_CLUSTERED_LIGHTLIST
             #pragma multi_compile SHOW_LIGHT_CATEGORIES SHOW_FEATURE_VARIANTS
-            #pragma multi_compile _ IS_DRAWINSTANCEDINDIRECT
+            #pragma multi_compile _ IS_DRAWPROCEDURALINDIRECT
 
             //-------------------------------------------------------------------------------------
             // Include
@@ -51,7 +51,7 @@ Shader "Hidden/HDRP/DebugViewTiles"
 
             uint GetDispatchIndirectCount(uint variant)
             {
-#if IS_DRAWINSTANCEDINDIRECT
+#if IS_DRAWPROCEDURALINDIRECT
                 return g_DispatchIndirectBuffer[variant * 4 + 1];
 #else
                 return g_DispatchIndirectBuffer[variant * 3 + 0] / 4; // 4 8x8 groups per tile
@@ -94,7 +94,7 @@ Shader "Hidden/HDRP/DebugViewTiles"
                 uint2 pixelCoord = (tileCoord + uint2((quadVertex+1) & 1, (quadVertex >> 1) & 1)) * tileSize;
 
 #if defined(UNITY_STEREO_INSTANCING_ENABLED)
-                // With instancing, all tiles from the indirect buffer are processed so we need to discard them if they don't match the current eye index
+                // With XR single-pass, all tiles from the indirect buffer are processed so we need to discard them if they don't match the current eye index
                 uint tile_StereoEyeIndex = tileIndex >> TILE_INDEX_SHIFT_EYE;
                 if (unity_StereoEyeIndex != tile_StereoEyeIndex)
                     variant = -1;

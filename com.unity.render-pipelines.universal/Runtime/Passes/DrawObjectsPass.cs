@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace UnityEngine.Rendering.Universal
+namespace UnityEngine.Rendering.Universal.Internal
 {
     /// <summary>
     /// Draw  objects into the given color and depth target
@@ -8,20 +8,24 @@ namespace UnityEngine.Rendering.Universal
     /// You can use this pass to render objects that have a material and/or shader
     /// with the pass names UniversalForward or SRPDefaultUnlit.
     /// </summary>
-    internal class DrawObjectsPass : ScriptableRenderPass
+    public class DrawObjectsPass : ScriptableRenderPass
     {
         FilteringSettings m_FilteringSettings;
         RenderStateBlock m_RenderStateBlock;
         List<ShaderTagId> m_ShaderTagIdList = new List<ShaderTagId>();
         string m_ProfilerTag;
+        ProfilingSampler m_ProfilingSampler;
         bool m_IsOpaque;
+
+        static readonly int s_DrawObjectPassDataPropID = Shader.PropertyToID("_DrawObjectPassData");
 
         public DrawObjectsPass(string profilerTag, bool opaque, RenderPassEvent evt, RenderQueueRange renderQueueRange, LayerMask layerMask, StencilState stencilState, int stencilReference)
         {
             m_ProfilerTag = profilerTag;
+            m_ProfilingSampler = new ProfilingSampler(profilerTag);
+            m_ShaderTagIdList.Add(new ShaderTagId("SRPDefaultUnlit"));
             m_ShaderTagIdList.Add(new ShaderTagId("UniversalForward"));
             m_ShaderTagIdList.Add(new ShaderTagId("LightweightForward"));
-            m_ShaderTagIdList.Add(new ShaderTagId("SRPDefaultUnlit"));
             renderPassEvent = evt;
             m_FilteringSettings = new FilteringSettings(renderQueueRange, layerMask);
             m_RenderStateBlock = new RenderStateBlock(RenderStateMask.Nothing);
@@ -39,8 +43,13 @@ namespace UnityEngine.Rendering.Universal
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             CommandBuffer cmd = CommandBufferPool.Get(m_ProfilerTag);
-            using (new ProfilingSample(cmd, m_ProfilerTag))
+            using (new ProfilingScope(cmd, m_ProfilingSampler))
             {
+                // Global render pass data containing various settings.
+                // x,y,z are currently unused
+                // w is used for knowing whether the object is opaque(1) or alpha blended(0)
+                Vector4 drawObjectPassData = new Vector4(0.0f, 0.0f, 0.0f, (m_IsOpaque) ? 1.0f : 0.0f);
+                cmd.SetGlobalVector(s_DrawObjectPassDataPropID, drawObjectPassData);
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
 

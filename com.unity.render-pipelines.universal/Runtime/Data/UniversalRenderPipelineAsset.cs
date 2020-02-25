@@ -3,7 +3,9 @@ using UnityEngine.Scripting.APIUpdating;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.ProjectWindowCallback;
+using System.IO;
 #endif
+using System.ComponentModel;
 
 namespace UnityEngine.Rendering.LWRP
 {
@@ -78,10 +80,17 @@ namespace UnityEngine.Rendering.Universal
         AllShaders,
     }
 
+    public enum PipelineDebugLevel
+    {
+        Disabled,
+        Profiling,
+    }
+
     [MovedFrom("UnityEngine.Rendering.LWRP")] public enum RendererType
     {
         Custom,
         ForwardRenderer,
+        _2DRenderer,
     }
 
     public enum ColorGradingMode
@@ -90,21 +99,30 @@ namespace UnityEngine.Rendering.Universal
         HighDynamicRange
     }
 
+    [ExcludeFromPreset]
     public class UniversalRenderPipelineAsset : RenderPipelineAsset, ISerializationCallbackReceiver
     {
         Shader m_DefaultShader;
-        internal ScriptableRenderer m_Renderer;
+        ScriptableRenderer[] m_Renderers = new ScriptableRenderer[1];
 
         // Default values set when a new UniversalRenderPipeline asset is created
-        [SerializeField] int k_AssetVersion = 4;
+        [SerializeField] int k_AssetVersion = 5;
+        [SerializeField] int k_AssetPreviousVersion = 5;
 
+        // Deprecated settings for upgrading sakes
         [SerializeField] RendererType m_RendererType = RendererType.ForwardRenderer;
+        [EditorBrowsable(EditorBrowsableState.Never)]
         [SerializeField] internal ScriptableRendererData m_RendererData = null;
+
+        // Renderer settings
+        [SerializeField] internal ScriptableRendererData[] m_RendererDataList = new ScriptableRendererData[1];
+        [SerializeField] internal int m_DefaultRendererIndex = 0;
 
         // General settings
         [SerializeField] bool m_RequireDepthTexture = false;
         [SerializeField] bool m_RequireOpaqueTexture = false;
         [SerializeField] Downsampling m_OpaqueDownsampling = Downsampling._2xBilinear;
+        [SerializeField] bool m_SupportsTerrainHoles = true;
 
         // Quality settings
         [SerializeField] bool m_SupportsHDR = false;
@@ -136,6 +154,7 @@ namespace UnityEngine.Rendering.Universal
         [SerializeField] bool m_UseSRPBatcher = true;
         [SerializeField] bool m_SupportsDynamicBatching = false;
         [SerializeField] bool m_MixedLightingSupported = true;
+        [SerializeField] PipelineDebugLevel m_DebugLevel = PipelineDebugLevel.Disabled;
 
         // Post-processing settings
         [SerializeField] ColorGradingMode m_ColorGradingMode = ColorGradingMode.LowDynamicRange;
@@ -162,13 +181,16 @@ namespace UnityEngine.Rendering.Universal
 
         public static readonly string packagePath = "Packages/com.unity.render-pipelines.universal";
 
-        public static UniversalRenderPipelineAsset Create()
+        public static UniversalRenderPipelineAsset Create(ScriptableRendererData rendererData = null)
         {
+            // Create Universal RP Asset
             var instance = CreateInstance<UniversalRenderPipelineAsset>();
-
-            instance.LoadBuiltinRendererData();
+            if (rendererData != null)
+                instance.m_RendererDataList[0] = rendererData;
+            else
+                instance.m_RendererDataList[0] = CreateInstance<ForwardRendererData>();
+            // Initialize default Renderer
             instance.m_EditorResourcesAsset = LoadResourceFile<UniversalRenderPipelineEditorResources>();
-            instance.m_Renderer = instance.m_RendererData.InternalCreateRenderer();
             return instance;
         }
 
@@ -177,15 +199,44 @@ namespace UnityEngine.Rendering.Universal
         {
             public override void Action(int instanceId, string pathName, string resourceFile)
             {
-                AssetDatabase.CreateAsset(Create(), pathName);
+                //Create asset
+                AssetDatabase.CreateAsset(Create(CreateRendererAsset(pathName, RendererType.ForwardRenderer)), pathName);
             }
         }
 
-        [MenuItem("Assets/Create/Rendering/Universal Render Pipeline/Pipeline Asset", priority = CoreUtils.assetCreateMenuPriority1)]
+        [MenuItem("Assets/Create/Rendering/Universal Render Pipeline/Pipeline Asset (Forward Renderer)", priority = CoreUtils.assetCreateMenuPriority1)]
         static void CreateUniversalPipeline()
         {
             ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, CreateInstance<CreateUniversalPipelineAsset>(),
                 "UniversalRenderPipelineAsset.asset", null, null);
+        }
+
+        static ScriptableRendererData CreateRendererAsset(string path, RendererType type, bool relativePath = true)
+        {
+            ScriptableRendererData data = CreateRendererData(type);
+            string dataPath;
+            if (relativePath)
+                dataPath =
+                    $"{Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path))}_Renderer{Path.GetExtension(path)}";
+            else
+                dataPath = path;
+            AssetDatabase.CreateAsset(data, dataPath);
+            return data;
+        }
+
+        static ScriptableRendererData CreateRendererData(RendererType type)
+        {
+            switch (type)
+            {
+                case RendererType.ForwardRenderer:
+                    return CreateInstance<ForwardRendererData>();
+                // 2D renderer is experimental
+                case RendererType._2DRenderer:
+                    return CreateInstance<Experimental.Rendering.Universal.Renderer2DData>();
+                // Forward Renderer is the fallback renderer that works on all platforms
+                default:
+                    return CreateInstance<ForwardRendererData>();
+            }
         }
 
         //[MenuItem("Assets/Create/Rendering/Universal Pipeline Editor Resources", priority = CoreUtils.assetCreateMenuPriority1)]
@@ -216,7 +267,7 @@ namespace UnityEngine.Rendering.Universal
             }
 
             // Validate the resource file
-            ResourceReloader.ReloadAllNullIn(resourceAsset, packagePath);
+            ResourceReloader.TryReloadAllNullIn(resourceAsset, packagePath);
 
             return resourceAsset;
         }
@@ -233,34 +284,72 @@ namespace UnityEngine.Rendering.Universal
         }
 #endif
 
-        public ScriptableRendererData LoadBuiltinRendererData()
+        public ScriptableRendererData LoadBuiltinRendererData(RendererType type = RendererType.ForwardRenderer)
         {
-            switch (m_RendererType)
-            {
-                // Forward Renderer is the fallback renderer that works on all platforms
-                default:
 #if UNITY_EDITOR
-                    m_RendererData = LoadResourceFile<ForwardRendererData>();
+            EditorUtility.SetDirty(this);
+            return m_RendererDataList[0] =
+                CreateRendererAsset("Assets/ForwardRenderer.asset", type, false);
 #else
-                    m_RendererData = null;
+            m_RendererDataList[0] = null;
+            return m_RendererDataList[0];
 #endif
-                    break;
-            }
-
-            return m_RendererData;
         }
 
         protected override RenderPipeline CreatePipeline()
         {
-            if (m_RendererData == null)
-                LoadBuiltinRendererData();
+            if (m_RendererDataList == null)
+                m_RendererDataList = new ScriptableRendererData[1];
 
             // If no data we can't create pipeline instance
-            if (m_RendererData == null)
-                return null;
+            if (m_RendererDataList[0] == null)
+            {
+                // If previous version and current version are miss-matched then we are waiting for the upgrader to kick in
+                if(k_AssetPreviousVersion != k_AssetVersion)
+                    return null;
 
-            m_Renderer = m_RendererData.InternalCreateRenderer();
+                Debug.LogError(
+                    $"Default Renderer is missing, make sure there is a Renderer assigned as the default on the current Universal RP asset:{UniversalRenderPipeline.asset.name}",
+                    this);
+                return null;
+            }
+
+            CreateRenderers();
             return new UniversalRenderPipeline(this);
+        }
+
+        void DestroyRenderers()
+        {
+            foreach (var renderer in m_Renderers)
+                renderer?.Dispose();
+        }
+
+        protected override void OnValidate()
+        {
+            DestroyRenderers();
+
+            // This will call RenderPipelineManager.CleanupRenderPipeline that in turn disposes the render pipeline instance and
+            // assign pipeline asset reference to null
+            base.OnValidate();
+        }
+
+        protected override void OnDisable()
+        {
+            DestroyRenderers();
+
+            // This will call RenderPipelineManager.CleanupRenderPipeline that in turn disposes the render pipeline instance and
+            // assign pipeline asset reference to null
+            base.OnDisable();
+        }
+
+        void CreateRenderers()
+        {
+            m_Renderers = new ScriptableRenderer[m_RendererDataList.Length];
+            for (int i = 0; i < m_RendererDataList.Length; ++i)
+            {
+                if (m_RendererDataList[i] != null)
+                    m_Renderers[i] = m_RendererDataList[i].InternalCreateRenderer();
+            }
         }
 
         Material GetMaterial(DefaultMaterialType materialType)
@@ -293,25 +382,105 @@ namespace UnityEngine.Rendering.Universal
 #endif
         }
 
+        /// <summary>
+        /// Returns the default renderer being used by this pipeline.
+        /// </summary>
         public ScriptableRenderer scriptableRenderer
         {
             get
             {
-                if (scriptableRendererData.isInvalidated || m_Renderer == null)
-                    m_Renderer = scriptableRendererData.InternalCreateRenderer();
+                if (m_RendererDataList?.Length > m_DefaultRendererIndex && m_RendererDataList[m_DefaultRendererIndex] == null)
+                {
+                    Debug.LogError("Default renderer is missing from the current Pipeline Asset.", this);
+                    return null;
+                }
 
-                return m_Renderer;
+                if (scriptableRendererData.isInvalidated || m_Renderers[m_DefaultRendererIndex] == null)
+                {
+                    m_Renderers[m_DefaultRendererIndex] = scriptableRendererData.InternalCreateRenderer();
+                }
+
+                return m_Renderers[m_DefaultRendererIndex];
             }
+        }
+
+        /// <summary>
+        /// Returns a renderer from the current pipeline asset
+        /// </summary>
+        /// <param name="index">Index to the renderer. If invalid index is passed, the default renderer is returned instead.</param>
+        /// <returns></returns>
+        public ScriptableRenderer GetRenderer(int index)
+        {
+            if (index == -1)
+                index = m_DefaultRendererIndex;
+
+            if (index >= m_RendererDataList.Length || index < 0 || m_RendererDataList[index] == null)
+            {
+                Debug.LogWarning(
+                    $"Renderer at index {index.ToString()} is missing, falling back to Default Renderer {m_RendererDataList[m_DefaultRendererIndex].name}",
+                    this);
+                index = m_DefaultRendererIndex;
+            }
+
+            // RendererData list differs from RendererList. Create RendererList.
+            if (m_Renderers == null || m_Renderers.Length < m_RendererDataList.Length)
+                CreateRenderers();
+
+            // This renderer data is outdated or invalid, we recreate the renderer
+            // so we construct all render passes with the updated data
+            if (m_RendererDataList[index].isInvalidated || m_Renderers[index] == null)
+                m_Renderers[index] = m_RendererDataList[index].InternalCreateRenderer();
+
+            return m_Renderers[index];
         }
 
         internal ScriptableRendererData scriptableRendererData
         {
             get
             {
-                if (m_RendererData == null)
+                if (m_RendererDataList[m_DefaultRendererIndex] == null)
                     CreatePipeline();
 
-                return m_RendererData;
+                return m_RendererDataList[m_DefaultRendererIndex];
+            }
+        }
+
+#if UNITY_EDITOR
+        internal GUIContent[] rendererDisplayList
+        {
+            get
+            {
+                GUIContent[] list = new GUIContent[m_RendererDataList.Length + 1];
+                list[0] = new GUIContent($"Default Renderer ({RendererDataDisplayName(m_RendererDataList[m_DefaultRendererIndex])})");
+
+                for (var i = 1; i < list.Length; i++)
+                {
+                    list[i] = new GUIContent($"{(i - 1).ToString()}: {RendererDataDisplayName(m_RendererDataList[i-1])}");
+                }
+                return list;
+            }
+        }
+
+        string RendererDataDisplayName(ScriptableRendererData data)
+        {
+            if (data != null)
+                return data.name;
+
+            return "NULL (Missing RendererData)";
+        }
+
+#endif
+
+        internal int[] rendererIndexList
+        {
+            get
+            {
+                int[] list = new int[m_RendererDataList.Length + 1];
+                for (int i = 0; i < list.Length; i++)
+                {
+                    list[i] = i - 1;
+                }
+                return list;
             }
         }
 
@@ -330,6 +499,11 @@ namespace UnityEngine.Rendering.Universal
         public Downsampling opaqueDownsampling
         {
             get { return m_OpaqueDownsampling; }
+        }
+
+        public bool supportsTerrainHoles
+        {
+            get { return m_SupportsTerrainHoles; }
         }
 
         public bool supportsHDR
@@ -440,6 +614,11 @@ namespace UnityEngine.Rendering.Universal
         {
             get { return m_ShaderVariantLogLevel; }
             set { m_ShaderVariantLogLevel = value; }
+        }
+
+        public PipelineDebugLevel debugLevel
+        {
+            get => m_DebugLevel;
         }
 
         public bool useSRPBatcher
@@ -575,19 +754,61 @@ namespace UnityEngine.Rendering.Universal
         {
             if (k_AssetVersion < 3)
             {
-                k_AssetVersion = 3;
                 m_SoftShadowsSupported = (m_ShadowType == ShadowQuality.SoftShadows);
+                k_AssetPreviousVersion = k_AssetVersion;
+                k_AssetVersion = 3;
             }
 
             if (k_AssetVersion < 4)
             {
-                k_AssetVersion = 4;
                 m_AdditionalLightShadowsSupported = m_LocalShadowsSupported;
                 m_AdditionalLightsShadowmapResolution = m_LocalShadowsAtlasResolution;
                 m_AdditionalLightsPerObjectLimit = m_MaxPixelLights;
                 m_MainLightShadowmapResolution = m_ShadowAtlasResolution;
+                k_AssetPreviousVersion = k_AssetVersion;
+                k_AssetVersion = 4;
+            }
+
+            if (k_AssetVersion < 5)
+            {
+                if (m_RendererType == RendererType.Custom)
+                {
+                    m_RendererDataList[0] = m_RendererData;
+                }
+                k_AssetPreviousVersion = k_AssetVersion;
+                k_AssetVersion = 5;
+            }
+#if UNITY_EDITOR
+            if (k_AssetPreviousVersion != k_AssetVersion)
+            {
+                EditorApplication.delayCall += () => UpgradeAsset(this);
+            }
+#endif
+        }
+
+#if UNITY_EDITOR
+        static void UpgradeAsset(UniversalRenderPipelineAsset asset)
+        {
+            if(asset.k_AssetPreviousVersion < 5)
+            {
+                if (asset.m_RendererType == RendererType.ForwardRenderer)
+                {
+                    var data = AssetDatabase.LoadAssetAtPath<ForwardRendererData>("Assets/ForwardRenderer.asset");
+                    if (data)
+                    {
+                        asset.m_RendererDataList[0] = data;
+                    }
+                    else
+                    {
+                        asset.LoadBuiltinRendererData();
+                    }
+                    asset.m_RendererData = null; // Clears the old renderer
+                }
+
+                asset.k_AssetPreviousVersion = 5;
             }
         }
+#endif
 
         float ValidateShadowBias(float value)
         {
@@ -602,6 +823,27 @@ namespace UnityEngine.Rendering.Universal
         float ValidateRenderScale(float value)
         {
             return Mathf.Max(UniversalRenderPipeline.minRenderScale, Mathf.Min(value, UniversalRenderPipeline.maxRenderScale));
+        }
+
+        /// <summary>
+        /// Check to see if the RendererData list contains valide RendererData references.
+        /// </summary>
+        /// <param name="partial">This bool controls whether to test against all or any, if false then there has to be no invalid RendererData</param>
+        /// <returns></returns>
+        internal bool ValidateRendererDataList(bool partial = false)
+        {
+            var emptyEntries = 0;
+            for (int i = 0; i < m_RendererDataList.Length; i++) emptyEntries += ValidateRendererData(i) ? 0 : 1;
+            if (partial)
+                return emptyEntries == 0;
+            return emptyEntries != m_RendererDataList.Length;
+        }
+
+        internal bool ValidateRendererData(int index)
+        {
+            // Check to see if you are asking for the default renderer
+            if (index == -1) index = m_DefaultRendererIndex;
+            return index < m_RendererDataList.Length ? m_RendererDataList[index] != null : false;
         }
     }
 }

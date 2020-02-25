@@ -38,48 +38,45 @@ namespace UnityEditor.VFX.Operator
 
         public class CustomInputProperties
         {
-            [Range(0.0f, 1.0f)]
+            [Range(0.0f, 1.0f), Tooltip("Sets the UV coordinates with which to sample the depth buffer.")]
             public Vector2 UVSpawn;
         }
 
         public class RangeInputProperties
         {
-            [Range(0.0f, 1.0f)]
+            [Range(0.0f, 1.0f), Tooltip("Sets the depth range within which to spawn particles. Particles outside of this range are culled.")]
             public Vector2 DepthRange = new Vector2(0.0f, 1.0f);
         }
 
-        [VFXSetting]
-        [Tooltip("Specifies which Camera to use to project particles onto its depth. Can use the camera tagged 'Main', or a custom camera.")]
+        [VFXSetting, Tooltip("Specifies which Camera to use to project particles onto its depth. Can use the camera tagged 'Main', or a custom camera.")]
         public Block.CameraMode camera = CameraMode.Main;
 
-        [VFXSetting]
-        [Tooltip("Specifies how particles are positioned on the screen. They can be placed sequentially in an even grid, randomly, or with a custom UV position.")]
+        [VFXSetting, Tooltip("Specifies how particles are positioned on the screen. They can be placed sequentially in an even grid, randomly, or with a custom UV position.")]
         public PositionMode mode = PositionMode.Random;
 
-        [VFXSetting]
-        [Tooltip("Specifies how to determine whether the particle should be alive. A particle can be culled when it is projected on the far camera plane, between a specific range, or culling can be disabled.")]
+        [VFXSetting, Tooltip("Specifies how to determine whether the particle should be alive. A particle can be culled when it is projected on the far camera plane, between a specific range, or culling can be disabled.")]
         public CullMode cullMode = CullMode.None;
 
-        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector)]
+        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), Tooltip("When enabled, particles inherit the color from the color buffer.")]
         public bool inheritSceneColor = false;
 
         private int _customCameraOffset = 0;
 
         public class OutputPropertiesCommon
         {
-            [Tooltip("The particle position projected on the depth buffer of the selected Camera.")]
-            public Vector3 position = Vector3.zero;
+            [Tooltip("Outputs the position projected on the depth buffer of the selected Camera in world space.")]
+            public Position position = Vector3.zero;
         }
 
         public class OutputPropertiesCull
         {
-            [Tooltip("Determines whether the particle is alive or culled by the Cull Mode settings.")]
+            [Tooltip("Outputs whether the particle should be alive or culled by the Cull Mode settings.")]
             public bool isAlive = true;
         }
 
         public class OutputPropertiesColor
         {
-            [Tooltip("The color of the particle, derived from the color buffer of the selected Camera.")]
+            [Tooltip("Outputs the color of the particle derived from the color buffer of the selected Camera.")]
             public Color color = Color.black;
         }
 
@@ -130,6 +127,11 @@ namespace UnityEditor.VFX.Operator
             }
         }
 
+        public override VFXCoordinateSpace GetOutputSpaceFromSlot(VFXSlot outputSlot)
+        {
+            return VFXCoordinateSpace.World;
+        }
+
         protected override VFXExpression[] BuildExpression(VFXExpression[] inputExpression)
         {
 
@@ -145,7 +147,7 @@ namespace UnityEditor.VFX.Operator
 
             // Camera expressions
             var expressions = Block.CameraHelper.AddCameraExpressions(GetExpressionsFromSlots(this), camera);
-            Block.CameraMatricesExpressions camMatrices = Block.CameraHelper.GetMatricesExpressions(expressions);
+            Block.CameraMatricesExpressions camMatrices = Block.CameraHelper.GetMatricesExpressions(expressions, VFXCoordinateSpace.World);
 
             var Camera_depthBuffer = expressions.First(e => e.name == "Camera_depthBuffer").exp;
             var CamPixDim = expressions.First(e => e.name == "Camera_pixelDimensions").exp;
@@ -158,7 +160,7 @@ namespace UnityEditor.VFX.Operator
             {
                 case PositionMode.Random:
                     // Random UVs
-                    uv = new VFXExpressionCombine(VFXOperatorUtility.FixedRandom(0, true), VFXOperatorUtility.FixedRandom(1, true));
+                    uv = new VFXExpressionCombine(VFXOperatorUtility.FixedRandom(0, VFXSeedMode.PerParticle), VFXOperatorUtility.FixedRandom(1, VFXSeedMode.PerParticle));
                     break;
 
                 case PositionMode.Sequential:
@@ -189,10 +191,10 @@ namespace UnityEditor.VFX.Operator
             }
 
             VFXExpression projpos = uv * VFXValue.Constant<Vector2>(new Vector2(2f, 2f)) - VFXValue.Constant<Vector2>(Vector2.one);
-            VFXExpression uvs = new VFXExpressionCombine(uv.x * CamPixDim.x, uv.y * CamPixDim.y, VFXValue.Constant(0f));
+            VFXExpression uvs = new VFXExpressionCombine(uv.x * CamPixDim.x, uv.y * CamPixDim.y, VFXValue.Constant(0f), VFXValue.Constant(0f));
 
             // Get depth
-            VFXExpression depth = new VFXExpressionExtractComponent(new VFXExpressionLoadTexture2D(Camera_depthBuffer, uvs), 0);
+            VFXExpression depth = new VFXExpressionExtractComponent(new VFXExpressionLoadTexture2DArray(Camera_depthBuffer, uvs), 0);
 
             if (SystemInfo.usesReversedZBuffer)
             {
@@ -241,7 +243,7 @@ namespace UnityEditor.VFX.Operator
             if (inheritSceneColor)
             {
                 VFXExpression Camera_colorBuffer = expressions.First(e => e.name == "Camera_colorBuffer").exp;
-                VFXExpression tempColor = new VFXExpressionLoadTexture2D(Camera_colorBuffer, uvs);
+                VFXExpression tempColor = new VFXExpressionLoadTexture2DArray(Camera_colorBuffer, uvs);
                 color = new VFXExpressionCombine(tempColor.x, tempColor.y, tempColor.z, VFXValue.Constant(1.0f));
             }
 

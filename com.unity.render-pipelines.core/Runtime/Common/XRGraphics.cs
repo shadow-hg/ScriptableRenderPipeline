@@ -1,37 +1,41 @@
 using System;
 using UnityEditor;
 
-#if ENABLE_VR
-
-#if UNITY_2017_2_OR_NEWER
+#if ENABLE_VR && ENABLE_VR_MODULE
 using UnityEngine.XR;
-using XRSettings = UnityEngine.XR.XRSettings;
-#elif UNITY_5_6_OR_NEWER
-using UnityEngine.VR;
-using XRSettings = UnityEngine.VR.VRSettings;
 #endif
-
-#endif // ENABLE_VR
 
 namespace UnityEngine.Rendering
 {
+    /// <summary>
+    /// XRGraphics insulates SRP from API changes across platforms, Editor versions, and as XR transitions into XR SDK
+    /// </summary>
     [Serializable]
     public class XRGraphics
-    { // XRGraphics insulates SRP from API changes across platforms, Editor versions, and as XR transitions into XR SDK
-
+    {
+        /// <summary>
+        /// Stereo Rendering Modes.
+        /// </summary>
         public enum StereoRenderingMode
         {
+            /// <summary>Multi Pass.</summary>
             MultiPass = 0,
+            /// <summary>Single Pass.</summary>
             SinglePass,
+            /// <summary>Single Pass Instanced.</summary>
             SinglePassInstanced,
+            /// <summary>Single Pass Multi View.</summary>
             SinglePassMultiView
         };
 
+        /// <summary>
+        /// Eye texture resolution scale.
+        /// </summary>
         public static float eyeTextureResolutionScale
         {
             get
             {
-#if ENABLE_VR
+#if ENABLE_VR && ENABLE_VR_MODULE
                 if (enabled)
                     return XRSettings.eyeTextureResolutionScale;
 #endif
@@ -39,30 +43,47 @@ namespace UnityEngine.Rendering
             }
         }
 
+        /// <summary>
+        /// Render viewport scale.
+        /// </summary>
         public static float renderViewportScale
         {
             get
             {
-#if ENABLE_VR
+#if ENABLE_VR && ENABLE_VR_MODULE
                 if (enabled)
                     return XRSettings.renderViewportScale;
 #endif
-                return 1.0f;    
+                return 1.0f;
             }
         }
 
+        /// <summary>
+        /// Try enable.
+        /// </summary>
 #if UNITY_EDITOR
+        // TryEnable gets updated before "play" is pressed- we use this for updating GUI only.
         public static bool tryEnable
-        { // TryEnable gets updated before "play" is pressed- we use this for updating GUI only.
-            get { return PlayerSettings.virtualRealitySupported; }
+        {
+            get
+            {
+            #if UNITY_2020_1_OR_NEWER
+                return false;
+            #else
+                return UnityEditorInternal.VR.VREditor.GetVREnabledOnTargetGroup(BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget));
+            #endif
+            }
         }
 #endif
 
+        /// <summary>
+        /// SRP should use this to safely determine whether XR is enabled at runtime.
+        /// </summary>
         public static bool enabled
-        { // SRP should use this to safely determine whether XR is enabled at runtime.
+        {
             get
             {
-#if ENABLE_VR
+#if ENABLE_VR && ENABLE_VR_MODULE
                 return XRSettings.enabled;
 #else
                 return false;
@@ -70,11 +91,14 @@ namespace UnityEngine.Rendering
             }
         }
 
+        /// <summary>
+        /// Returns true if the XR device is active.
+        /// </summary>
         public static bool isDeviceActive
         {
             get
             {
-#if ENABLE_VR
+#if ENABLE_VR && ENABLE_VR_MODULE
                 if (enabled)
                     return XRSettings.isDeviceActive;
 #endif
@@ -82,11 +106,14 @@ namespace UnityEngine.Rendering
             }
         }
 
+        /// <summary>
+        /// Name of the loaded XR device.
+        /// </summary>
         public static string loadedDeviceName
         {
             get
             {
-#if ENABLE_VR
+#if ENABLE_VR && ENABLE_VR_MODULE
                 if (enabled)
                     return XRSettings.loadedDeviceName;
 #endif
@@ -94,11 +121,14 @@ namespace UnityEngine.Rendering
             }
         }
 
+        /// <summary>
+        /// List of supported XR devices.
+        /// </summary>
         public static string[] supportedDevices
         {
             get
             {
-#if ENABLE_VR
+#if ENABLE_VR && ENABLE_VR_MODULE
                 if (enabled)
                     return XRSettings.supportedDevices;
 #endif
@@ -106,37 +136,30 @@ namespace UnityEngine.Rendering
             }
         }
 
+        /// <summary>
+        /// Stereo rendering mode.
+        /// </summary>
         public static StereoRenderingMode stereoRenderingMode
         {
             get
             {
-#if ENABLE_VR
+#if ENABLE_VR && ENABLE_VR_MODULE
                 if (enabled)
-                {
-    #if UNITY_2018_3_OR_NEWER
                     return (StereoRenderingMode)XRSettings.stereoRenderingMode;
-    #else // Reverse engineer it
-                    if (eyeTextureDesc.vrUsage == VRTextureUsage.TwoEyes)
-                    {
-                        if (eyeTextureDesc.dimension == UnityEngine.Rendering.TextureDimension.Tex2DArray)
-                            return StereoRenderingMode.SinglePassInstanced;
-                        return StereoRenderingMode.SinglePassDoubleWide;
-                    }
-                    else
-                        return StereoRenderingMode.MultiPass;
-    #endif // UNITY_2018_3_OR_NEWER
-                }
-#endif // ENABLE_VR
+#endif
 
                 return StereoRenderingMode.SinglePass;
             }
         }
 
+        /// <summary>
+        /// Eye texture descriptor.
+        /// </summary>
         public static RenderTextureDescriptor eyeTextureDesc
         {
             get
             {
-#if ENABLE_VR
+#if ENABLE_VR && ENABLE_VR_MODULE
                 if (enabled)
                     return XRSettings.eyeTextureDesc;
 #endif
@@ -144,26 +167,33 @@ namespace UnityEngine.Rendering
             }
         }
 
+        /// <summary>
+        /// Eye texture width.
+        /// </summary>
         public static int eyeTextureWidth
         {
             get
             {
-#if ENABLE_VR
+#if ENABLE_VR && ENABLE_VR_MODULE
                 if (enabled)
                     return XRSettings.eyeTextureWidth;
 #endif
                 return 0;
             }
         }
+
+        /// <summary>
+        /// Eye texture height.
+        /// </summary>
         public static int eyeTextureHeight
         {
             get
             {
-#if ENABLE_VR
+#if ENABLE_VR && ENABLE_VR_MODULE
                 if (enabled)
                     return XRSettings.eyeTextureHeight;
 #endif
-                return 0;          
+                return 0;
             }
         }
     }

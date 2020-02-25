@@ -1,7 +1,8 @@
 namespace UnityEngine.Rendering.HighDefinition
 {
-    [VolumeComponentMenu("Fog/Exponential Fog")]
-    public class ExponentialFog : AtmosphericScattering
+    // Deprecated, kept for migration
+    [VolumeComponentDeprecated()]
+    class ExponentialFog : AtmosphericScattering
     {
         private readonly static int m_ExpFogParam = Shader.PropertyToID("_ExpFogParameters");
 
@@ -14,8 +15,8 @@ namespace UnityEngine.Rendering.HighDefinition
 
         internal override void PushShaderParameters(HDCamera hdCamera, CommandBuffer cmd)
         {
-            PushShaderParametersCommon(hdCamera, cmd, FogType.Exponential);
-            cmd.SetGlobalVector(m_ExpFogParam, new Vector4(Mathf.Max(1e-6f, fogDistance.value), fogBaseHeight.value, fogHeightAttenuation.value, 0.0f));
         }
+
+        ExponentialFog() => displayName = "Exponential Fog (Deprecated)";
     }
 }

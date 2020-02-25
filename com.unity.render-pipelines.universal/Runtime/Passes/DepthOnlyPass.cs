@@ -1,6 +1,6 @@
 using System;
 
-namespace UnityEngine.Rendering.Universal
+namespace UnityEngine.Rendering.Universal.Internal
 {
     /// <summary>
     /// Render all objects that have a 'DepthOnly' pass into the given depth buffer.
@@ -8,7 +8,7 @@ namespace UnityEngine.Rendering.Universal
     /// You can use this pass to prime a depth buffer for subsequent rendering.
     /// Use it as a z-prepass, or use it to generate a depth buffer.
     /// </summary>
-    internal class DepthOnlyPass : ScriptableRenderPass
+    public class DepthOnlyPass : ScriptableRenderPass
     {
         int kDepthBufferBits = 32;
 
@@ -16,7 +16,8 @@ namespace UnityEngine.Rendering.Universal
         internal RenderTextureDescriptor descriptor { get; private set; }
 
         FilteringSettings m_FilteringSettings;
-        string m_ProfilerTag = "Depth Prepass";
+        const string m_ProfilerTag = "Depth Prepass";
+        ProfilingSampler m_ProfilingSampler = new ProfilingSampler(m_ProfilerTag);
         ShaderTagId m_ShaderTagId = new ShaderTagId("DepthOnly");
 
         /// <summary>
@@ -55,7 +56,7 @@ namespace UnityEngine.Rendering.Universal
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             CommandBuffer cmd = CommandBufferPool.Get(m_ProfilerTag);
-            using (new ProfilingSample(cmd, m_ProfilerTag))
+            using (new ProfilingScope(cmd, m_ProfilingSampler))
             {
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
@@ -67,7 +68,9 @@ namespace UnityEngine.Rendering.Universal
                 ref CameraData cameraData = ref renderingData.cameraData;
                 Camera camera = cameraData.camera;
                 if (cameraData.isStereoEnabled)
-                    context.StartMultiEye(camera);
+                {
+                    context.StartMultiEye(camera, eyeIndex);
+                }
 
                 context.DrawRenderers(renderingData.cullResults, ref drawSettings, ref m_FilteringSettings);
 

@@ -38,6 +38,7 @@ namespace UnityEngine.Experimental.Rendering.Universal
         internal Rect   pixelRect           = Rect.zero;
         internal float  orthoSize           = 1.0f;
         internal float  unitsPerPixel       = 0.0f;
+        internal int    cinemachineVCamZoom = 1;
 
         internal PixelPerfectCameraInternal(IPixelPerfectCamera component)
         {
@@ -161,7 +162,7 @@ namespace UnityEngine.Experimental.Rendering.Universal
                 unitsPerPixel = 1.0f / (zoom * assetsPPU);
         }
 
-        internal Rect CalculateFinalBlitPixelRect(float cameraAspect, int screenWidth, int screenHeight)
+        internal Rect CalculateFinalBlitPixelRect(int screenWidth, int screenHeight)
         {
             // This VP is used when the internal temp RT is blitted back to screen.
             Rect pixelRect = new Rect();
@@ -170,6 +171,8 @@ namespace UnityEngine.Experimental.Rendering.Universal
             {
                 // stretch (fit either width or height)
                 float screenAspect = (float)screenWidth / screenHeight;
+                float cameraAspect = (float)m_Component.refResolutionX / m_Component.refResolutionY;
+
                 if (screenAspect > cameraAspect)
                 {
                     pixelRect.height = screenHeight;
@@ -204,6 +207,29 @@ namespace UnityEngine.Experimental.Rendering.Universal
             }
 
             return pixelRect;
+        }
+
+        // Find a pixel-perfect orthographic size as close to targetOrthoSize as possible.
+        internal float CorrectCinemachineOrthoSize(float targetOrthoSize)
+        {
+            float correctedOrthoSize;
+
+            if (m_Component.upscaleRT)
+            {
+                cinemachineVCamZoom = Math.Max(1, Mathf.RoundToInt(orthoSize / targetOrthoSize));
+                correctedOrthoSize = orthoSize / cinemachineVCamZoom;
+            }
+            else
+            {
+                cinemachineVCamZoom = Math.Max(1, Mathf.RoundToInt(zoom * orthoSize / targetOrthoSize));
+                correctedOrthoSize = zoom * orthoSize / cinemachineVCamZoom;
+            }
+
+            // In this case the actual zoom level is cinemachineVCamZoom instead of zoom.
+            if (!m_Component.upscaleRT && !m_Component.pixelSnapping)
+                unitsPerPixel = 1.0f / (cinemachineVCamZoom * m_Component.assetsPPU);
+
+            return correctedOrthoSize;
         }
     }
 }

@@ -6,6 +6,7 @@ using UnityEditor.ShaderGraph.Drawing;
 using UnityEngine;
 using UnityEditor.Graphing;
 using UnityEditor.Rendering;
+using UnityEngine.Rendering.ShaderGraph;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.ShaderGraph
@@ -18,6 +19,9 @@ namespace UnityEditor.ShaderGraph
         {
             name = "Output";
         }
+
+        // Link to the Sub Graph overview page instead of the specific Node page, seems more useful
+        public override string documentationURL => Documentation.GetPageLink("Sub-graph");
 
         void ValidateShaderStage()
             {
@@ -79,7 +83,7 @@ namespace UnityEditor.ShaderGraph
         public int AddSlot(ConcreteSlotValueType concreteValueType)
         {
             var index = this.GetInputSlots<ISlot>().Count() + 1;
-            string name = string.Format("Out_{0}", NodeUtils.GetDuplicateSafeNameForSlot(this, index, concreteValueType.ToString()));
+            name = NodeUtils.GetDuplicateSafeNameForSlot(this, index, "Out_" + concreteValueType.ToString());
             AddSlot(MaterialSlot.CreateMaterialSlot(concreteValueType.ToSlotValueType(), index, name,
                 NodeUtils.GetHLSLSafeName(name), SlotType.Input, Vector4.zero));
             return index;

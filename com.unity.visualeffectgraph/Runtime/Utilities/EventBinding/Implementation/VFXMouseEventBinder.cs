@@ -1,3 +1,5 @@
+#if VFX_HAS_PHYSICS
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,7 +7,7 @@ using UnityEngine;
 namespace UnityEngine.VFX.Utility
 {
     [RequireComponent(typeof(Collider))]
-    public class VFXMouseEventBinder : VFXEventBinderBase
+    class VFXMouseEventBinder : VFXEventBinderBase
     {
         public enum Activation
         {
@@ -69,3 +71,4 @@ namespace UnityEngine.VFX.Utility
         }
     }
 }
+#endif

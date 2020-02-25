@@ -7,7 +7,7 @@
 #define UNITY_STEREO_INSTANCING_ENABLED
 #endif
 
-#if defined(STEREO_MULTIVIEW_ON) && (defined(SHADER_API_GLES3) || defined(SHADER_API_GLCORE)) && !(defined(SHADER_API_SWITCH))
+#if defined(STEREO_MULTIVIEW_ON) && (defined(SHADER_API_GLES3) || defined(SHADER_API_GLCORE) || defined(SHADER_API_VULKAN)) && !(defined(SHADER_API_SWITCH))
     #define UNITY_STEREO_MULTIVIEW_ENABLED
 #endif
 
@@ -20,6 +20,7 @@
 #define unity_MatrixV unity_StereoMatrixV[unity_StereoEyeIndex]
 #define unity_MatrixInvV unity_StereoMatrixInvV[unity_StereoEyeIndex]
 #define unity_MatrixVP unity_StereoMatrixVP[unity_StereoEyeIndex]
+#define unity_MatrixInvVP mul(unity_StereoMatrixInvV[unity_StereoEyeIndex], unity_StereoCameraInvProjection[unity_StereoEyeIndex])
 
 #define unity_CameraProjection unity_StereoCameraProjection[unity_StereoEyeIndex]
 #define unity_CameraInvProjection unity_StereoCameraInvProjection[unity_StereoEyeIndex]
@@ -93,14 +94,14 @@ CBUFFER_START(UnityPerDraw)
 float4x4 unity_ObjectToWorld;
 float4x4 unity_WorldToObject;
 float4 unity_LODFade; // x is the fade value ranging within [0,1]. y is x quantized into 16 levels
-half4 unity_WorldTransformParams; // w is usually 1.0, or -1.0 for odd-negative scale transforms
+real4 unity_WorldTransformParams; // w is usually 1.0, or -1.0 for odd-negative scale transforms
 
 // Light Indices block feature
 // These are set internally by the engine upon request by RendererConfiguration.
 real4 unity_LightData;
 real4 unity_LightIndices[2];
 
-half4 unity_ProbesOcclusion;
+float4 unity_ProbesOcclusion;
 
 // Reflection Probe 0 block feature
 // HDR environment map decode instructions
@@ -188,6 +189,7 @@ float4x4 glstate_matrix_projection;
 float4x4 unity_MatrixV;
 float4x4 unity_MatrixInvV;
 float4x4 unity_MatrixVP;
+float4x4 unity_MatrixInvVP;
 float4 unity_StereoScaleOffset;
 int unity_StereoEyeIndex;
 #endif

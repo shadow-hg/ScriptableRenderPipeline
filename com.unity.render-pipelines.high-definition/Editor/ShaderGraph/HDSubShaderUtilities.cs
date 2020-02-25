@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Data.Util;
 using UnityEditor.Graphing;
 using UnityEngine;              // Vector3,4
 using UnityEditor.ShaderGraph;
+using UnityEditor.ShaderGraph.Internal;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Rendering;
 
@@ -21,6 +23,13 @@ namespace UnityEditor.Rendering.HighDefinition
 
     static class HDRPShaderStructs
     {
+        public static string s_ResourceClassName => typeof(HDRPShaderStructs).FullName;
+
+        public static string s_AssemblyName => typeof(HDRPShaderStructs).Assembly.FullName.ToString();
+
+        struct UInt32_4
+        {}
+
         internal struct AttributesMesh
         {
             [Semantic("POSITION")]                  Vector3 positionOS;
@@ -30,6 +39,8 @@ namespace UnityEditor.Rendering.HighDefinition
             [Semantic("TEXCOORD1")][Optional]       Vector4 uv1;
             [Semantic("TEXCOORD2")][Optional]       Vector4 uv2;
             [Semantic("TEXCOORD3")][Optional]       Vector4 uv3;
+            [Semantic("BLENDWEIGHTS")][Optional]    Vector4 weights;
+            [Semantic("BLENDINDICES")][Optional]    UInt32_4 indices;
             [Semantic("COLOR")][Optional]           Vector4 color;
             [Semantic("INSTANCEID_SEMANTIC")] [PreprocessorIf("UNITY_ANY_INSTANCING_ENABLED")] uint instanceID;
         };
@@ -37,7 +48,7 @@ namespace UnityEditor.Rendering.HighDefinition
         [InterpolatorPack]
         internal struct VaryingsMeshToPS
         {
-            [Semantic("SV_Position")]                                               Vector4 positionCS;
+            [Semantic("SV_POSITION")]                                               Vector4 positionCS;
             [Optional]                                                              Vector3 positionRWS;
             [Optional]                                                              Vector3 normalWS;
             [Optional]                                                              Vector4 tangentWS;      // w contain mirror sign
@@ -47,7 +58,7 @@ namespace UnityEditor.Rendering.HighDefinition
             [Optional]                                                              Vector4 texCoord3;
             [Optional]                                                              Vector4 color;
             [Semantic("CUSTOM_INSTANCE_ID")] [PreprocessorIf("UNITY_ANY_INSTANCING_ENABLED")] uint instanceID;
-            [Semantic("FRONT_FACE_SEMANTIC")][OverrideType("FRONT_FACE_TYPE")][PreprocessorIf("defined(SHADER_STAGE_FRAGMENT) && defined(VARYINGS_NEED_CULLFACE)")] bool cullFace;
+            [Semantic("FRONT_FACE_SEMANTIC")][SystemGenerated][OverrideType("FRONT_FACE_TYPE")][PreprocessorIf("defined(SHADER_STAGE_FRAGMENT) && defined(VARYINGS_NEED_CULLFACE)")] bool cullFace;
 
             public static Dependency[] tessellationDependencies = new Dependency[]
             {
@@ -230,6 +241,8 @@ namespace UnityEditor.Rendering.HighDefinition
             [Optional] Vector4 uv3;
             [Optional] Vector4 VertexColor;
             [Optional] Vector3 TimeParameters;
+            [Optional] Vector4 BoneWeights;
+            [Optional] UInt32_4 BoneIndices;
 
             public static Dependency[] dependencies = new Dependency[]
             {                                                                       // TODO: NOCHECKIN: these dependencies are not correct for vertex pass
@@ -265,113 +278,122 @@ namespace UnityEditor.Rendering.HighDefinition
                 new Dependency("VertexDescriptionInputs.uv2",                       "AttributesMesh.uv2"),
                 new Dependency("VertexDescriptionInputs.uv3",                       "AttributesMesh.uv3"),
                 new Dependency("VertexDescriptionInputs.VertexColor",               "AttributesMesh.color"),
+
+                new Dependency("VertexDescriptionInputs.BoneWeights",               "AttributesMesh.weights"),
+                new Dependency("VertexDescriptionInputs.BoneIndices",               "AttributesMesh.indices")
             };
         };
 
         // TODO: move this out of HDRPShaderStructs
-        static public void AddActiveFieldsFromVertexGraphRequirements(HashSet<string> activeFields, ShaderGraphRequirements requirements)
+        static public void AddActiveFieldsFromVertexGraphRequirements(IActiveFieldsSet activeFields, ShaderGraphRequirements requirements)
         {
             if (requirements.requiresScreenPosition)
             {
-                activeFields.Add("VertexDescriptionInputs.ScreenPosition");
+                activeFields.AddAll("VertexDescriptionInputs.ScreenPosition");
             }
 
             if (requirements.requiresVertexColor)
             {
-                activeFields.Add("VertexDescriptionInputs.VertexColor");
+                activeFields.AddAll("VertexDescriptionInputs.VertexColor");
             }
 
             if (requirements.requiresNormal != 0)
             {
                 if ((requirements.requiresNormal & NeededCoordinateSpace.Object) > 0)
-                    activeFields.Add("VertexDescriptionInputs.ObjectSpaceNormal");
+                    activeFields.AddAll("VertexDescriptionInputs.ObjectSpaceNormal");
 
                 if ((requirements.requiresNormal & NeededCoordinateSpace.View) > 0)
-                    activeFields.Add("VertexDescriptionInputs.ViewSpaceNormal");
+                    activeFields.AddAll("VertexDescriptionInputs.ViewSpaceNormal");
 
                 if ((requirements.requiresNormal & NeededCoordinateSpace.World) > 0)
-                    activeFields.Add("VertexDescriptionInputs.WorldSpaceNormal");
+                    activeFields.AddAll("VertexDescriptionInputs.WorldSpaceNormal");
 
                 if ((requirements.requiresNormal & NeededCoordinateSpace.Tangent) > 0)
-                    activeFields.Add("VertexDescriptionInputs.TangentSpaceNormal");
+                    activeFields.AddAll("VertexDescriptionInputs.TangentSpaceNormal");
             }
 
             if (requirements.requiresTangent != 0)
             {
                 if ((requirements.requiresTangent & NeededCoordinateSpace.Object) > 0)
-                    activeFields.Add("VertexDescriptionInputs.ObjectSpaceTangent");
+                    activeFields.AddAll("VertexDescriptionInputs.ObjectSpaceTangent");
 
                 if ((requirements.requiresTangent & NeededCoordinateSpace.View) > 0)
-                    activeFields.Add("VertexDescriptionInputs.ViewSpaceTangent");
+                    activeFields.AddAll("VertexDescriptionInputs.ViewSpaceTangent");
 
                 if ((requirements.requiresTangent & NeededCoordinateSpace.World) > 0)
-                    activeFields.Add("VertexDescriptionInputs.WorldSpaceTangent");
+                    activeFields.AddAll("VertexDescriptionInputs.WorldSpaceTangent");
 
                 if ((requirements.requiresTangent & NeededCoordinateSpace.Tangent) > 0)
-                    activeFields.Add("VertexDescriptionInputs.TangentSpaceTangent");
+                    activeFields.AddAll("VertexDescriptionInputs.TangentSpaceTangent");
             }
 
             if (requirements.requiresBitangent != 0)
             {
                 if ((requirements.requiresBitangent & NeededCoordinateSpace.Object) > 0)
-                    activeFields.Add("VertexDescriptionInputs.ObjectSpaceBiTangent");
+                    activeFields.AddAll("VertexDescriptionInputs.ObjectSpaceBiTangent");
 
                 if ((requirements.requiresBitangent & NeededCoordinateSpace.View) > 0)
-                    activeFields.Add("VertexDescriptionInputs.ViewSpaceBiTangent");
+                    activeFields.AddAll("VertexDescriptionInputs.ViewSpaceBiTangent");
 
                 if ((requirements.requiresBitangent & NeededCoordinateSpace.World) > 0)
-                    activeFields.Add("VertexDescriptionInputs.WorldSpaceBiTangent");
+                    activeFields.AddAll("VertexDescriptionInputs.WorldSpaceBiTangent");
 
                 if ((requirements.requiresBitangent & NeededCoordinateSpace.Tangent) > 0)
-                    activeFields.Add("VertexDescriptionInputs.TangentSpaceBiTangent");
+                    activeFields.AddAll("VertexDescriptionInputs.TangentSpaceBiTangent");
             }
 
             if (requirements.requiresViewDir != 0)
             {
                 if ((requirements.requiresViewDir & NeededCoordinateSpace.Object) > 0)
-                    activeFields.Add("VertexDescriptionInputs.ObjectSpaceViewDirection");
+                    activeFields.AddAll("VertexDescriptionInputs.ObjectSpaceViewDirection");
 
                 if ((requirements.requiresViewDir & NeededCoordinateSpace.View) > 0)
-                    activeFields.Add("VertexDescriptionInputs.ViewSpaceViewDirection");
+                    activeFields.AddAll("VertexDescriptionInputs.ViewSpaceViewDirection");
 
                 if ((requirements.requiresViewDir & NeededCoordinateSpace.World) > 0)
-                    activeFields.Add("VertexDescriptionInputs.WorldSpaceViewDirection");
+                    activeFields.AddAll("VertexDescriptionInputs.WorldSpaceViewDirection");
 
                 if ((requirements.requiresViewDir & NeededCoordinateSpace.Tangent) > 0)
-                    activeFields.Add("VertexDescriptionInputs.TangentSpaceViewDirection");
+                    activeFields.AddAll("VertexDescriptionInputs.TangentSpaceViewDirection");
             }
 
             if (requirements.requiresPosition != 0)
             {
                 if ((requirements.requiresPosition & NeededCoordinateSpace.Object) > 0)
-                    activeFields.Add("VertexDescriptionInputs.ObjectSpacePosition");
+                    activeFields.AddAll("VertexDescriptionInputs.ObjectSpacePosition");
 
                 if ((requirements.requiresPosition & NeededCoordinateSpace.View) > 0)
-                    activeFields.Add("VertexDescriptionInputs.ViewSpacePosition");
+                    activeFields.AddAll("VertexDescriptionInputs.ViewSpacePosition");
 
                 if ((requirements.requiresPosition & NeededCoordinateSpace.World) > 0)
-                    activeFields.Add("VertexDescriptionInputs.WorldSpacePosition");
+                    activeFields.AddAll("VertexDescriptionInputs.WorldSpacePosition");
 
                 if ((requirements.requiresPosition & NeededCoordinateSpace.Tangent) > 0)
-                    activeFields.Add("VertexDescriptionInputs.TangentSpacePosition");
+                    activeFields.AddAll("VertexDescriptionInputs.TangentSpacePosition");
 
                 if ((requirements.requiresPosition & NeededCoordinateSpace.AbsoluteWorld) > 0)
-                    activeFields.Add("VertexDescriptionInputs.AbsoluteWorldSpacePosition");
+                    activeFields.AddAll("VertexDescriptionInputs.AbsoluteWorldSpacePosition");
+            }
+
+            if (requirements.requiresVertexSkinning)
+            {
+                activeFields.AddAll("VertexDescriptionInputs.BoneWeights");
+                activeFields.AddAll("VertexDescriptionInputs.BoneIndices");
             }
 
             foreach (var channel in requirements.requiresMeshUVs.Distinct())
             {
-                activeFields.Add("VertexDescriptionInputs." + channel.GetUVName());
+                activeFields.AddAll("VertexDescriptionInputs." + channel.GetUVName());
             }
 
             if (requirements.requiresTime)
             {
-                activeFields.Add("VertexDescriptionInputs.TimeParameters");
+                activeFields.AddAll("VertexDescriptionInputs.TimeParameters");
             }
         }
 
         // TODO: move this out of HDRPShaderStructs
-        static public void AddActiveFieldsFromPixelGraphRequirements(HashSet<string> activeFields, ShaderGraphRequirements requirements)
+        static public void AddActiveFieldsFromPixelGraphRequirements(IActiveFields activeFields, ShaderGraphRequirements requirements)
         {
             if (requirements.requiresScreenPosition)
             {
@@ -479,13 +501,13 @@ namespace UnityEditor.Rendering.HighDefinition
 
         public static void AddRequiredFields(
             List<string> passRequiredFields,            // fields the pass requires
-            HashSet<string> activeFields)
+            IActiveFieldsSet activeFields)
         {
             if (passRequiredFields != null)
             {
                 foreach (var requiredField in passRequiredFields)
                 {
-                    activeFields.Add(requiredField);
+                    activeFields.AddAll(requiredField);
                 }
             }
         }
@@ -500,6 +522,7 @@ namespace UnityEditor.Rendering.HighDefinition
         public List<string> Includes;
         public string TemplateName;
         public string MaterialName;
+        public List<string> ShaderStages;
         public List<string> ExtraInstancingOptions;
         public List<string> ExtraDefines;
         public List<int> VertexShaderSlots;         // These control what slots are used by the pass vertex shader
@@ -533,10 +556,18 @@ namespace UnityEditor.Rendering.HighDefinition
         }
         public OnGeneratePassDelegate OnGeneratePassImpl;
     }
-
     static class HDSubShaderUtilities
     {
-        public static bool GenerateShaderPass(AbstractMaterialNode masterNode, Pass pass, GenerationMode mode, HashSet<string> activeFields, ShaderGenerator result, List<string> sourceAssetDependencyPaths, bool vertexActive)
+
+        static List<Dependency[]> k_Dependencies = new List<Dependency[]>()
+        {
+            HDRPShaderStructs.FragInputs.dependencies,
+            HDRPShaderStructs.VaryingsMeshToPS.standardDependencies,
+            HDRPShaderStructs.SurfaceDescriptionInputs.dependencies,
+            HDRPShaderStructs.VertexDescriptionInputs.dependencies
+        };
+
+        public static bool GenerateShaderPass(AbstractMaterialNode masterNode, Pass pass, GenerationMode mode, ActiveFields activeFields, ShaderGenerator result, List<string> sourceAssetDependencyPaths, bool vertexActive)
         {
             string templatePath = Path.Combine(HDUtils.GetHDRenderPipelinePath(), "Editor/Material");
             string templateLocation = Path.Combine(Path.Combine(Path.Combine(templatePath, pass.MaterialName), "ShaderGraph"), pass.TemplateName);
@@ -557,9 +588,9 @@ namespace UnityEditor.Rendering.HighDefinition
             NodeUtils.DepthFirstCollectNodesFromNode(pixelNodes, masterNode, NodeUtils.IncludeSelf.Include, pass.PixelShaderSlots);
 
             // graph requirements describe what the graph itself requires
-            var pixelRequirements = ShaderGraphRequirements.FromNodes(pixelNodes, ShaderStageCapability.Fragment, false);   // TODO: is ShaderStageCapability.Fragment correct?
-            var vertexRequirements = ShaderGraphRequirements.FromNodes(vertexNodes, ShaderStageCapability.Vertex, false);
-            var graphRequirements = pixelRequirements.Union(vertexRequirements);
+            ShaderGraphRequirementsPerKeyword pixelRequirements = new ShaderGraphRequirementsPerKeyword();
+            ShaderGraphRequirementsPerKeyword vertexRequirements = new ShaderGraphRequirementsPerKeyword();
+            ShaderGraphRequirementsPerKeyword graphRequirements = new ShaderGraphRequirementsPerKeyword();
 
             // Function Registry tracks functions to remove duplicates, it wraps a string builder that stores the combined function string
             ShaderStringBuilder graphNodeFunctions = new ShaderStringBuilder();
@@ -574,7 +605,10 @@ namespace UnityEditor.Rendering.HighDefinition
 
             // properties used by either pixel and vertex shader
             PropertyCollector sharedProperties = new PropertyCollector();
+            KeywordCollector sharedKeywords = new KeywordCollector();
             ShaderStringBuilder shaderPropertyUniforms = new ShaderStringBuilder(1);
+            ShaderStringBuilder shaderKeywordDeclarations = new ShaderStringBuilder(1);
+            ShaderStringBuilder shaderKeywordPermutations = new ShaderStringBuilder(1);
 
             // build the graph outputs structure to hold the results of each active slots (and fill out activeFields to indicate they are active)
             string pixelGraphInputStructName = "SurfaceDescriptionInputs";
@@ -583,21 +617,88 @@ namespace UnityEditor.Rendering.HighDefinition
             ShaderStringBuilder pixelGraphEvalFunction = new ShaderStringBuilder();
             ShaderStringBuilder pixelGraphOutputs = new ShaderStringBuilder();
 
-            // build initial requirements
-            HDRPShaderStructs.AddActiveFieldsFromPixelGraphRequirements(activeFields, pixelRequirements);
+            // ----------------------------------------------------- //
+            //                         KEYWORDS                      //
+            // ----------------------------------------------------- //
+
+            // -------------------------------------
+            // Get keyword permutations
+
+            masterNode.owner.CollectShaderKeywords(sharedKeywords, mode);
+
+            // Track permutation indices for all nodes
+            List<int>[] keywordPermutationsPerVertexNode = new List<int>[vertexNodes.Count];
+            List<int>[] keywordPermutationsPerPixelNode = new List<int>[pixelNodes.Count];
+
+            // -------------------------------------
+            // Evaluate all permutations
+
+            if (sharedKeywords.permutations.Count > 0)
+            {
+                for(int i = 0; i < sharedKeywords.permutations.Count; i++)
+                {
+                    // Get active nodes for this permutation
+                    var localVertexNodes = UnityEngine.Rendering.ListPool<AbstractMaterialNode>.Get();
+                    var localPixelNodes = UnityEngine.Rendering.ListPool<AbstractMaterialNode>.Get();
+                    NodeUtils.DepthFirstCollectNodesFromNode(localVertexNodes, masterNode, NodeUtils.IncludeSelf.Include, pass.VertexShaderSlots, sharedKeywords.permutations[i]);
+                    NodeUtils.DepthFirstCollectNodesFromNode(localPixelNodes, masterNode, NodeUtils.IncludeSelf.Include, pass.PixelShaderSlots, sharedKeywords.permutations[i]);
+
+                    // Track each vertex node in this permutation
+                    foreach(AbstractMaterialNode vertexNode in localVertexNodes)
+                    {
+                        int nodeIndex = vertexNodes.IndexOf(vertexNode);
+
+                        if(keywordPermutationsPerVertexNode[nodeIndex] == null)
+                            keywordPermutationsPerVertexNode[nodeIndex] = new List<int>();
+                        keywordPermutationsPerVertexNode[nodeIndex].Add(i);
+                    }
+
+                    // Track each pixel node in this permutation
+                    foreach(AbstractMaterialNode pixelNode in localPixelNodes)
+                    {
+                        int nodeIndex = pixelNodes.IndexOf(pixelNode);
+
+                        if(keywordPermutationsPerPixelNode[nodeIndex] == null)
+                            keywordPermutationsPerPixelNode[nodeIndex] = new List<int>();
+                        keywordPermutationsPerPixelNode[nodeIndex].Add(i);
+                    }
+
+                    // Get active requirements for this permutation
+                    var localVertexRequirements = ShaderGraphRequirements.FromNodes(localVertexNodes, ShaderStageCapability.Vertex, false);
+                    var localPixelRequirements = ShaderGraphRequirements.FromNodes(localPixelNodes, ShaderStageCapability.Fragment, false);
+
+                    vertexRequirements[i].SetRequirements(localVertexRequirements);
+                    pixelRequirements[i].SetRequirements(localPixelRequirements);
+
+                    // build initial requirements
+                    HDRPShaderStructs.AddActiveFieldsFromPixelGraphRequirements(activeFields[i], localPixelRequirements);
+                    HDRPShaderStructs.AddActiveFieldsFromVertexGraphRequirements(activeFields[i], localVertexRequirements);
+                }
+            }
+            else
+            {
+                pixelRequirements.baseInstance.SetRequirements(ShaderGraphRequirements.FromNodes(pixelNodes, ShaderStageCapability.Fragment, false));   // TODO: is ShaderStageCapability.Fragment correct?
+                vertexRequirements.baseInstance.SetRequirements(ShaderGraphRequirements.FromNodes(vertexNodes, ShaderStageCapability.Vertex, false));
+                HDRPShaderStructs.AddActiveFieldsFromPixelGraphRequirements(activeFields.baseInstance, pixelRequirements.baseInstance.requirements);
+                HDRPShaderStructs.AddActiveFieldsFromVertexGraphRequirements(activeFields.baseInstance, vertexRequirements.baseInstance.requirements);
+            }
+
+            graphRequirements.UnionWith(pixelRequirements);
+            graphRequirements.UnionWith(vertexRequirements);
 
             // build the graph outputs structure, and populate activeFields with the fields of that structure
-            GraphUtil.GenerateSurfaceDescriptionStruct(pixelGraphOutputs, pixelSlots, pixelGraphOutputStructName, activeFields);
+            SubShaderGenerator.GenerateSurfaceDescriptionStruct(pixelGraphOutputs, pixelSlots, pixelGraphOutputStructName, activeFields.baseInstance);
 
             // Build the graph evaluation code, to evaluate the specified slots
-            GraphUtil.GenerateSurfaceDescriptionFunction(
+            SubShaderGenerator.GenerateSurfaceDescriptionFunction(
                 pixelNodes,
+                keywordPermutationsPerPixelNode,
                 masterNode,
                 masterNode.owner as GraphData,
                 pixelGraphEvalFunction,
                 functionRegistry,
                 sharedProperties,
-                pixelRequirements,  // TODO : REMOVE UNUSED
+                sharedKeywords,
                 mode,
                 pixelGraphEvalFunctionName,
                 pixelGraphOutputStructName,
@@ -615,22 +716,24 @@ namespace UnityEditor.Rendering.HighDefinition
             if (vertexActive)
             {
                 vertexActive = true;
-                activeFields.Add("features.modifyMesh");
-                HDRPShaderStructs.AddActiveFieldsFromVertexGraphRequirements(activeFields, vertexRequirements);
+                activeFields.baseInstance.Add("features.modifyMesh");
 
                 // -------------------------------------
                 // Generate Output structure for Vertex Description function
-                GraphUtil.GenerateVertexDescriptionStruct(vertexGraphOutputs, vertexSlots, vertexGraphOutputStructName, activeFields);
+                SubShaderGenerator.GenerateVertexDescriptionStruct(vertexGraphOutputs, vertexSlots, vertexGraphOutputStructName, activeFields.baseInstance);
 
                 // -------------------------------------
                 // Generate Vertex Description function
-                GraphUtil.GenerateVertexDescriptionFunction(
+                SubShaderGenerator.GenerateVertexDescriptionFunction(
                     masterNode.owner as GraphData,
                     vertexGraphEvalFunction,
                     functionRegistry,
                     sharedProperties,
+                    sharedKeywords,
                     mode,
+                    masterNode,
                     vertexNodes,
+                    keywordPermutationsPerVertexNode,
                     vertexSlots,
                     vertexGraphInputStructName,
                     vertexGraphEvalFunctionName,
@@ -644,30 +747,27 @@ namespace UnityEditor.Rendering.HighDefinition
             var zClipCode = new ShaderStringBuilder();
             var stencilCode = new ShaderStringBuilder();
             var colorMaskCode = new ShaderStringBuilder();
+            var dotsInstancingCode = new ShaderStringBuilder();
             HDSubShaderUtilities.BuildRenderStatesFromPass(pass, blendCode, cullCode, zTestCode, zWriteCode, zClipCode, stencilCode, colorMaskCode);
 
-            HDRPShaderStructs.AddRequiredFields(pass.RequiredFields, activeFields);
+            HDRPShaderStructs.AddRequiredFields(pass.RequiredFields, activeFields.baseInstance);
+
+            // Get keyword declarations
+            sharedKeywords.GetKeywordsDeclaration(shaderKeywordDeclarations, mode);
 
             // Get property declarations
             sharedProperties.GetPropertiesDeclaration(shaderPropertyUniforms, mode, masterNode.owner.concretePrecision);
 
             // propagate active field requirements using dependencies
-            ShaderSpliceUtil.ApplyDependencies(
-                activeFields,
-                new List<Dependency[]>()
-                {
-                    HDRPShaderStructs.FragInputs.dependencies,
-                    HDRPShaderStructs.VaryingsMeshToPS.standardDependencies,
-                    HDRPShaderStructs.SurfaceDescriptionInputs.dependencies,
-                    HDRPShaderStructs.VertexDescriptionInputs.dependencies
-                });
+            foreach (var instance in activeFields.all.instances)
+                ShaderSpliceUtil.ApplyDependencies(instance, k_Dependencies);
 
             // debug output all active fields
             var interpolatorDefines = new ShaderGenerator();
             if (debugOutput)
             {
                 interpolatorDefines.AddShaderChunk("// ACTIVE FIELDS:");
-                foreach (string f in activeFields)
+                foreach (string f in activeFields.baseInstance.fields)
                 {
                     interpolatorDefines.AddShaderChunk("//   " + f);
                 }
@@ -675,17 +775,55 @@ namespace UnityEditor.Rendering.HighDefinition
 
             // build graph inputs structures
             ShaderGenerator pixelGraphInputs = new ShaderGenerator();
-            ShaderSpliceUtil.BuildType(typeof(HDRPShaderStructs.SurfaceDescriptionInputs), activeFields, pixelGraphInputs);
+            ShaderSpliceUtil.BuildType(typeof(HDRPShaderStructs.SurfaceDescriptionInputs), activeFields, pixelGraphInputs, debugOutput);
             ShaderGenerator vertexGraphInputs = new ShaderGenerator();
-            ShaderSpliceUtil.BuildType(typeof(HDRPShaderStructs.VertexDescriptionInputs), activeFields, vertexGraphInputs);
+            ShaderSpliceUtil.BuildType(typeof(HDRPShaderStructs.VertexDescriptionInputs), activeFields, vertexGraphInputs, debugOutput);
 
+
+            int instancedCount = sharedProperties.GetDotsInstancingPropertiesCount(mode);
             ShaderGenerator instancingOptions = new ShaderGenerator();
             {
                 instancingOptions.AddShaderChunk("#pragma multi_compile_instancing", true);
+
+                if (masterNode is MasterNode node && node.dotsInstancing.isOn)
+                {
+                    instancingOptions.AddShaderChunk("#define UNITY_DOTS_SHADER");
+                    instancingOptions.AddShaderChunk("#pragma instancing_options nolightprobe");
+                    instancingOptions.AddShaderChunk("#pragma instancing_options nolodfade");
+                }
+
+                if (instancedCount > 0)
+                {
+                    instancingOptions.AddShaderChunk("#if SHADER_TARGET >= 35 && (defined(SHADER_API_D3D11) || defined(SHADER_API_GLES3) || defined(SHADER_API_GLCORE) || defined(SHADER_API_XBOXONE) || defined(SHADER_API_PSSL) || defined(SHADER_API_VULKAN) || defined(SHADER_API_METAL))");
+                    instancingOptions.AddShaderChunk("#define UNITY_SUPPORT_INSTANCING");
+                    instancingOptions.AddShaderChunk("#endif");
+                    instancingOptions.AddShaderChunk("#if defined(UNITY_SUPPORT_INSTANCING) && defined(INSTANCING_ON)");
+                    instancingOptions.AddShaderChunk("#define UNITY_DOTS_INSTANCING_ENABLED");
+                    instancingOptions.AddShaderChunk("#endif");
+                }
+
                 if (pass.ExtraInstancingOptions != null)
                 {
                     foreach (var instancingOption in pass.ExtraInstancingOptions)
                         instancingOptions.AddShaderChunk(instancingOption);
+                }
+            }
+            if (instancedCount > 0)
+            {
+                dotsInstancingCode.AppendLine("//-------------------------------------------------------------------------------------");
+                dotsInstancingCode.AppendLine("// Dots Instancing vars");
+                dotsInstancingCode.AppendLine("//-------------------------------------------------------------------------------------");
+                dotsInstancingCode.AppendLine("");
+
+                dotsInstancingCode.Append(sharedProperties.GetDotsInstancingPropertiesDeclaration(mode));
+            }
+
+            ShaderGenerator shaderStages = new ShaderGenerator();
+            {
+                if (pass.ShaderStages != null)
+                {
+                    foreach (var shaderStage in pass.ShaderStages)
+                        shaderStages.AddShaderChunk(shaderStage);
                 }
             }
 
@@ -697,10 +835,43 @@ namespace UnityEditor.Rendering.HighDefinition
                     foreach (var define in pass.ExtraDefines)
                         defines.AddShaderChunk(define);
                 }
-                if (graphRequirements.requiresDepthTexture)
-                    defines.AddShaderChunk("#define REQUIRE_DEPTH_TEXTURE");
-                if (graphRequirements.requiresCameraOpaqueTexture)
-                    defines.AddShaderChunk("#define REQUIRE_OPAQUE_TEXTURE");
+
+                if (graphRequirements.permutationCount > 0)
+                {
+                    {
+                        var activePermutationIndices = graphRequirements.allPermutations.instances
+                            .Where(p => p.requirements.requiresDepthTexture)
+                            .Select(p => p.permutationIndex)
+                            .ToList();
+                        if (activePermutationIndices.Count > 0)
+                        {
+                            defines.AddShaderChunk(KeywordUtil.GetKeywordPermutationSetConditional(activePermutationIndices));
+                            defines.AddShaderChunk("#define REQUIRE_DEPTH_TEXTURE");
+                            defines.AddShaderChunk("#endif");
+                        }
+                    }
+
+                    {
+                        var activePermutationIndices = graphRequirements.allPermutations.instances
+                            .Where(p => p.requirements.requiresCameraOpaqueTexture)
+                            .Select(p => p.permutationIndex)
+                            .ToList();
+                        if (activePermutationIndices.Count > 0)
+                        {
+                            defines.AddShaderChunk(KeywordUtil.GetKeywordPermutationSetConditional(activePermutationIndices));
+                            defines.AddShaderChunk("#define REQUIRE_OPAQUE_TEXTURE");
+                            defines.AddShaderChunk("#endif");
+                        }
+                    }
+                }
+                else
+                {
+                    if (graphRequirements.baseInstance.requirements.requiresDepthTexture)
+                        defines.AddShaderChunk("#define REQUIRE_DEPTH_TEXTURE");
+                    if (graphRequirements.baseInstance.requirements.requiresCameraOpaqueTexture)
+                        defines.AddShaderChunk("#define REQUIRE_OPAQUE_TEXTURE");
+                }
+
                 defines.AddGenerator(interpolatorDefines);
             }
 
@@ -710,6 +881,10 @@ namespace UnityEditor.Rendering.HighDefinition
                 foreach (var include in pass.Includes)
                     shaderPassIncludes.AddShaderChunk(include);
             }
+
+            defines.AddShaderChunk("// Shared Graph Keywords");
+            defines.AddShaderChunk(shaderKeywordDeclarations.ToString());
+            defines.AddShaderChunk(shaderKeywordPermutations.ToString());
 
             // build graph code
             var graph = new ShaderGenerator();
@@ -758,6 +933,7 @@ namespace UnityEditor.Rendering.HighDefinition
             // build the hash table of all named fragments      TODO: could make this Dictionary<string, ShaderGenerator / string>  ?
             Dictionary<string, string> namedFragments = new Dictionary<string, string>();
             namedFragments.Add("InstancingOptions", instancingOptions.GetShaderString(0, false));
+            namedFragments.Add("ShaderStages", shaderStages.GetShaderString(2, false));
             namedFragments.Add("Defines", defines.GetShaderString(2, false));
             namedFragments.Add("Graph", graph.GetShaderString(2, false));
             namedFragments.Add("LightMode", pass.LightMode);
@@ -770,14 +946,12 @@ namespace UnityEditor.Rendering.HighDefinition
             namedFragments.Add("ZClip", zClipCode.ToString());
             namedFragments.Add("Stencil", stencilCode.ToString());
             namedFragments.Add("ColorMask", colorMaskCode.ToString());
-
-            // this is the format string for building the 'C# qualified assembly type names' for $buildType() commands
-            string buildTypeAssemblyNameFormat = "UnityEditor.Rendering.HighDefinition.HDRPShaderStructs+{0}, " + typeof(HDSubShaderUtilities).Assembly.FullName.ToString();
+            namedFragments.Add("DotsInstancedVars", dotsInstancingCode.ToString());
 
             string sharedTemplatePath = Path.Combine(Path.Combine(HDUtils.GetHDRenderPipelinePath(), "Editor"), "ShaderGraph");
             // process the template to generate the shader code for this pass
             ShaderSpliceUtil.TemplatePreprocessor templatePreprocessor =
-                new ShaderSpliceUtil.TemplatePreprocessor(activeFields, namedFragments, debugOutput, sharedTemplatePath, sourceAssetDependencyPaths, buildTypeAssemblyNameFormat);
+                new ShaderSpliceUtil.TemplatePreprocessor(activeFields, namedFragments, debugOutput, sharedTemplatePath, sourceAssetDependencyPaths, HDRPShaderStructs.s_AssemblyName, HDRPShaderStructs.s_ResourceClassName);
 
             templatePreprocessor.ProcessTemplateFile(templateLocation);
 
@@ -863,19 +1037,33 @@ namespace UnityEditor.Rendering.HighDefinition
             "#pragma multi_compile _ SHADOWS_SHADOWMASK",
             "#pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT",
             "#define USE_CLUSTERED_LIGHTLIST",
-            "#pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH"
+            "#pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH",
+            HDLitSubShader.DefineRaytracingKeyword(RayTracingNode.RaytracingVariant.High)
         };
 
         public static List<string> s_ExtraDefinesForwardMaterialDepthOrMotion = new List<string>()
         {
             "#define WRITE_NORMAL_BUFFER",
-            "#pragma multi_compile _ WRITE_MSAA_DEPTH"
+            "#pragma multi_compile _ WRITE_MSAA_DEPTH",
+            HDLitSubShader.DefineRaytracingKeyword(RayTracingNode.RaytracingVariant.High)
         };
 
         public static List<string> s_ExtraDefinesDepthOrMotion = new List<string>()
         {
             "#pragma multi_compile _ WRITE_NORMAL_BUFFER",
-            "#pragma multi_compile _ WRITE_MSAA_DEPTH"
+            "#pragma multi_compile _ WRITE_MSAA_DEPTH",
+            HDLitSubShader.DefineRaytracingKeyword(RayTracingNode.RaytracingVariant.High)
+        };
+
+        public static List<string> s_ShaderStagesRasterization = new List<string>()
+        {
+            "#pragma vertex Vert",
+            "#pragma fragment Frag",
+        };
+
+        public static List<string> s_ShaderStagesRayTracing = new List<string>()
+        {
+            "#pragma raytracing surface_shader",
         };
 
         public static void SetStencilStateForDepth(ref Pass pass)
@@ -915,7 +1103,7 @@ namespace UnityEditor.Rendering.HighDefinition
                 "// Stencil setup",
                 "Stencil",
                 "{",
-                "   WriteMask [_StencilRefDistortionVec]",
+                "   WriteMask [_StencilWriteMaskDistortionVec]",
                 "   Ref [_StencilRefDistortionVec]",
                 "   Comp Always",
                 "   Pass Replace",
@@ -983,6 +1171,18 @@ namespace UnityEditor.Rendering.HighDefinition
             generator.AddShaderChunk(builder.ToString());
         }
 
+        public static void AddTags(ShaderGenerator generator, string pipeline)
+        {
+            ShaderStringBuilder builder = new ShaderStringBuilder();
+            builder.AppendLine("Tags");
+            using (builder.BlockScope())
+            {
+                builder.AppendLine("\"RenderPipeline\"=\"{0}\"", pipeline);
+            }
+
+            generator.AddShaderChunk(builder.ToString());
+        }
+
         // Utils property to add properties to the collector, all hidden because we use a custom UI to display them
         static void AddIntProperty(this PropertyCollector collector, string referenceName, int defaultValue)
         {
@@ -1026,21 +1226,26 @@ namespace UnityEditor.Rendering.HighDefinition
 
         public static void AddStencilShaderProperties(PropertyCollector collector, bool splitLighting, bool receiveSSR)
         {
+            BaseLitGUI.ComputeStencilProperties(receiveSSR, splitLighting, out int stencilRef, out int stencilWriteMask,
+                out int stencilRefDepth, out int stencilWriteMaskDepth, out int stencilRefGBuffer, out int stencilWriteMaskGBuffer,
+                out int stencilRefMV, out int stencilWriteMaskMV
+            );
+
             // All these properties values will be patched with the material keyword update
-            collector.AddIntProperty("_StencilRef", 0); // StencilLightingUsage.NoLighting
-            collector.AddIntProperty("_StencilWriteMask", 3); // StencilMask.Lighting
+            collector.AddIntProperty("_StencilRef", stencilRef); 
+            collector.AddIntProperty("_StencilWriteMask", stencilWriteMask); 
             // Depth prepass
-            collector.AddIntProperty("_StencilRefDepth", 0); // Nothing
-            collector.AddIntProperty("_StencilWriteMaskDepth", 32); // DoesntReceiveSSR
+            collector.AddIntProperty("_StencilRefDepth", stencilRefDepth); // Nothing
+            collector.AddIntProperty("_StencilWriteMaskDepth", stencilWriteMaskDepth); // StencilUsage.TraceReflectionRay
             // Motion vector pass
-            collector.AddIntProperty("_StencilRefMV", 128); // StencilBitMask.ObjectMotionVectors
-            collector.AddIntProperty("_StencilWriteMaskMV", 128); // StencilBitMask.ObjectMotionVectors
+            collector.AddIntProperty("_StencilRefMV", stencilRefMV); // StencilUsage.ObjectMotionVector
+            collector.AddIntProperty("_StencilWriteMaskMV", stencilWriteMaskMV); // StencilUsage.ObjectMotionVector
             // Distortion vector pass
-            collector.AddIntProperty("_StencilRefDistortionVec", 64); // StencilBitMask.DistortionVectors
-            collector.AddIntProperty("_StencilWriteMaskDistortionVec", 64); // StencilBitMask.DistortionVectors
+            collector.AddIntProperty("_StencilRefDistortionVec", (int)StencilUsage.DistortionVectors);
+            collector.AddIntProperty("_StencilWriteMaskDistortionVec", (int)StencilUsage.DistortionVectors);
             // Gbuffer
-            collector.AddIntProperty("_StencilWriteMaskGBuffer", 3); // StencilMask.Lighting
-            collector.AddIntProperty("_StencilRefGBuffer", 2); // StencilLightingUsage.RegularLighting
+            collector.AddIntProperty("_StencilWriteMaskGBuffer", stencilWriteMaskGBuffer); 
+            collector.AddIntProperty("_StencilRefGBuffer", stencilRefGBuffer); 
             collector.AddIntProperty("_ZTestGBuffer", 4);
 
             collector.AddToggleProperty(kUseSplitLighting, splitLighting);
@@ -1050,7 +1255,8 @@ namespace UnityEditor.Rendering.HighDefinition
 
         public static void AddBlendingStatesShaderProperties(
             PropertyCollector collector, SurfaceType surface, BlendMode blend, int sortingPriority,
-            bool zWrite, TransparentCullMode transparentCullMode, CompareFunction zTest, bool backThenFrontRendering)
+            bool zWrite, TransparentCullMode transparentCullMode, CompareFunction zTest,
+            bool backThenFrontRendering, bool fogOnTransparent)
         {
             collector.AddFloatProperty("_SurfaceType", (int)surface);
             collector.AddFloatProperty("_BlendMode", (int)blend);
@@ -1060,9 +1266,11 @@ namespace UnityEditor.Rendering.HighDefinition
             collector.AddFloatProperty("_DstBlend", 0.0f);
             collector.AddFloatProperty("_AlphaSrcBlend", 1.0f);
             collector.AddFloatProperty("_AlphaDstBlend", 0.0f);
-            collector.AddToggleProperty("_ZWrite", zWrite);
+            collector.AddToggleProperty(kZWrite, (surface == SurfaceType.Transparent) ? zWrite : true);
+            collector.AddToggleProperty(kTransparentZWrite, zWrite);
             collector.AddFloatProperty("_CullMode", (int)CullMode.Back);
-            collector.AddIntProperty("_TransparentSortPriority", sortingPriority);
+            collector.AddIntProperty(kTransparentSortPriority, sortingPriority);
+            collector.AddToggleProperty(kEnableFogOnTransparent, fogOnTransparent);
             collector.AddFloatProperty("_CullModeForward", (int)CullMode.Back);
             collector.AddShaderProperty(new Vector1ShaderProperty{
                 overrideReferenceName = kTransparentCullMode,
@@ -1090,15 +1298,7 @@ namespace UnityEditor.Rendering.HighDefinition
         public static void AddAlphaCutoffShaderProperties(PropertyCollector collector, bool alphaCutoff, bool shadowThreshold)
         {
             collector.AddToggleProperty("_AlphaCutoffEnable", alphaCutoff);
-            collector.AddShaderProperty(new Vector1ShaderProperty{
-                overrideReferenceName = "_AlphaCutoff",
-                displayName = "Alpha Cutoff",
-                floatType = FloatType.Slider,
-                rangeValues = new Vector2(0, 1),
-                hidden = true,
-                value = 0.5f
-            });
-            collector.AddFloatProperty("_TransparentSortPriority", "_TransparentSortPriority", 0);
+            collector.AddFloatProperty(kTransparentSortPriority, kTransparentSortPriority, 0);
             collector.AddToggleProperty("_UseShadowThreshold", shadowThreshold);
         }
 
@@ -1137,10 +1337,18 @@ namespace UnityEditor.Rendering.HighDefinition
                 case HDRenderQueue.RenderQueueType.AfterPostprocessTransparent:
                     return "After Post-process";
 
-#if ENABLE_RAYTRACING
-                case HDRenderQueue.RenderQueueType.RaytracingOpaque: return "Raytracing";
-                case HDRenderQueue.RenderQueueType.RaytracingTransparent: return "Raytracing";
-#endif
+                case HDRenderQueue.RenderQueueType.RaytracingOpaque:
+                {
+                    if ((RenderPipelineManager.currentPipeline as HDRenderPipeline).rayTracingSupported)
+                        return "RayTracing";
+                    return "None";
+                }
+                case HDRenderQueue.RenderQueueType.RaytracingTransparent:
+                {
+                    if ((RenderPipelineManager.currentPipeline as HDRenderPipeline).rayTracingSupported)
+                        return "RayTracing";
+                    return "None";
+                }
                 default:
                     return "None";
             }
@@ -1148,15 +1356,16 @@ namespace UnityEditor.Rendering.HighDefinition
 
         public static System.Collections.Generic.List<HDRenderQueue.RenderQueueType> GetRenderingPassList(bool opaque, bool needAfterPostProcess)
         {
+            // We can't use RenderPipelineManager.currentPipeline here because this is called before HDRP is created by SG window
+            bool supportsRayTracing = HDRenderPipeline.GatherRayTracingSupport(HDRenderPipeline.currentAsset.currentPlatformRenderPipelineSettings);
             var result = new System.Collections.Generic.List<HDRenderQueue.RenderQueueType>();
             if (opaque)
             {
                 result.Add(HDRenderQueue.RenderQueueType.Opaque);
                 if (needAfterPostProcess)
                     result.Add(HDRenderQueue.RenderQueueType.AfterPostProcessOpaque);
-#if ENABLE_RAYTRACING
-                result.Add(HDRenderQueue.RenderQueueType.RaytracingOpaque);
-#endif
+                if (supportsRayTracing)
+                    result.Add(HDRenderQueue.RenderQueueType.RaytracingOpaque);
             }
             else
             {
@@ -1165,9 +1374,8 @@ namespace UnityEditor.Rendering.HighDefinition
                 result.Add(HDRenderQueue.RenderQueueType.LowTransparent);
                 if (needAfterPostProcess)
                     result.Add(HDRenderQueue.RenderQueueType.AfterPostprocessTransparent);
-#if ENABLE_RAYTRACING
-                result.Add(HDRenderQueue.RenderQueueType.RaytracingTransparent);
-#endif
+                if (supportsRayTracing)
+                    result.Add(HDRenderQueue.RenderQueueType.RaytracingTransparent);
             }
 
             return result;

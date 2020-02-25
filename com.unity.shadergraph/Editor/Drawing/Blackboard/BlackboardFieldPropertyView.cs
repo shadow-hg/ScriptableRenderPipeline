@@ -8,6 +8,7 @@ using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 using Toggle = UnityEngine.UIElements.Toggle;
 using UnityEditor.Experimental.GraphView;
+using UnityEditor.ShaderGraph.Internal;
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
@@ -41,7 +42,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 case ColorShaderProperty colorProperty:
                     BuildColorPropertyField(colorProperty);
                     break;
-                case TextureShaderProperty texture2DProperty:
+                case Texture2DShaderProperty texture2DProperty:
                     BuildTexture2DPropertyField(texture2DProperty);
                     break;
                 case Texture2DArrayShaderProperty texture2DArrayProperty:
@@ -74,7 +75,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-            
+
             // Precision
             var precisionField = new EnumField((Enum)property.precision);
             precisionField.RegisterValueChangedCallback(evt =>
@@ -82,13 +83,25 @@ namespace UnityEditor.ShaderGraph.Drawing
                 graph.owner.RegisterCompleteObjectUndo("Change Precision");
                 if (property.precision == (Precision)evt.newValue)
                     return;
-                
+
                 property.precision = (Precision)evt.newValue;
                 graph.ValidateGraph();
                 precisionField.MarkDirtyRepaint();
                 DirtyNodes();
             });
             AddRow("Precision", precisionField);
+            if (property.isGpuInstanceable)
+            {
+                Toggle gpuInstancedToogle = new Toggle { value = property.gpuInstanced };
+                gpuInstancedToogle.OnToggleChanged(evt =>
+                {
+                    graph.owner.RegisterCompleteObjectUndo("Change Hybrid Instanced Toggle");
+                    property.gpuInstanced = evt.newValue;
+                    DirtyNodes(ModificationScope.Graph);
+                });
+                AddRow("Hybrid Instanced (experimental)", gpuInstancedToogle);
+            }
+
         }
 
         void BuildVector1PropertyField(Vector1ShaderProperty property)
@@ -144,7 +157,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                             defaultField.value = property.value;
                             DirtyNodes();
                         });
-                        
+
                         AddRow("Default", defaultField);
                         AddRow("Min", minField);
                         AddRow("Max", maxField);
@@ -189,7 +202,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 AddRow("Mode", modeField);
             }
         }
-        
+
         void BuildVector2PropertyField(Vector2ShaderProperty property)
         {
             var field = new Vector2Field { value = property.value };
@@ -203,10 +216,10 @@ namespace UnityEditor.ShaderGraph.Drawing
             field.RegisterValueChangedCallback(evt =>
                 {
                     // Only true when setting value via FieldMouseDragger
-                    // Undo recorded once per dragger release              
+                    // Undo recorded once per dragger release
                     if (undoGroup == -1)
                         graph.owner.RegisterCompleteObjectUndo("Change property value");
-                    
+
                     property.value = evt.newValue;
                     DirtyNodes();
                 });
@@ -228,10 +241,10 @@ namespace UnityEditor.ShaderGraph.Drawing
             field.RegisterValueChangedCallback(evt =>
                 {
                     // Only true when setting value via FieldMouseDragger
-                    // Undo recorded once per dragger release              
+                    // Undo recorded once per dragger release
                     if (undoGroup == -1)
                         graph.owner.RegisterCompleteObjectUndo("Change property value");
-                    
+
                     property.value = evt.newValue;
                     DirtyNodes();
                 });
@@ -255,10 +268,10 @@ namespace UnityEditor.ShaderGraph.Drawing
             field.RegisterValueChangedCallback(evt =>
                 {
                     // Only true when setting value via FieldMouseDragger
-                    // Undo recorded once per dragger release              
+                    // Undo recorded once per dragger release
                     if (undoGroup == -1)
                         graph.owner.RegisterCompleteObjectUndo("Change property value");
-                    
+
                     property.value = evt.newValue;
                     DirtyNodes();
                 });
@@ -293,7 +306,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
         }
 
-        void BuildTexture2DPropertyField(TextureShaderProperty property)
+        void BuildTexture2DPropertyField(Texture2DShaderProperty property)
         {
             var field = new ObjectField { value = property.value.texture, objectType = typeof(Texture) };
             field.RegisterValueChangedCallback(evt =>
@@ -304,25 +317,18 @@ namespace UnityEditor.ShaderGraph.Drawing
                 });
             AddRow("Default", field);
 
-            if(!graph.isSubGraph)
-            {
-                var defaultModeField = new EnumField((Enum)property.defaultType);
+            var defaultMode = (Enum)Texture2DShaderProperty.DefaultType.Grey;
+            var textureMode = property.generatePropertyBlock ? (Enum)property.defaultType : defaultMode;
+            var defaultModeField = new EnumField(textureMode);
                 defaultModeField.RegisterValueChangedCallback(evt =>
                     {
                         graph.owner.RegisterCompleteObjectUndo("Change Texture Mode");
-                        if (property.defaultType == (TextureShaderProperty.DefaultType)evt.newValue)
+                        if (property.defaultType == (Texture2DShaderProperty.DefaultType)evt.newValue)
                             return;
-                        property.defaultType = (TextureShaderProperty.DefaultType)evt.newValue;
+                        property.defaultType = (Texture2DShaderProperty.DefaultType)evt.newValue;
                         DirtyNodes(ModificationScope.Graph);
                     });
-                
-                void ToggleDefaultModeFieldEnabled()
-                {
-                    defaultModeField.SetEnabled(!defaultModeField.enabledSelf);
-                }
-                onExposedToggle += ToggleDefaultModeFieldEnabled;
-                AddRow("Mode", defaultModeField);
-            }
+            AddRow("Mode", defaultModeField, !graph.isSubGraph && property.generatePropertyBlock);
         }
 
         void BuildTexture2DArrayPropertyField(Texture2DArrayShaderProperty property)
@@ -490,7 +496,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                         };
                         DirtyNodes();
                     });
-                
+
                 AddRow("", row1Field);
                 var row2Field = new Vector3Field { value = property.value.GetRow(2) };
                 row2Field.RegisterValueChangedCallback(evt =>
@@ -654,6 +660,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     TextureSamplerState state = property.value;
                     state.filter = (TextureSamplerState.FilterMode)evt.newValue;
                     property.value = state;
+                    Rebuild();
                     DirtyNodes(ModificationScope.Graph);
                 });
             AddRow("Filter", filterField);
@@ -665,6 +672,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     TextureSamplerState state = property.value;
                     state.wrap = (TextureSamplerState.WrapMode)evt.newValue;
                     property.value = state;
+                    Rebuild();
                     DirtyNodes(ModificationScope.Graph);
                 });
             AddRow("Wrap", wrapField);
@@ -684,8 +692,16 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         public override void DirtyNodes(ModificationScope modificationScope = ModificationScope.Node)
         {
+            var colorManager = GetFirstAncestorOfType<GraphEditorView>().colorManager;
+            var nodes = GetFirstAncestorOfType<GraphEditorView>().graphView.Query<MaterialNodeView>().ToList();
+
+            colorManager.SetNodesDirty(nodes);
+            colorManager.UpdateNodeViews(nodes);
+
             foreach (var node in graph.GetNodes<PropertyNode>())
+            {
                 node.Dirty(modificationScope);
+            }
         }
     }
 }

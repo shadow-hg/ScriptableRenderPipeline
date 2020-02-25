@@ -6,19 +6,12 @@ using UnityEditor.Graphing.Util;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UIElements;
+using UnityEditor.ShaderGraph.Drawing.Controls;
 
 namespace UnityEditor.ShaderGraph
 {
-    [Serializable]
-    abstract class MasterNode<T> : AbstractMaterialNode, IMasterNode, IHasSettings
-        where T : class, ISubShader
+    abstract class MasterNode : AbstractMaterialNode, IMasterNode, IHasSettings
     {
-        [NonSerialized]
-        List<T> m_SubShaders = new List<T>();
-
-        [SerializeField]
-        List<SerializationHelper.JSONSerializedElement> m_SerializableSubShaders = new List<SerializationHelper.JSONSerializedElement>();
-
         public override bool hasPreview
         {
             get { return false; }
@@ -34,15 +27,57 @@ namespace UnityEditor.ShaderGraph
             get { return PreviewMode.Preview3D; }
         }
 
-        public Type supportedSubshaderType
+        [SerializeField]
+        bool m_DOTSInstancing = false;
+
+        public ToggleData dotsInstancing
         {
-            get { return typeof(T); }
+            get { return new ToggleData(m_DOTSInstancing); }
+            set
+            {
+                if (m_DOTSInstancing == value.isOn)
+                    return;
+
+                m_DOTSInstancing = value.isOn;
+                Dirty(ModificationScope.Graph);
+            }
         }
 
-        public IEnumerable<T> subShaders
+        public abstract string GetShader(GenerationMode mode, string outputName, out List<PropertyCollector.TextureInfo> configuredTextures, List<string> sourceAssetDependencyPaths = null);
+        public abstract bool IsPipelineCompatible(RenderPipelineAsset renderPipelineAsset);
+        public abstract int GetPreviewPassIndex();
+
+        public VisualElement CreateSettingsElement()
         {
-            get { return m_SubShaders; }
+            var container = new VisualElement();
+            var commonSettingsElement = CreateCommonSettingsElement();
+            if (commonSettingsElement != null)
+                container.Add(commonSettingsElement);
+
+            return container;
         }
+
+        protected virtual VisualElement CreateCommonSettingsElement()
+        {
+            return null;
+        }
+
+        public virtual object saveContext => null;
+
+        public virtual void ProcessPreviewMaterial(Material Material) {}
+    }
+
+    [Serializable]
+    abstract class MasterNode<T> : MasterNode
+        where T : class, ISubShader
+    {
+        [NonSerialized]
+        List<T> m_SubShaders = new List<T>();
+
+        [SerializeField]
+        List<SerializationHelper.JSONSerializedElement> m_SerializableSubShaders = new List<SerializationHelper.JSONSerializedElement>();
+
+        public IEnumerable<T> subShaders => m_SubShaders;
 
         public void AddSubShader(T subshader)
         {
@@ -69,15 +104,25 @@ namespace UnityEditor.ShaderGraph
             return null;
         }
 
-        public string GetShader(GenerationMode mode, string outputName, out List<PropertyCollector.TextureInfo> configuredTextures, List<string> sourceAssetDependencyPaths = null)
+        public sealed override string GetShader(GenerationMode mode, string outputName, out List<PropertyCollector.TextureInfo> configuredTextures, List<string> sourceAssetDependencyPaths = null)
         {
-            var activeNodeList = ListPool<AbstractMaterialNode>.Get();
+            var activeNodeList = Graphing.ListPool<AbstractMaterialNode>.Get();
             NodeUtils.DepthFirstCollectNodesFromNode(activeNodeList, this);
 
             var shaderProperties = new PropertyCollector();
+            var shaderKeywords = new KeywordCollector();
             if (owner != null)
             {
                 owner.CollectShaderProperties(shaderProperties, mode);
+                owner.CollectShaderKeywords(shaderKeywords, mode);
+            }
+
+            if(owner.GetKeywordPermutationCount() > ShaderGraphPreferences.variantLimit)
+            {
+                owner.AddValidationError(tempId, ShaderKeyword.kVariantLimitWarning, Rendering.ShaderCompilerMessageSeverity.Error);
+
+                configuredTextures = shaderProperties.GetConfiguredTexutres();
+                return ShaderGraphImporter.k_ErrorShader;
             }
 
             foreach (var activeNode in activeNodeList.OfType<AbstractMaterialNode>())
@@ -87,7 +132,7 @@ namespace UnityEditor.ShaderGraph
             finalShader.AppendLine(@"Shader ""{0}""", outputName);
             using (finalShader.BlockScope())
             {
-                GraphUtil.GeneratePropertiesBlock(finalShader, shaderProperties, mode);
+                SubShaderGenerator.GeneratePropertiesBlock(finalShader, shaderProperties, shaderKeywords, mode);
 
                 foreach (var subShader in m_SubShaders)
                 {
@@ -95,13 +140,13 @@ namespace UnityEditor.ShaderGraph
                         finalShader.AppendLines(subShader.GetSubshader(this, mode, sourceAssetDependencyPaths));
                 }
 
-                finalShader.AppendLine(@"FallBack ""Hidden/InternalErrorShader""");
+                finalShader.AppendLine(@"FallBack ""Hidden/Shader Graph/FallbackError""");
             }
             configuredTextures = shaderProperties.GetConfiguredTexutres();
             return finalShader.ToString();
         }
 
-        public bool IsPipelineCompatible(RenderPipelineAsset renderPipelineAsset)
+        public sealed override bool IsPipelineCompatible(RenderPipelineAsset renderPipelineAsset)
         {
             foreach (var subShader in m_SubShaders)
             {
@@ -109,6 +154,11 @@ namespace UnityEditor.ShaderGraph
                     return true;
             }
             return false;
+        }
+
+        public sealed override int GetPreviewPassIndex()
+        {
+            return GetActiveSubShader()?.GetPreviewPassIndex() ?? 0;
         }
 
         public override void OnBeforeSerialize()
@@ -148,22 +198,5 @@ namespace UnityEditor.ShaderGraph
                 }
             }
         }
-
-        public VisualElement CreateSettingsElement()
-        {
-            var container = new VisualElement();
-            var commonSettingsElement = CreateCommonSettingsElement();
-            if (commonSettingsElement != null)
-                container.Add(commonSettingsElement);
-
-            return container;
-        }
-
-        protected virtual VisualElement CreateCommonSettingsElement()
-        {
-            return null;
-        }
-
-        public virtual void ProcessPreviewMaterial(Material Material) {}
     }
 }

@@ -1,6 +1,9 @@
 // This structure abstract uv mapping inside one struct.
 // It represent a mapping of any uv (with its associated tangent space for derivative if SurfaceGradient mode) - UVSet0 to 4, planar, triplanar
 
+#ifndef __SAMPLEUVMAPPING_HLSL__
+#define __SAMPLEUVMAPPING_HLSL__
+
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/NormalSurfaceGradient.hlsl"
 
 #define UV_MAPPING_UVSET 0
@@ -39,14 +42,14 @@ struct UVMapping
 #undef SAMPLE_TEXTURE_FUNC
 
 // Lod sampling functions
-#define ADD_FUNC_SUFFIX(Name) Name##Lod
+#define ADD_FUNC_SUFFIX(Name) MERGE_NAME(Name, Lod)
 #define SAMPLE_TEXTURE_FUNC(textureName, samplerName, uvMapping, lod) SAMPLE_TEXTURE2D_LOD(textureName, samplerName, uvMapping, lod)
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Sampling/SampleUVMappingInternal.hlsl"
 #undef ADD_FUNC_SUFFIX
 #undef SAMPLE_TEXTURE_FUNC
 
 // Bias sampling functions
-#define ADD_FUNC_SUFFIX(Name) Name##Bias
+#define ADD_FUNC_SUFFIX(Name) MERGE_NAME(Name, Bias)
 #define SAMPLE_TEXTURE_FUNC(textureName, samplerName, uvMapping, bias) SAMPLE_TEXTURE2D_BIAS(textureName, samplerName, uvMapping, bias)
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Sampling/SampleUVMappingInternal.hlsl"
 #undef ADD_FUNC_SUFFIX
@@ -68,3 +71,5 @@ struct UVMapping
 #define SAMPLE_UVMAPPING_NORMALMAP_RGB(textureName, samplerName, uvMapping, scale)              SampleUVMappingNormalRGB(TEXTURE2D_ARGS(textureName, samplerName), uvMapping, scale, 0.0)
 #define SAMPLE_UVMAPPING_NORMALMAP_RGB_LOD(textureName, samplerName, uvMapping, scale, lod)     SampleUVMappingNormalRGBLod(TEXTURE2D_ARGS(textureName, samplerName), uvMapping, scale, lod)
 #define SAMPLE_UVMAPPING_NORMALMAP_RGB_BIAS(textureName, samplerName, uvMapping, scale, bias)   SampleUVMappingNormalRGBBias(TEXTURE2D_ARGS(textureName, samplerName), uvMapping, scale, bias)
+
+#endif //__SAMPLEUVMAPPING_HLSL__
