@@ -69,9 +69,8 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 propertyNames.Add(sp.m_PropertyName);
             }
 
-            // remove any properties that do not appear in the shader
+            // remove any left-over properties that do not appear in the shader anymore
             for (int j = m_ShaderProperties.Count - 1; j >= 0; --j)
-            //    foreach (var property in m_ShaderProperties)
             {
                 int indx = propertyNames.FindIndex(x => x == m_ShaderProperties[j].m_PropertyName);
                 if (indx < 0)
@@ -80,7 +79,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 }
             }
 
-            // Now remove any layers that do not appear in the shader
+            // Now remove any left-over  layers that do not appear in the shader anymore
             for (int j = m_InputLayers.Count - 1; j >= 0; --j)
             {
                 if (m_InputLayers[j].GetOutputTarget() != CompositorLayer.OutputTarget.CameraStack)
@@ -105,15 +104,21 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 m_ShaderProperties.Add(sp);
             }
 
+            bool hide = ((int)sp.m_Flags & (int)ShaderPropertyFlags.NonModifiableTextureData) != 0;
             // For textures, check if we already have this layer in the layer list. If not, add it.
             if (sp.m_Type == ShaderPropertyType.Texture)
             {
                 indx = m_InputLayers.FindIndex(s => s.m_LayerName == sp.m_PropertyName);
-                if (indx < 0)
+                if (indx < 0 && !hide)
                 {
                     Debug.Log($"Adding output layer from shader graph: {sp.m_PropertyName}");
                     var newLayer = CompositorLayer.CreateOutputLayer(sp.m_PropertyName);
                     m_InputLayers.Add(newLayer);
+                }
+                else if (indx >= 0 && hide)
+                {
+                    // if a layer already in the list is now hidden, remove it
+                    RemoveLayerAtIndex(indx);
                 }
             }
         }

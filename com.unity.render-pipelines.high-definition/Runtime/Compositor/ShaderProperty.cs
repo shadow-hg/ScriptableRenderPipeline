@@ -10,6 +10,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         public ShaderPropertyType m_Type;
         public Vector4 m_Value;
         public Vector2 m_RangeLimits;
+        public ShaderPropertyFlags m_Flags;
 
         public static ShaderProperty Create(Shader shader, Material material, int indx)
         {
@@ -17,6 +18,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             {
                 sp.m_PropertyName = shader.GetPropertyName(indx);
                 sp.m_Type = shader.GetPropertyType(indx);
+                sp.m_Flags = shader.GetPropertyFlags(indx);
                 sp.m_Value = Vector4.zero;
 
                 if (sp.m_Type == ShaderPropertyType.Range)
