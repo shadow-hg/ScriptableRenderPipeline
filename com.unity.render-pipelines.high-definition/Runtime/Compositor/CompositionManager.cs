@@ -54,7 +54,6 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         internal Matrix4x4 m_ViewProjMatrixFlipped;
         internal GameObject m_CompositorGameObject;
 
-        internal bool m_IsCompositorDirty = true;
         internal bool m_ShaderPropertiesAreDirty = false;
 
         static private CompositionManager s_CompositorInstance;
@@ -319,7 +318,6 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         void OnValidate()
         {
-            m_IsCompositorDirty = true;
             UpdateLayerList();
         }
 
@@ -456,14 +454,8 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         public void UpdateLayerSetup()
         {
-            if (m_IsCompositorDirty)
-            {
-                SetupCompositorLayers();
-
-                SetupLayerPriorities();
-
-                m_IsCompositorDirty = false;
-            }
+            SetupCompositorLayers();
+            SetupLayerPriorities();
         }
 
         // Update is called once per frame
@@ -523,13 +515,11 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         {
             var newLayer = CompositorLayer.CreateStackLayer(type, "New Layer");
             m_CompositionProfile.AddNewLayerAtIndex(newLayer, index);
-            m_IsCompositorDirty = true;
         }
 
         public void RemoveLayerAtIndex(int indx)
         {
             m_CompositionProfile.RemoveLayerAtIndex(indx);
-            m_IsCompositorDirty = true;
         }
 
         public RenderTexture GetRenderTarget(int indx)
