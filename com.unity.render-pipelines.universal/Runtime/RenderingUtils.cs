@@ -98,6 +98,17 @@ namespace UnityEngine.Rendering.Universal
             }
         }
 
+        /// <summary>
+        /// Returns true if the projection matrix is y-flipped.
+        /// Unity renders with a flip projection matrix if rendering to a render texture in non OpengGL platforms.
+        /// </summary>
+        /// <param name="projectionMatrix">The projection matrix.</param>
+        /// <returns>True if the projection matrix if y-flipped.</returns>
+        public static float GetProjectionFlipSign(Matrix4x4 projectionMatrix)
+        {
+            return Mathf.Sign(projectionMatrix.GetColumn(1).y);
+        }
+
         // This is used to render materials that contain built-in shader passes not compatible with URP. 
         // It will render those legacy passes with error/pink shader.
         [Conditional("DEVELOPMENT_BUILD"), Conditional("UNITY_EDITOR")]

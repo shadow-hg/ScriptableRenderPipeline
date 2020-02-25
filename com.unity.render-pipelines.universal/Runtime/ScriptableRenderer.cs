@@ -179,6 +179,41 @@ namespace UnityEngine.Rendering.Universal
         }
 
         /// <summary>
+        /// Helper method to check if pipeline needs to create an intermediate render texture.
+        /// 
+        /// </summary>
+        /// <param name="cameraData">Camera data</param>
+        /// <param name="baseDescriptor">RenderTextureDescriptor for the camera target</param>
+        /// <returns>Return true if </returns>
+        public virtual bool RequiresIntermediateColorTexture(ref CameraData cameraData, RenderTextureDescriptor baseDescriptor)
+        {
+            // When rendering a camera stack we always create an intermediate render texture to composite camera results.
+            // We create it upon rendering the Base camera.
+            if (cameraData.renderType == CameraRenderType.Base && !cameraData.resolveFinalTarget)
+                return true;
+
+            int msaaSamples = cameraData.cameraTargetDescriptor.msaaSamples;
+            bool isStereoEnabled = cameraData.isStereoEnabled;
+            bool isScaledRender = !Mathf.Approximately(cameraData.renderScale, 1.0f);
+            bool isCompatibleBackbufferTextureDimension = baseDescriptor.dimension == TextureDimension.Tex2D;
+            bool requiresExplicitMsaaResolve = msaaSamples > 1 && !SystemInfo.supportsMultisampleAutoResolve;
+            bool isOffscreenRender = cameraData.targetTexture != null && !cameraData.isSceneViewCamera;
+            bool isCapturing = cameraData.captureActions != null;
+
+#if ENABLE_VR && ENABLE_VR_MODULE
+            if (isStereoEnabled)
+                isCompatibleBackbufferTextureDimension = UnityEngine.XR.XRSettings.deviceEyeTextureDimension == baseDescriptor.dimension;
+#endif
+
+            bool requiresBlitForOffscreenCamera = cameraData.postProcessEnabled || cameraData.requiresOpaqueTexture || requiresExplicitMsaaResolve;
+            if (isOffscreenRender)
+                return requiresBlitForOffscreenCamera;
+
+            return requiresBlitForOffscreenCamera || cameraData.isSceneViewCamera || isScaledRender || cameraData.isHdrEnabled ||
+                   !isCompatibleBackbufferTextureDimension || !cameraData.isDefaultViewport || isCapturing || Display.main.requiresBlitToBackbuffer;
+        }
+
+        /// <summary>
         /// Configures the camera target.
         /// </summary>
         /// <param name="colorTarget">Camera color target. Pass BuiltinRenderTextureType.CameraTarget if rendering to backbuffer.</param>
@@ -333,7 +368,7 @@ namespace UnityEngine.Rendering.Universal
 
             DrawGizmos(context, camera, GizmoSubset.PostImageEffects);
 
-            InternalFinishRendering(context, renderingData.resolveFinalTarget);
+            InternalFinishRendering(context, cameraData.resolveFinalTarget);
             blockRanges.Dispose();
             CommandBufferPool.Release(cmd);
         }
@@ -429,14 +464,7 @@ namespace UnityEngine.Rendering.Universal
             Matrix4x4 viewMatrix = cameraData.viewMatrix;
             Matrix4x4 viewProjMatrix = projMatrix * viewMatrix;
             Matrix4x4 invViewProjMatrix = Matrix4x4.Inverse(viewProjMatrix);
-            
-            // -1.0 if flipped projection, 1.0 otherwise
-            // projection is flipped when rendering to a render texture in non OpenGL platforms
-            // this is because Unity uses bottom left coordinate system for uv (OpenGL convention)
-            // final blit pass will un-flip it when rendering to screen
-            bool isRT = (cameraColorTarget != BuiltinRenderTextureType.CameraTarget || cameraData.targetTexture != null);
-            float projectionFlip = (isRT && SystemInfo.graphicsUVStartsAtTop) ? -1.0f : 1.0f;
-            
+
             float near = camera.nearClipPlane;
             float far = camera.farClipPlane;
             float invNear = Mathf.Approximately(near, 0.0f) ? 0.0f : 1.0f / near;
@@ -462,8 +490,13 @@ namespace UnityEngine.Rendering.Universal
                 zBufferParams.w += zBufferParams.z;
                 zBufferParams.z = -zBufferParams.z;
             }
-            
-            Vector4 projectionParams = new Vector4(projectionFlip, near, far, 1.0f * invFar);
+
+            // -1.0 if flipped projection, 1.0 otherwise
+            // projection is flipped when rendering to a render texture in non OpenGL platforms
+            // this is because Unity uses bottom left coordinate system for uv (OpenGL convention)
+            // final blit pass will un-flip it when rendering to screen
+            float projectionFlipSign = RenderingUtils.GetProjectionFlipSign(cameraData.projectionMatrix);
+            Vector4 projectionParams = new Vector4(projectionFlipSign, near, far, 1.0f * invFar);
             Vector4 orthoParams = new Vector4(camera.orthographicSize * cameraData.aspectRatio, camera.orthographicSize, 0.0f, isOrthographic);
                    
             // Camera and Screen variables as described in https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
@@ -717,7 +750,7 @@ namespace UnityEngine.Rendering.Universal
         {
             Camera camera = renderingData.cameraData.camera;
             context.StopMultiEye(camera);
-            bool isLastPass = renderingData.resolveFinalTarget && (eyeIndex == renderingData.cameraData.numberOfXRPasses - 1);
+            bool isLastPass = renderingData.cameraData.resolveFinalTarget && (eyeIndex == renderingData.cameraData.numberOfXRPasses - 1);
             context.StereoEndRender(camera, eyeIndex, isLastPass);
             m_InsideStereoRenderBlock = false;
         }

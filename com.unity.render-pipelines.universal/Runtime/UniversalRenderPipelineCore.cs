@@ -29,7 +29,6 @@ namespace UnityEngine.Rendering.Universal
         /// True if post-processing effect is enabled while rendering the camera stack.
         /// </summary>
         public bool postProcessingEnabled;
-        internal bool resolveFinalTarget;
     }
 
     [MovedFrom("UnityEngine.Rendering.LWRP")] public struct LightData
@@ -83,6 +82,7 @@ namespace UnityEngine.Rendering.Universal
         public AntialiasingMode antialiasing;
         public AntialiasingQuality antialiasingQuality;
         internal ScriptableRenderer renderer;
+        internal bool resolveFinalTarget;
     }
 
     [MovedFrom("UnityEngine.Rendering.LWRP")] public struct ShadowData

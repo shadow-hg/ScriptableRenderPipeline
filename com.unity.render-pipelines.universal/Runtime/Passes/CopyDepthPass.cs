@@ -20,10 +20,6 @@ namespace UnityEngine.Rendering.Universal.Internal
 
         int m_ScaleBiasId = Shader.PropertyToID("_ScaleBiasRT");
 
-        // Tells if while doing a blit we should flip
-        // TODO: remove this when we remove cmd.Blit() from this pass.
-        internal bool hasFlip { get; set;}
-
         public CopyDepthPass(RenderPassEvent evt, Material copyDepthMaterial)
         {
             m_CopyDepthMaterial = copyDepthMaterial;
@@ -70,13 +66,6 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             CameraData cameraData = renderingData.cameraData;
             
-            // scaleBias.x = scale
-            // scaleBias.y = bias
-            // In shader: uv.y = bias + uv.y * scale
-            Vector4 scaleBias = (hasFlip) ? new Vector4(1.0f, 0.0f, 1.0f, 1.0f) : new Vector4(-1.0f, 1.0f, 1.0f, 1.0f);
-            cmd.SetGlobalVector(m_ScaleBiasId, scaleBias);
-            cmd.SetGlobalTexture("_CameraDepthAttachment", source.Identifier());
-
             switch (cameraSamples)
             {
                 case 8:
@@ -105,23 +94,24 @@ namespace UnityEngine.Rendering.Universal.Internal
                     break;
             }
 
-            CopyTexture(cmd, depthSurface, copyDepthSurface, m_CopyDepthMaterial);
-            context.ExecuteCommandBuffer(cmd);
-            CommandBufferPool.Release(cmd);
-        }
+            cmd.SetGlobalTexture("_CameraDepthAttachment", source.Identifier());
 
-        void CopyTexture(CommandBuffer cmd, RenderTargetIdentifier source, RenderTargetIdentifier dest, Material material)
-        {
-            // TODO: In order to issue a copyTexture we need to also check if source and dest have same size
-            //if (SystemInfo.copyTextureSupport != CopyTextureSupport.None)
-            //    cmd.CopyTexture(source, dest);
-            //else
             // Blit has logic to flip projection matrix when rendering to render texture.
             // Currently the y-flip is handled in CopyDepthPass.hlsl by checking _ProjectionParams.x
             // If you replace this Blit with a Draw* that sets projection matrix double check
             // to also update shader.
+            // scaleBias.x = flipSign
+            // scaleBias.y = scale
+            // scaleBias.z = bias
+            // scaleBias.w = unused
+            float flipSign = RenderingUtils.GetProjectionFlipSign(cameraData.projectionMatrix);
+            Vector4 scaleBias = (flipSign < 0.0f) ? new Vector4(flipSign, 1.0f, -1.0f, 1.0f) : new Vector4(flipSign, 0.0f, 1.0f, 1.0f);
+            cmd.SetGlobalVector(m_ScaleBiasId, scaleBias);
+
             cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_CopyDepthMaterial);
-                //Blit(cmd, source, dest, material);
+
+            context.ExecuteCommandBuffer(cmd);
+            CommandBufferPool.Release(cmd);
         }
 
         /// <inheritdoc/>
