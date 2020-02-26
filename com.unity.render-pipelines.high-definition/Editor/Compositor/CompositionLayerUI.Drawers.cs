@@ -151,13 +151,13 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                     Debug.Log("Unknown layer type: Please add code here to handle this type of layer.");
                     break;
             }
-            rect.y += 1.1f * CompositorStyle.k_Spacing;
+            rect.y += 1.5f * CompositorStyle.k_Spacing;
 
             EditorGUI.PropertyField(rect, serializedProperties.ClearDepth, TextUI.ClearDepth);
             rect.y += CompositorStyle.k_Spacing;
 
             EditorGUI.PropertyField(rect, serializedProperties.ClearAlpha, TextUI.ClearAlpha);
-            rect.y += CompositorStyle.k_Spacing;
+            rect.y += 1.5f * CompositorStyle.k_Spacing;
 
             DrawPropertyHelper(rect, TextUI.ClearMode, serializedProperties.OverrideClearMode, serializedProperties.ClearMode);
             rect.y += CompositorStyle.k_Spacing;
@@ -179,17 +179,19 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
         static void DrawPropertyHelper(Rect rect, GUIContent label, SerializedProperty checkBox, SerializedProperty serializedProperty)
         {
             Rect rectCopy = rect;
-            rectCopy.width = 200;
-            EditorGUI.PropertyField(rectCopy, checkBox, label);
+            rectCopy.width = EditorGUIUtility.singleLineHeight;
+            EditorGUI.PropertyField(rectCopy, checkBox, GUIContent.none);
+
+            rectCopy.x += EditorGUIUtility.singleLineHeight;
+            rectCopy.width = EditorGUIUtility.labelWidth - EditorGUIUtility.singleLineHeight;
+            EditorGUI.LabelField(rectCopy, label);
 
             using (new EditorGUI.DisabledScope(checkBox.boolValue != true))
             {
-                float pad = EditorGUIUtility.labelWidth + EditorGUIUtility.singleLineHeight + 2;
+                float pad = EditorGUIUtility.labelWidth;
                 rect.x += pad;
                 rect.width -= rect.x;
                 EditorGUI.PropertyField(rect, serializedProperty, GUIContent.none);
-                rect.x -= pad;
-                rect.width += pad;
             }
         }
     }
