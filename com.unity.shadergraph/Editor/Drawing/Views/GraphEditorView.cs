@@ -261,6 +261,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                         var nodeData = new RedirectNodeData();
                         nodeData.SetPosition(context.screenMousePosition);
                         nodeData.m_Edge = context.edge;
+                        m_Graph.owner.RegisterCompleteObjectUndo("Add Redirect Node");
                         m_Graph.AddNode(nodeData);
                         return;
                     }

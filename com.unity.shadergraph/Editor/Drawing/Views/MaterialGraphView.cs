@@ -363,7 +363,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             return true;
         }
 
-        void RemoveFromGroupNode(DropdownMenuAction action)
+        public void RemoveFromGroupNode()
         {
             graph.owner.RegisterCompleteObjectUndo("Ungroup Node(s)");
             foreach (var element in selection.OfType<GraphElement>())
@@ -371,8 +371,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                 if (element.userData is IGroupItem)
                 {
                     Group group = element.GetContainingScope() as Group;
-                if (group != null)
-                {
+                    if (group != null)
+                    {
                         group.RemoveElement(element);
                     }
                 }
