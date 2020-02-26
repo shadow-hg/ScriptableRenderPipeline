@@ -99,7 +99,7 @@ namespace UnityEngine.Rendering.Universal
         }
 
         /// <summary>
-        /// Helper method to check if the pipeline needs to create a intermediate render texture.
+        /// Checks if the pipeline needs to create a intermediate render texture.
         /// </summary>
         /// <param name="cameraData">CameraData contains all relevant render target information for the camera.</param>
         /// <seealso cref="CameraData"/>
@@ -131,6 +131,67 @@ namespace UnityEngine.Rendering.Universal
 
             return requiresBlitForOffscreenCamera || cameraData.isSceneViewCamera || isScaledRender || cameraData.isHdrEnabled ||
                    !isCompatibleBackbufferTextureDimension || !cameraData.isDefaultViewport || isCapturing || Display.main.requiresBlitToBackbuffer;
+        }
+
+
+        /// <summary>
+        /// Set camera matrices. This method will set <c>UNITY_MATRIX_V</c>, <c>UNITY_MATRIX_P</c>, <c>UNITY_MATRIX_VP</c> to camera matrices.
+        /// Additionally this will also set <c>unity_CameraProjection</c> and <c>unity_CameraProjection</c>.
+        /// If <c>setInverseMatrices</c> is set to true this function will also set <c>UNITY_MATRIX_I_V</c> and <c>UNITY_MATRIX_I_VP</c>.
+        /// This function has no effect when rendering in stereo. When in stereo rendering you cannot override camera matrices.
+        /// If you need to set general purpose view and projection matrices call <see cref="SetViewAndProjectionMatrices(CommandBuffer, Matrix4x4, Matrix4x4, bool)"/> instead.
+        /// </summary>
+        /// <param name="cmd">CommandBuffer to submit data to GPU.</param>
+        /// <param name="cameraData">CameraData containing camera matrices information.</param>
+        /// <param name="setInverseMatrices">Set this to true if you also need to set inverse camera matrices.</param>
+        public static void SetCameraMatrices(CommandBuffer cmd, ref CameraData cameraData, bool setInverseMatrices)
+        {
+            if (cameraData.isStereoEnabled)
+            {
+                Debug.LogWarning("You cannot override camera matrices in stereo rendering. SetCameraMatrices will do nothing.");
+                return;
+            }
+
+            Matrix4x4 viewMatrix = cameraData.viewMatrix;
+
+            // Note: CameraData.projectionMatrix is computed with GL.GetGPUProjecitonMatrix.
+            // This account for platform specific y and z direction differences in OpenGL vs other platforms.
+            Matrix4x4 projectionMatrix = cameraData.projectionMatrix;
+
+            SetViewAndProjectionMatrices(cmd, viewMatrix, projectionMatrix, setInverseMatrices);
+            cmd.SetGlobalMatrix(ShaderPropertyId.worldToCameraMatrix, viewMatrix);
+
+            if (setInverseMatrices)
+            {
+                Matrix4x4 inverseViewMatrix = Matrix4x4.Inverse(viewMatrix);
+                cmd.SetGlobalMatrix(ShaderPropertyId.cameraToWorldMatrix, inverseViewMatrix);
+            }
+        }
+
+        /// <summary>
+        /// Set view and projection matrices.
+        /// This function will set <c>UNITY_MATRIX_V</c>, <c>UNITY_MATRIX_P</c>, <c>UNITY_MATRIX_VP</c> to given view and projection matrices.
+        /// If <c>setInverseMatrices</c> is set to true this function will also set <c>UNITY_MATRIX_I_V</c> and <c>UNITY_MATRIX_I_VP</c>.
+        /// </summary>
+        /// <param name="cmd">CommandBuffer to submit data to GPU.</param>
+        /// <param name="viewMatrix">View matrix to be set.</param>
+        /// <param name="projectionMatrix">Projection matrix to be set.</param>
+        /// <param name="setInverseMatrices">Set this to true if you also need to set inverse camera matrices.</param>
+        public static void SetViewAndProjectionMatrices(CommandBuffer cmd, Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix, bool setInverseMatrices)
+        {
+            Matrix4x4 viewAndProjectionMatrix = projectionMatrix * viewMatrix;
+            cmd.SetGlobalMatrix(ShaderPropertyId.viewMatrix, viewMatrix);
+            cmd.SetGlobalMatrix(ShaderPropertyId.projectionMatrix, projectionMatrix);
+            cmd.SetGlobalMatrix(ShaderPropertyId.viewAndProjectionMatrix, viewAndProjectionMatrix);
+
+            if (setInverseMatrices)
+            {
+                Matrix4x4 inverseMatrix = Matrix4x4.Inverse(viewMatrix);
+                // Note: inverse projection is currently undefined
+                Matrix4x4 inverseViewProjection = Matrix4x4.Inverse(viewAndProjectionMatrix);
+                cmd.SetGlobalMatrix(ShaderPropertyId.inverseViewMatrix, inverseMatrix);
+                cmd.SetGlobalMatrix(ShaderPropertyId.inverseViewAndProjectionMatrix, inverseViewProjection);
+            }
         }
 
         /// <summary>

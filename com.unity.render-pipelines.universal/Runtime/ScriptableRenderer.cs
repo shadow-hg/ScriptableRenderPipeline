@@ -6,18 +6,6 @@ using UnityEngine.Scripting.APIUpdating;
 
 namespace UnityEngine.Rendering.Universal
 {
-    static class PerCameraBuffer
-    {
-        // TODO: This needs to account for stereo rendering
-        public static int unity_MatrixInvVP = Shader.PropertyToID("unity_MatrixInvVP");
-        public static int _ScaledScreenParams = Shader.PropertyToID("_ScaledScreenParams");
-        public static int _WorldSpaceCameraPos = Shader.PropertyToID("_WorldSpaceCameraPos");
-        public static int _ScreenParams = Shader.PropertyToID("_ScreenParams");
-        public static int _ProjectionParams = Shader.PropertyToID("_ProjectionParams");
-        public static int _ZBufferParams = Shader.PropertyToID("_ZBufferParams");
-        public static int unity_OrthoParams = Shader.PropertyToID("unity_OrthoParams");
-    }
-    
     /// <summary>
     ///  Class <c>ScriptableRenderer</c> implements a rendering strategy. It describes how culling and lighting works and
     /// the effects supported.
@@ -470,17 +458,17 @@ namespace UnityEngine.Rendering.Universal
             float projectionFlipSign = RenderingUtils.GetProjectionFlipSign(cameraData.projectionMatrix);
             Vector4 projectionParams = new Vector4(projectionFlipSign, near, far, 1.0f * invFar);
             Vector4 orthoParams = new Vector4(camera.orthographicSize * cameraData.aspectRatio, camera.orthographicSize, 0.0f, isOrthographic);
-                   
+
             // Camera and Screen variables as described in https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
-            cmd.SetGlobalVector(PerCameraBuffer._WorldSpaceCameraPos, camera.transform.position);
-            cmd.SetGlobalVector(PerCameraBuffer._ProjectionParams, projectionParams);
-            cmd.SetGlobalVector(PerCameraBuffer._ScreenParams, new Vector4(cameraWidth, cameraHeight, 1.0f + 1.0f / cameraWidth, 1.0f + 1.0f / cameraHeight));
-            cmd.SetGlobalVector(PerCameraBuffer._ScaledScreenParams, new Vector4(scaledCameraWidth, scaledCameraHeight, 1.0f + 1.0f / scaledCameraWidth, 1.0f + 1.0f / scaledCameraHeight));
-            //cmd.SetGlobalVector(PerCameraBuffer._ZBufferParams, zBufferParams);
-            cmd.SetGlobalVector(PerCameraBuffer.unity_OrthoParams, orthoParams);
+            cmd.SetGlobalVector(ShaderPropertyId.worldSpaceCameraPos, camera.transform.position);
+            cmd.SetGlobalVector(ShaderPropertyId.projectionParams, projectionParams);
+            cmd.SetGlobalVector(ShaderPropertyId.screenParams, new Vector4(cameraWidth, cameraHeight, 1.0f + 1.0f / cameraWidth, 1.0f + 1.0f / cameraHeight));
+            cmd.SetGlobalVector(ShaderPropertyId.scaledScreenParams, new Vector4(scaledCameraWidth, scaledCameraHeight, 1.0f + 1.0f / scaledCameraWidth, 1.0f + 1.0f / scaledCameraHeight));
+            cmd.SetGlobalVector(ShaderPropertyId.zBufferParams, zBufferParams);
+            cmd.SetGlobalVector(ShaderPropertyId.orthoParams, orthoParams);
             // TODO: missing unity_CameraWorldClipPlanes[6], currently set by context.SetupCameraProperties
             
-            cmd.SetGlobalMatrix(PerCameraBuffer.unity_MatrixInvVP, invViewProjMatrix);
+            cmd.SetGlobalMatrix(ShaderPropertyId.inverseViewMatrix, invViewProjMatrix);
         }
 
         internal void Clear(CameraRenderType cameraType)
