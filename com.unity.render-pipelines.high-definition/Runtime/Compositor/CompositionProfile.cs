@@ -125,12 +125,20 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         public void Init()
         {
+            for (int i = 0; i < m_InputLayers.Count; ++i)
+            {
+                m_InputLayers[i].Init($"Layer{i}");
+            }
+
+            SetLayerRenderTargets();
+        }
+
+        public void SetLayerRenderTargets()
+        {
             bool isFirstLayerInSTack = true;
             CompositorLayer lastLayer = null;
             for (int i = 0; i < m_InputLayers.Count; ++i)
             {
-                m_InputLayers[i].Init($"Layer{i}");
-
                 if (m_InputLayers[i].GetOutputTarget() != CompositorLayer.OutputTarget.CameraStack)
                 {
                     lastLayer = m_InputLayers[i];
@@ -153,6 +161,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 }
             }
         }
+
         public void SetDrawOrder()
         {
             int count = 0;
@@ -170,6 +179,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             {
                 layer.Update(isPLaying);
             }
+            SetLayerRenderTargets();
         }
     }
 }

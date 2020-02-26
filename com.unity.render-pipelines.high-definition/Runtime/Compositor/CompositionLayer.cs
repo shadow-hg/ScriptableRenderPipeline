@@ -440,10 +440,14 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
             m_LayerCamera.enabled = (m_Show || m_ClearsBackGround) && compositor.enableOutput;
 
-            //TODO: maybe we can spawn the clone camera as child of the original one
-            m_LayerCamera.gameObject.transform.position = m_Camera.gameObject.transform.position;
-            m_LayerCamera.gameObject.transform.rotation = m_Camera.gameObject.transform.rotation;
-            m_LayerCamera.gameObject.transform.localScale = m_Camera.gameObject.transform.localScale;
+            // Refresh the camera data
+            m_LayerCamera.CopyFrom(m_Camera);
+            var cameraDataOrig = m_Camera.GetComponent<HDAdditionalCameraData>();
+            var cameraData = m_LayerCamera.GetComponent<HDAdditionalCameraData>();
+            if (cameraDataOrig)
+            {
+                cameraDataOrig.CopyTo(cameraData);
+            }
         }
 
         public void Update(bool isPlaying)
