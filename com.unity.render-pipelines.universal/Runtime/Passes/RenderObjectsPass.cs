@@ -89,9 +89,6 @@ namespace UnityEngine.Experimental.Rendering.Universal
             CommandBuffer cmd = CommandBufferPool.Get(m_ProfilerTag);
             using (new ProfilingScope(cmd, m_ProfilingSampler))
             {
-                context.ExecuteCommandBuffer(cmd);
-                cmd.Clear();
-
                 if (cameraData.isStereoEnabled)
                     Debug.LogWarning("RenderObjects pass is configured to override camera matrices. While rendering in stereo camera matrices cannot be overriden.");
 
@@ -106,10 +103,10 @@ namespace UnityEngine.Experimental.Rendering.Universal
                     viewMatrix.SetColumn(3, cameraTranslation + m_CameraSettings.offset);
 
                     RenderingUtils.SetViewAndProjectionMatrices(cmd, viewMatrix, projectionMatrix, false);
-
-                    context.ExecuteCommandBuffer(cmd);
-                    cmd.Clear();
                 }
+
+                context.ExecuteCommandBuffer(cmd);
+                cmd.Clear();
 
                 context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref m_FilteringSettings,
                     ref m_RenderStateBlock);
