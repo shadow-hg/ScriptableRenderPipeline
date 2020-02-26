@@ -264,12 +264,6 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             {
                 m_SerializedProperties.ApplyModifiedProperties();
             }
-            /*
-            if (m_compositionManager)
-            {
-                EditorUtility.SetDirty(m_compositionManager);
-            }
-            */
 
             if (m_compositionManager.shader == null)
             {

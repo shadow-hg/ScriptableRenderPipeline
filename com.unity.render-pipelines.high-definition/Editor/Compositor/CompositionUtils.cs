@@ -9,6 +9,8 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
 {
     internal class CompositionUtils
     {
+        public static readonly string k_DefaultCameraName = "MainCompositorCamera";
+
         static public void LoadDefaultCompositionGraph(CompositionManager compositor)
         {
             compositor.shader = UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>(HDUtils.GetHDRenderPipelinePath() + "Runtime/Compositor/ShaderGraphs/DefaultCompositionGraph.shadergraph");
@@ -31,7 +33,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             {
                 var outputCamera = Object.Instantiate(camera);
                 RemoveAudioListeners(outputCamera);
-                outputCamera.name = "MainCompositorCamera";
+                outputCamera.name = k_DefaultCameraName;
                 outputCamera.cullingMask = 0; // we don't want to render any 3D objects on the compositor camera
                 compositor.outputCamera = outputCamera;
             }
