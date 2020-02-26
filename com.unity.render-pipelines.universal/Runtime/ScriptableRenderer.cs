@@ -179,41 +179,6 @@ namespace UnityEngine.Rendering.Universal
         }
 
         /// <summary>
-        /// Helper method to check if pipeline needs to create an intermediate render texture.
-        /// 
-        /// </summary>
-        /// <param name="cameraData">Camera data</param>
-        /// <param name="baseDescriptor">RenderTextureDescriptor for the camera target</param>
-        /// <returns>Return true if </returns>
-        public virtual bool RequiresIntermediateColorTexture(ref CameraData cameraData, RenderTextureDescriptor baseDescriptor)
-        {
-            // When rendering a camera stack we always create an intermediate render texture to composite camera results.
-            // We create it upon rendering the Base camera.
-            if (cameraData.renderType == CameraRenderType.Base && !cameraData.resolveFinalTarget)
-                return true;
-
-            int msaaSamples = cameraData.cameraTargetDescriptor.msaaSamples;
-            bool isStereoEnabled = cameraData.isStereoEnabled;
-            bool isScaledRender = !Mathf.Approximately(cameraData.renderScale, 1.0f);
-            bool isCompatibleBackbufferTextureDimension = baseDescriptor.dimension == TextureDimension.Tex2D;
-            bool requiresExplicitMsaaResolve = msaaSamples > 1 && !SystemInfo.supportsMultisampleAutoResolve;
-            bool isOffscreenRender = cameraData.targetTexture != null && !cameraData.isSceneViewCamera;
-            bool isCapturing = cameraData.captureActions != null;
-
-#if ENABLE_VR && ENABLE_VR_MODULE
-            if (isStereoEnabled)
-                isCompatibleBackbufferTextureDimension = UnityEngine.XR.XRSettings.deviceEyeTextureDimension == baseDescriptor.dimension;
-#endif
-
-            bool requiresBlitForOffscreenCamera = cameraData.postProcessEnabled || cameraData.requiresOpaqueTexture || requiresExplicitMsaaResolve;
-            if (isOffscreenRender)
-                return requiresBlitForOffscreenCamera;
-
-            return requiresBlitForOffscreenCamera || cameraData.isSceneViewCamera || isScaledRender || cameraData.isHdrEnabled ||
-                   !isCompatibleBackbufferTextureDimension || !cameraData.isDefaultViewport || isCapturing || Display.main.requiresBlitToBackbuffer;
-        }
-
-        /// <summary>
         /// Configures the camera target.
         /// </summary>
         /// <param name="colorTarget">Camera color target. Pass BuiltinRenderTextureType.CameraTarget if rendering to backbuffer.</param>

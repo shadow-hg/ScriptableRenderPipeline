@@ -569,7 +569,8 @@ namespace UnityEngine.Rendering.Universal
             cameraData.requiresDepthTexture |= cameraData.isSceneViewCamera || CheckPostProcessForDepth(cameraData);
             cameraData.resolveFinalTarget = resolveFinalTarget;
 
-            bool requiresIntermediateColorTexture = cameraData.renderer.RequiresIntermediateColorTexture(ref cameraData, cameraData.cameraTargetDescriptor);
+            bool requiresIntermediateRenderTexture = RenderingUtils.RequiresIntermediateRenderTexture(ref cameraData);
+            cameraData.requiresIntermediateRenderTexture = requiresIntermediateRenderTexture;
             cameraData.viewMatrix = camera.worldToCameraMatrix;
 
             // Overlay cameras inherit viewport from base.
@@ -577,7 +578,7 @@ namespace UnityEngine.Rendering.Universal
             // matrix to prevent squishing when rendering objects in overlay cameras.
             cameraData.projectionMatrix = (!camera.orthographic && !cameraData.isStereoEnabled && cameraData.pixelRect != camera.pixelRect) ?
                 Matrix4x4.Perspective(camera.fieldOfView, cameraData.aspectRatio, camera.nearClipPlane, camera.farClipPlane) :
-                GL.GetGPUProjectionMatrix(camera.projectionMatrix, requiresIntermediateColorTexture);
+                GL.GetGPUProjectionMatrix(camera.projectionMatrix, requiresIntermediateRenderTexture);
         }
 
         static void InitializeRenderingData(UniversalRenderPipelineAsset settings, ref CameraData cameraData, ref CullingResults cullResults,
