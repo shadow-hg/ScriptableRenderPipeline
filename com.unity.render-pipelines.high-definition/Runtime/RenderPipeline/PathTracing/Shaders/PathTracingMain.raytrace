@@ -34,8 +34,8 @@ void AddConvergenceCue(uint2 pixelCoord, uint sampleCount, inout float3 color)
     uint width, height;
     _CameraColorTextureRW.GetDimensions(width, height);
 
-    // Change color only in a region corresponding to a progress bar, on the bottom 1% of the screen
-    if (pixelCoord.y < 0.01 * height && (float)pixelCoord.x / width <= (float)sampleCount / _RaytracingNumSamples)
+    // Change color only in a region corresponding to a progress bar, at the bottom of the screen
+    if (pixelCoord.y < 4 && (float)pixelCoord.x / width <= (float)sampleCount / _RaytracingNumSamples)
     {
         float lum = Luminance(color);
 
@@ -86,10 +86,10 @@ void RayGen()
         return;
     }
 
-    // Jitter them
+    // Jitter them (we use 4x10 dimensions of our sequence during path tracing atm, so pick the next available ones)
     float3 jitteredPixelCoord = float3(currentPixelCoord, 1.0);
-    jitteredPixelCoord.x += GetSample(currentPixelCoord, _RaytracingFrameIndex, 254);
-    jitteredPixelCoord.y += GetSample(currentPixelCoord, _RaytracingFrameIndex, 255);
+    jitteredPixelCoord.x += GetSample(currentPixelCoord, _RaytracingFrameIndex, 40);
+    jitteredPixelCoord.y += GetSample(currentPixelCoord, _RaytracingFrameIndex, 41);
 
     // Compute the ray direction, from those coordinates
     float3 directionWS = -normalize(mul(jitteredPixelCoord, (float3x3)_PixelCoordToViewDirWS));

@@ -16,12 +16,57 @@ struct LightList
     uint  distantIndex[MAX_DISTANT_LIGHT_COUNT];
     float distantWeight;
 
-    #ifdef USE_LIGHT_CLUSTER
+#ifdef USE_LIGHT_CLUSTER
     uint  cellIndex;
-    #endif
+#endif
 };
 
-LightList CreateLightList(float3 position, uint lightLayers)
+bool IsRectAreaLightActive(LightData lightData, float3 lightVec, float3 normal)
+{
+    // Check that the shading position is in front of the light
+    float lightCos = dot(lightVec, lightData.forward);
+    if (lightCos < 0.0)
+        return false;
+
+    // Check that at least part of the light is above the tangent plane
+   float lightTangentDist = dot(normal, lightVec);
+   if (4.0 * lightTangentDist * abs(lightTangentDist) > Sq(lightData.size.x) + Sq(lightData.size.y))
+        return false;
+
+    return true;
+}
+
+bool IsPointLightActive(LightData lightData, float3 lightVec, float3 normal)
+{
+    // Check that at least part of the light is above the tangent plane
+   float lightTangentDist = dot(normal, lightVec);
+   if (lightTangentDist * abs(lightTangentDist) > lightData.size.x)
+        return false;
+
+    // Offset the light position towards the back, to account for the radius,
+    // then check whether we are still within the dilated cone angle
+    float sqSinAngle = 1.0 - Sq(lightData.angleOffset / lightData.angleScale);
+    float3 lightOffset = sqrt(lightData.size.x / sqSinAngle) * lightData.forward;
+    float lightCos = dot(normalize(lightVec + lightOffset), lightData.forward);
+
+    return lightCos * lightData.angleScale + lightData.angleOffset > 0.0;
+}
+
+bool IsLocalLightActive(LightData lightData, float3 position, float3 normal)
+{
+    float3 lightVec = position - GetAbsolutePositionWS(lightData.positionRWS);
+
+    return lightData.lightType == GPULIGHTTYPE_RECTANGLE ?
+        IsRectAreaLightActive(lightData, lightVec, normal) :
+        IsPointLightActive(lightData, lightVec, normal);
+}
+
+bool IsDistantLightActive(DirectionalLightData lightData, float3 normal)
+{
+    return dot(normal, lightData.forward) < sin(lightData.angularDiameter * 0.5);
+}
+
+LightList CreateLightList(float3 position, float3 normal, uint lightLayers)
 {
     LightList list;
 
@@ -29,21 +74,25 @@ LightList CreateLightList(float3 position, uint lightLayers)
     list.localCount = 0;
     uint localCount;
 
-    #ifdef USE_LIGHT_CLUSTER
+#ifdef USE_LIGHT_CLUSTER
     GetLightCountAndStartCluster(position, LIGHTCATEGORY_AREA, localCount, localCount, list.cellIndex);
-    #else
+#else
     localCount = _PunctualLightCountRT + _AreaLightCountRT;
-    #endif
+#endif
 
     for (uint i = 0; i < localCount && list.localCount < MAX_LOCAL_LIGHT_COUNT; i++)
     {
-        #ifdef USE_LIGHT_CLUSTER
+#ifdef USE_LIGHT_CLUSTER
         const LightData lightData = FetchClusterLightIndex(list.cellIndex, i);
-        #else
+#else
         const LightData lightData = _LightDatasRT[i];
-        #endif
+#endif
 
-        if (IsMatchingLightLayer(lightData.lightLayers, lightLayers))
+        if (IsMatchingLightLayer(lightData.lightLayers, lightLayers)
+#ifndef _SURFACE_TYPE_TRANSPARENT
+            && IsLocalLightActive(lightData, position, normal)
+#endif
+            )
             list.localIndex[list.localCount++] = i;
     }
 
@@ -52,7 +101,11 @@ LightList CreateLightList(float3 position, uint lightLayers)
 
     for (uint i = 0; i < _DirectionalLightCount && list.distantCount < MAX_DISTANT_LIGHT_COUNT; i++)
     {
-        if (IsMatchingLightLayer(_DirectionalLightDatas[i].lightLayers, lightLayers))
+        if (IsMatchingLightLayer(_DirectionalLightDatas[i].lightLayers, lightLayers)
+#ifndef _SURFACE_TYPE_TRANSPARENT
+            && IsDistantLightActive(_DirectionalLightDatas[i], normal)
+#endif
+            )
             list.distantIndex[list.distantCount++] = i;
     }
 
@@ -70,11 +123,11 @@ uint GetLightCount(LightList list)
 
 LightData GetLocalLightData(LightList list, uint i)
 {
-    #ifdef USE_LIGHT_CLUSTER
+#ifdef USE_LIGHT_CLUSTER
     return FetchClusterLightIndex(list.cellIndex, list.localIndex[i]);
-    #else
+#else
     return _LightDatasRT[list.localIndex[i]];
-    #endif
+#endif
 }
 
 LightData GetLocalLightData(LightList list, float inputSample)

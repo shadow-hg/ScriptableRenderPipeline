@@ -117,7 +117,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
         return;
 
     // Create the list of active lights
-    LightList lightList = CreateLightList(position, builtinData.renderingLayers);
+    LightList lightList = CreateLightList(position, bsdfData.geomNormalWS, builtinData.renderingLayers);
 
     // Bunch of variables common to material and light sampling
     float pdf;
@@ -190,7 +190,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
             // Adjust the max roughness, based on the estimated diff/spec ratio
             nextPathIntersection.maxRoughness = (mtlResult.specPdf * max(bsdfData.roughnessT, bsdfData.roughnessB) + mtlResult.diffPdf) / pdf;
 
-#if defined(_SURFACE_TYPE_TRANSPARENT)
+#ifdef _SURFACE_TYPE_TRANSPARENT
             // When transmitting with an IOR close to 1.0, roughness is barely noticeable -> take that into account for roughness clamping
             if (IsBelow(mtlData) != isSampleBelow)
                 nextPathIntersection.maxRoughness = lerp(pathIntersection.maxRoughness, nextPathIntersection.maxRoughness, smoothstep(1.0, 1.3, bsdfData.ior));
