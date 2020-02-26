@@ -274,17 +274,18 @@ namespace UnityEngine.Rendering.Universal
 
            for (int eyeIndex = 0; eyeIndex < renderingData.cameraData.numberOfXRPasses; ++eyeIndex)
            {
-            /// Configure shader variables and other unity properties that are required for rendering.
-            /// /// * Setup Camera RenderTarget and Viewport	
-            /// * VR Camera Setup and SINGLE_PASS_STEREO props	
-            /// * Setup camera view, projection and their inverse matrices.	
-            /// * Setup properties: _WorldSpaceCameraPos, _ProjectionParams, _ScreenParams, _ZBufferParams, unity_OrthoParams	
-            /// * Setup camera world clip planes properties	
-            /// * Setup HDR keyword	
-            /// * Setup global time properties (_Time, _SinTime, _CosTime)
+            // This is still required because of the following reasons:
+            // - XR Camera Matrices. This condition should be lifted when Pure XR SDK lands.
+            // - Camera billboard properties.
+            // - Camera frustum planes: unity_CameraWorldClipPlanes[6]
+            // NOTE: The only reason we have to call this here and not at the beginning (before shadows)
+            // is because this need to be called for each eye in multi pass VR.
+            // The side effect is that this will override some shader properties we already setup and we will have to
+            // reset them.
             context.SetupCameraProperties(camera, stereoEnabled, eyeIndex);
-            
-            // SetupCameraProperties call above overrides some camera variables. We need to recall SetPerCameraShaderVariables 
+
+            // Reset per-camera shader variable. If we don't do it we might have a mismatch between shadows and main rendering
+            // f.ex, time variables need to match!
             SetPerCameraShaderVariables(cmd, ref cameraData, time, deltaTime, smoothDeltaTime);
 
             // If overlay camera, we have to reset projection related matrices due to inheriting viewport from base
@@ -420,11 +421,6 @@ namespace UnityEngine.Rendering.Universal
             float cameraWidth = (float)pixelRect.width;
             float cameraHeight = (float)pixelRect.height;
 
-            Matrix4x4 projMatrix = cameraData.projectionMatrix;
-            Matrix4x4 viewMatrix = cameraData.viewMatrix;
-            Matrix4x4 viewProjMatrix = projMatrix * viewMatrix;
-            Matrix4x4 invViewProjMatrix = Matrix4x4.Inverse(viewProjMatrix);
-
             float near = camera.nearClipPlane;
             float far = camera.farClipPlane;
             float invNear = Mathf.Approximately(near, 0.0f) ? 0.0f : 1.0f / near;
@@ -467,8 +463,8 @@ namespace UnityEngine.Rendering.Universal
             cmd.SetGlobalVector(ShaderPropertyId.zBufferParams, zBufferParams);
             cmd.SetGlobalVector(ShaderPropertyId.orthoParams, orthoParams);
             // TODO: missing unity_CameraWorldClipPlanes[6], currently set by context.SetupCameraProperties
-            
-            cmd.SetGlobalMatrix(ShaderPropertyId.inverseViewMatrix, invViewProjMatrix);
+
+            RenderingUtils.SetCameraMatrices(cmd, ref cameraData, true);
         }
 
         internal void Clear(CameraRenderType cameraType)

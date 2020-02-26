@@ -146,11 +146,9 @@ namespace UnityEngine.Rendering.Universal
         /// <param name="setInverseMatrices">Set this to true if you also need to set inverse camera matrices.</param>
         public static void SetCameraMatrices(CommandBuffer cmd, ref CameraData cameraData, bool setInverseMatrices)
         {
+            // We cannot override camera matrices in VR. They are set using context.SetupCameraProperties until XR Pure SDK lands.
             if (cameraData.isStereoEnabled)
-            {
-                Debug.LogWarning("You cannot override camera matrices in stereo rendering. SetCameraMatrices will do nothing.");
                 return;
-            }
 
             Matrix4x4 viewMatrix = cameraData.viewMatrix;
 
