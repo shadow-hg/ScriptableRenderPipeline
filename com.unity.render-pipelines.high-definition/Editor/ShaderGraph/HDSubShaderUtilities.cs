@@ -747,6 +747,7 @@ namespace UnityEditor.Rendering.HighDefinition
             var zClipCode = new ShaderStringBuilder();
             var stencilCode = new ShaderStringBuilder();
             var colorMaskCode = new ShaderStringBuilder();
+            var dotsInstancingCode = new ShaderStringBuilder();
             HDSubShaderUtilities.BuildRenderStatesFromPass(pass, blendCode, cullCode, zTestCode, zWriteCode, zClipCode, stencilCode, colorMaskCode);
 
             HDRPShaderStructs.AddRequiredFields(pass.RequiredFields, activeFields.baseInstance);
@@ -783,26 +784,22 @@ namespace UnityEditor.Rendering.HighDefinition
             ShaderGenerator instancingOptions = new ShaderGenerator();
             {
                 instancingOptions.AddShaderChunk("#pragma multi_compile_instancing", true);
-                instancingOptions.AddShaderChunk("#pragma multi_compile _ DOTS_INSTANCING_ON", true);
 
-                if ( instancedCount> 0)
+                if (masterNode is MasterNode node && node.dotsInstancing.isOn)
+                {
+                    instancingOptions.AddShaderChunk("#define UNITY_DOTS_SHADER");
+                    instancingOptions.AddShaderChunk("#pragma instancing_options nolightprobe");
+                    instancingOptions.AddShaderChunk("#pragma instancing_options nolodfade");
+                }
+
+                if (instancedCount > 0)
                 {
                     instancingOptions.AddShaderChunk("#if SHADER_TARGET >= 35 && (defined(SHADER_API_D3D11) || defined(SHADER_API_GLES3) || defined(SHADER_API_GLCORE) || defined(SHADER_API_XBOXONE) || defined(SHADER_API_PSSL) || defined(SHADER_API_VULKAN) || defined(SHADER_API_METAL))");
                     instancingOptions.AddShaderChunk("#define UNITY_SUPPORT_INSTANCING");
                     instancingOptions.AddShaderChunk("#endif");
-                    instancingOptions.AddShaderChunk("#if defined(SHADER_API_SWITCH)");
-                    instancingOptions.AddShaderChunk("#define UNITY_SUPPORT_INSTANCING");
-                    instancingOptions.AddShaderChunk("#endif");
-
-                    // Generate Hybrid V1 code if Hybrid V2 is disabled
-                    #if !ENABLE_HYBRID_RENDERER_V2
                     instancingOptions.AddShaderChunk("#if defined(UNITY_SUPPORT_INSTANCING) && defined(INSTANCING_ON)");
-                    instancingOptions.AddShaderChunk("#define UNITY_HYBRID_V1_INSTANCING_ENABLED");
+                    instancingOptions.AddShaderChunk("#define UNITY_DOTS_INSTANCING_ENABLED");
                     instancingOptions.AddShaderChunk("#endif");
-
-                    instancingOptions.AddShaderChunk("#pragma instancing_options nolightprobe");
-                    instancingOptions.AddShaderChunk("#pragma instancing_options nolodfade");
-                    #endif
                 }
 
                 if (pass.ExtraInstancingOptions != null)
@@ -811,22 +808,16 @@ namespace UnityEditor.Rendering.HighDefinition
                         instancingOptions.AddShaderChunk(instancingOption);
                 }
             }
-
-
-            // Generate Hybrid V1 code if Hybrid V2 is disabled            
-            var dotsInstancingCode = new ShaderStringBuilder();
-            #if !ENABLE_HYBRID_RENDERER_V2
             if (instancedCount > 0)
             {
                 dotsInstancingCode.AppendLine("//-------------------------------------------------------------------------------------");
                 dotsInstancingCode.AppendLine("// Dots Instancing vars");
                 dotsInstancingCode.AppendLine("//-------------------------------------------------------------------------------------");
                 dotsInstancingCode.AppendLine("");
-                dotsInstancingCode.Append(sharedProperties.GetDotsInstancingPropertiesDeclaration(mode));
 
+                dotsInstancingCode.Append(sharedProperties.GetDotsInstancingPropertiesDeclaration(mode));
             }
-            #endif
-            
+
             ShaderGenerator shaderStages = new ShaderGenerator();
             {
                 if (pass.ShaderStages != null)
@@ -1241,8 +1232,8 @@ namespace UnityEditor.Rendering.HighDefinition
             );
 
             // All these properties values will be patched with the material keyword update
-            collector.AddIntProperty("_StencilRef", stencilRef);
-            collector.AddIntProperty("_StencilWriteMask", stencilWriteMask);
+            collector.AddIntProperty("_StencilRef", stencilRef); 
+            collector.AddIntProperty("_StencilWriteMask", stencilWriteMask); 
             // Depth prepass
             collector.AddIntProperty("_StencilRefDepth", stencilRefDepth); // Nothing
             collector.AddIntProperty("_StencilWriteMaskDepth", stencilWriteMaskDepth); // StencilUsage.TraceReflectionRay
@@ -1253,8 +1244,8 @@ namespace UnityEditor.Rendering.HighDefinition
             collector.AddIntProperty("_StencilRefDistortionVec", (int)StencilUsage.DistortionVectors);
             collector.AddIntProperty("_StencilWriteMaskDistortionVec", (int)StencilUsage.DistortionVectors);
             // Gbuffer
-            collector.AddIntProperty("_StencilWriteMaskGBuffer", stencilWriteMaskGBuffer);
-            collector.AddIntProperty("_StencilRefGBuffer", stencilRefGBuffer);
+            collector.AddIntProperty("_StencilWriteMaskGBuffer", stencilWriteMaskGBuffer); 
+            collector.AddIntProperty("_StencilRefGBuffer", stencilRefGBuffer); 
             collector.AddIntProperty("_ZTestGBuffer", 4);
 
             collector.AddToggleProperty(kUseSplitLighting, splitLighting);
