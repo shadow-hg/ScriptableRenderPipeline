@@ -515,6 +515,7 @@ namespace UnityEngine.Rendering.Universal
         /// </summary>
         /// <param name="camera">Camera to initialize settings from.</param>
         /// <param name="additionalCameraData">Additional camera data component to initialize settings from.</param>
+        /// <param name="resolveFinalTarget">True if this is the last camera in the stack and rendering should resolve to camera target.</param>
         /// <param name="cameraData">Settings to be initilized.</param>
         static void InitializeAdditionalCameraData(Camera camera, UniversalAdditionalCameraData additionalCameraData, bool resolveFinalTarget, ref CameraData cameraData)
         {

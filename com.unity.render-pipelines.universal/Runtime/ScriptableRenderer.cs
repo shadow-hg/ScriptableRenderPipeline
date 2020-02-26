@@ -287,6 +287,13 @@ namespace UnityEngine.Rendering.Universal
            for (int eyeIndex = 0; eyeIndex < renderingData.cameraData.numberOfXRPasses; ++eyeIndex)
            {
             /// Configure shader variables and other unity properties that are required for rendering.
+            /// /// * Setup Camera RenderTarget and Viewport	
+            /// * VR Camera Setup and SINGLE_PASS_STEREO props	
+            /// * Setup camera view, projection and their inverse matrices.	
+            /// * Setup properties: _WorldSpaceCameraPos, _ProjectionParams, _ScreenParams, _ZBufferParams, unity_OrthoParams	
+            /// * Setup camera world clip planes properties	
+            /// * Setup HDR keyword	
+            /// * Setup global time properties (_Time, _SinTime, _CosTime)
             context.SetupCameraProperties(camera, stereoEnabled, eyeIndex);
             
             // SetupCameraProperties call above overrides some camera variables. We need to recall SetPerCameraShaderVariables 

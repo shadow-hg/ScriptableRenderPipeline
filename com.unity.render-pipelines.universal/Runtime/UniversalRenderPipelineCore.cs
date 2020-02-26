@@ -64,7 +64,7 @@ namespace UnityEngine.Rendering.Universal
         public bool requiresOpaqueTexture;
 
         /// <summary>
-        /// True if the pipeline requires to create an intermediate render texture to render.
+        /// True if the pipeline requires to create an intermediate render texture.
         /// If you are implementing a custom renderer for URP you should check this setting
         /// to create and set the camera render texture.
         /// </summary>
