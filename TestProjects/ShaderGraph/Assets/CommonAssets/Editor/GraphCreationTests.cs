@@ -8,204 +8,15 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEditor.Graphing;
 using UnityEditor.Graphing.Util;
-//using UnityEditor.Searcher;
+using UnityEditor.Searcher;
 using UnityEditor.ShaderGraph.Drawing;
 using UnityEditor.ShaderGraph.Drawing.Controls;
 using UnityEditor.ShaderGraph.Internal;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.TestTools;
+using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
-
-namespace UnityEditor.ShaderGraph.Drawing
-{
-    //class AutomatedTestingSearcherProvider : SearcherProvider
-    //{
-    //    public override void GenerateNodeEntries()
-    //    {
-    //        // First build up temporary data structure containing group & title as an array of strings (the last one is the actual title) and associated node type.
-    //        List<NodeEntry> nodeEntries = new List<NodeEntry>();
-    //        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-    //        {
-    //            foreach (var type in assembly.GetTypesOrNothing())
-    //            {
-    //                if (type.IsClass && !type.IsAbstract && (type.IsSubclassOf(typeof(AbstractMaterialNode)))
-    //                    && type != typeof(PropertyNode)
-    //                    && type != typeof(KeywordNode)
-    //                    && type != typeof(SubGraphNode))
-    //                {
-    //                    var attrs = type.GetCustomAttributes(typeof(TitleAttribute), false) as TitleAttribute[];
-    //                    if (attrs != null && attrs.Length > 0)
-    //                    {
-    //                        var node = (AbstractMaterialNode)Activator.CreateInstance(type);
-    //                        AddEntries(node, attrs[0].title, nodeEntries);
-    //                    }
-    //                }
-    //            }
-    //        }
-
-    //        foreach (var property in m_Graph.properties)
-    //        {
-    //            var node = new PropertyNode();
-    //            node.owner = m_Graph;
-    //            node.propertyGuid = property.guid;
-    //            node.owner = null;
-    //            AddEntries(node, new[] { "Properties", "Property: " + property.displayName }, nodeEntries);
-    //        }
-    //        foreach (var keyword in m_Graph.keywords)
-    //        {
-    //            var node = new KeywordNode();
-    //            node.owner = m_Graph;
-    //            node.keywordGuid = keyword.guid;
-    //            node.owner = null;
-    //            AddEntries(node, new[] { "Keywords", "Keyword: " + keyword.displayName }, nodeEntries);
-    //        }
-
-    //        // Sort the entries lexicographically by group then title with the requirement that items always comes before sub-groups in the same group.
-    //        // Example result:
-    //        // - Art/BlendMode
-    //        // - Art/Adjustments/ColorBalance
-    //        // - Art/Adjustments/Contrast
-    //        nodeEntries.Sort((entry1, entry2) =>
-    //        {
-    //            for (var i = 0; i < entry1.title.Length; i++)
-    //            {
-    //                if (i >= entry2.title.Length)
-    //                    return 1;
-    //                var value = entry1.title[i].CompareTo(entry2.title[i]);
-    //                if (value != 0)
-    //                {
-    //                        // Make sure that leaves go before nodes
-    //                        if (entry1.title.Length != entry2.title.Length && (i == entry1.title.Length - 1 || i == entry2.title.Length - 1))
-    //                    {
-    //                            //once nodes are sorted, sort slot entries by slot order instead of alphebetically 
-    //                            var alphaOrder = entry1.title.Length < entry2.title.Length ? -1 : 1;
-    //                        var slotOrder = entry1.compatibleSlotId.CompareTo(entry2.compatibleSlotId);
-    //                        return alphaOrder.CompareTo(slotOrder);
-    //                    }
-
-    //                    return value;
-    //                }
-    //            }
-    //            return 0;
-    //        });
-
-
-    //        currentNodeEntries = nodeEntries;
-    //    }
-    //}
-    //class AutomatedTestingGraphEditorView : GraphEditorView
-    //{
-    //    public Searcher.Searcher searcher;
-    //    public AutomatedTestingGraphEditorView(EditorWindow editorWindow, GraphData graph, MessageManager messageManager) : base(editorWindow, graph, messageManager) { }
-
-    //    protected override void InitializeSearchWindowProvider(EditorWindow editorWindow)
-    //    {
-    //        m_SearchWindowProvider = ScriptableObject.CreateInstance<SearcherProvider>();
-    //        m_SearchWindowProvider.Initialize(editorWindow, m_Graph, m_GraphView);
-    //        m_GraphView.nodeCreationRequest = (c) =>
-    //        {
-    //            m_SearchWindowProvider.connectedPort = null;
-    //            searcher = (m_SearchWindowProvider as SearcherProvider).LoadSearchWindow();
-    //            SearcherWindow.Show(editorWindow, searcher,
-    //                item => (m_SearchWindowProvider as SearcherProvider).OnSearcherSelectEntry(item, c.screenMousePosition - editorWindow.position.position),
-    //                c.screenMousePosition - editorWindow.position.position, null);
-    //        };
-    //    }
-
-
-    //}
-
-    //class AutomatedTestingGraphEditWindow : MaterialGraphEditWindow
-    //{
-    //    protected override void SetupGraphEditorView(GraphData materialGraph)
-    //    {
-    //        messageManager.ClearAll();
-    //        materialGraph.messageManager = messageManager;
-    //        var asset = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(selectedGuid));
-    //        graphEditorView = new AutomatedTestingGraphEditorView(this, materialGraph, messageManager)
-    //        {
-    //            viewDataKey = selectedGuid,
-    //            assetName = asset.name.Split('/').Last()
-    //        };
-    //        m_ColorSpace = PlayerSettings.colorSpace;
-    //        m_RenderPipelineAsset = GraphicsSettings.renderPipelineAsset;
-    //        graphObject.Validate();
-    //    }
-
-    //    public override void Initialize(string assetGuid)
-    //    {
-    //        try
-    //        {
-    //            m_ColorSpace = PlayerSettings.colorSpace;
-    //            m_RenderPipelineAsset = GraphicsSettings.renderPipelineAsset;
-
-    //            var asset = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(assetGuid));
-    //            if (asset == null)
-    //                return;
-
-    //            if (!EditorUtility.IsPersistent(asset))
-    //                return;
-
-    //            if (selectedGuid == assetGuid)
-    //                return;
-
-    //            var path = AssetDatabase.GetAssetPath(asset);
-    //            var extension = Path.GetExtension(path);
-    //            if (extension == null)
-    //                return;
-    //            // Path.GetExtension returns the extension prefixed with ".", so we remove it. We force lower case such that
-    //            // the comparison will be case-insensitive.
-    //            extension = extension.Substring(1).ToLowerInvariant();
-    //            bool isSubGraph;
-    //            switch (extension)
-    //            {
-    //                case ShaderGraphImporter.Extension:
-    //                    isSubGraph = false;
-    //                    break;
-    //                case ShaderSubGraphImporter.Extension:
-    //                    isSubGraph = true;
-    //                    break;
-    //                default:
-    //                    return;
-    //            }
-
-    //            selectedGuid = assetGuid;
-
-    //            var textGraph = File.ReadAllText(path, Encoding.UTF8);
-    //            graphObject = CreateInstance<GraphObject>();
-    //            graphObject.hideFlags = HideFlags.HideAndDontSave;
-    //            graphObject.graph = JsonUtility.FromJson<GraphData>(textGraph);
-    //            graphObject.graph.assetGuid = assetGuid;
-    //            graphObject.graph.isSubGraph = isSubGraph;
-    //            graphObject.graph.messageManager = messageManager;
-    //            graphObject.graph.OnEnable();
-    //            graphObject.graph.ValidateGraph();
-
-    //            graphEditorView = new AutomatedTestingGraphEditorView(this, m_GraphObject.graph, messageManager)
-    //            {
-    //                viewDataKey = selectedGuid,
-    //                assetName = asset.name.Split('/').Last()
-    //            };
-
-    //            Texture2D icon = GetThemeIcon(graphObject.graph);
-
-    //            // This is adding the icon at the front of the tab
-    //            titleContent = EditorGUIUtility.TrTextContentWithIcon(selectedGuid, icon);
-    //            UpdateTitle();
-
-    //            Repaint();
-    //        }
-    //        catch (Exception)
-    //        {
-    //            m_HasError = true;
-    //            m_GraphEditorView = null;
-    //            graphObject = null;
-    //            throw;
-    //        }
-    //    }
-    //}
-}
 
     namespace UnityEditor.ShaderGraph.UnitTests
 {
@@ -245,14 +56,41 @@ namespace UnityEditor.ShaderGraph.Drawing
                 position = graphToCopy.outputNode.drawState.position,
                 expanded = true
             };
-            graphData.AddNode(rootNode);
-            graphData.path = "Shader Graphs";
-            string outputPath = testGraphLocation + testPrefix + Path.GetFileNameWithoutExtension(basedOnGraph) + '.' + ShaderGraphImporter.Extension;
-            FileUtilities.WriteShaderGraphToDisk(outputPath, graphData);
-            AssetDatabase.Refresh();
-            window.UpdateAsset();
-            window.Close();
-            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<Shader>(outputPath));
+
+            if (graphToCopy.isSubGraph)
+            {
+                graphData.isSubGraph = true;
+                SubGraphOutputNode rootOutput = rootNode as SubGraphOutputNode;
+                graphData.AddNode(rootOutput);
+                SubGraphOutputNode outputNode = graphToCopy.outputNode as SubGraphOutputNode;
+                List<MaterialSlot> tempSlots = new List<MaterialSlot>();
+                outputNode.GetInputSlots(tempSlots);
+                foreach (var slot in tempSlots)
+                {
+                    rootOutput.AddSlot(slot.concreteValueType);
+                }
+
+                graphData.path = "Sub Graphs";
+                string outputPath = testGraphLocation + testPrefix + Path.GetFileNameWithoutExtension(basedOnGraph)
+                                  + '.' + ShaderSubGraphImporter.Extension;
+                FileUtilities.WriteShaderGraphToDisk(outputPath, graphData);
+                AssetDatabase.Refresh();
+                window.UpdateAsset();
+                window.Close();
+            }
+            else
+            {
+                graphData.AddNode(rootNode);
+                graphData.path = "Shader Graphs";
+                string outputPath = testGraphLocation + testPrefix + Path.GetFileNameWithoutExtension(basedOnGraph)
+                                  + '.' + ShaderGraphImporter.Extension;
+                FileUtilities.WriteShaderGraphToDisk(outputPath, graphData);
+                AssetDatabase.Refresh();
+                window.UpdateAsset();
+                window.Close();
+                Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<Shader>(outputPath));
+            }
+            
         }
 
         private static void TrySaveWindows(MaterialGraphEditWindow copyWindow, MaterialGraphEditWindow testGraphWindow)
@@ -271,14 +109,10 @@ namespace UnityEditor.ShaderGraph.Drawing
             
         }
 
-        private const float userTime = 0.5f;
-        public static IEnumerator UserlikeGraphCreation(string assetPath)
+        private const float userTime = 0.1f;
+        public static IEnumerator UserlikeGraphCreation(string assetPath, Action afterUserAddNode, Action afterUserAddEdge)
         {
-            var nodeLookup = new Dictionary<AbstractMaterialNode, AbstractMaterialNode>();
-            var temporaryMarks = ListPool<(AbstractMaterialNode, SlotReference?, SlotReference?)>.Get();
-            var permanentMarks = ListPool<(AbstractMaterialNode, SlotReference?, SlotReference?)>.Get();
-            var slots = ListPool<MaterialSlot>.Get();
-            var stack = StackPool<(AbstractMaterialNode, SlotReference?, SlotReference?)>.Get();
+
             MaterialGraphEditWindow copyWindow = null;
             MaterialGraphEditWindow testGraphWindow = null;
             GraphObject graphObjectToCopy = null;
@@ -288,7 +122,18 @@ namespace UnityEditor.ShaderGraph.Drawing
             {
                 copyWindow = OpenShaderGraphWindowForAsset(assetPath);
                 graphObjectToCopy = copyWindow.GetPrivateProperty<GraphObject>("graphObject");
-                string testGraphPath = testGraphLocation + testPrefix + Path.GetFileNameWithoutExtension(assetPath) + '.' + ShaderGraphImporter.Extension;
+                string testGraphPath;
+                if (graphObjectToCopy.graph.isSubGraph)
+                {
+                    testGraphPath = testGraphLocation + testPrefix + Path.GetFileNameWithoutExtension(assetPath)
+                                  + '.' + ShaderSubGraphImporter.Extension;
+                }
+                else
+                {
+                    testGraphPath = testGraphLocation + testPrefix + Path.GetFileNameWithoutExtension(assetPath)
+                                  + '.' + ShaderGraphImporter.Extension;
+                }
+
                 testGraphWindow = OpenShaderGraphWindowForAsset(testGraphPath);
                 testGraphWindow.Focus();
                 testGraphObject = testGraphWindow.GetPrivateProperty<GraphObject>("graphObject");
@@ -308,7 +153,11 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             yield return new WaitForSecondsRealtime(userTime);
 
-
+            var nodeLookup = new Dictionary<AbstractMaterialNode, AbstractMaterialNode>();
+            var temporaryMarks = ListPool<(AbstractMaterialNode, SlotReference?, SlotReference?)>.Get();
+            var permanentMarks = ListPool<(AbstractMaterialNode, SlotReference?, SlotReference?)>.Get();
+            var slots = ListPool<MaterialSlot>.Get();
+            var stack = StackPool<(AbstractMaterialNode, SlotReference?, SlotReference?)>.Get();
 
             nodeLookup.Add(graphObjectToCopy.graph.outputNode, testGraphObject.graph.outputNode);
 
@@ -328,8 +177,9 @@ namespace UnityEditor.ShaderGraph.Drawing
                 if (temporaryMarks.Contains((node, to, from)))
                 {
                     if (!nodeLookup.ContainsKey(node))
-                    {                      
-                        yield return UserlikeAddNode(node, testGraphObject, nodeLookup, testGraphWindow);
+                    {
+                        yield return UserlikeAddNode(node, testGraphWindow, nodeLookup);
+                        afterUserAddNode?.Invoke();
                     }
 
                     if (to.HasValue)
@@ -338,13 +188,15 @@ namespace UnityEditor.ShaderGraph.Drawing
                         if (toNode != null && !nodeLookup.ContainsKey(toNode))
                         {
 
-                            yield return UserlikeAddNode(toNode, testGraphObject, nodeLookup, testGraphWindow);
+                            yield return UserlikeAddNode(toNode, testGraphWindow, nodeLookup);
+                            afterUserAddNode?.Invoke();
                             permanentMarks.Add((toNode, null, null));
                         }
                         Assert.IsTrue(from.HasValue);
                         try
                         {
                             UserlikeAddEdge(to.Value, from.Value, ref graphObjectToCopy, ref testGraphObject, ref nodeLookup);
+                            afterUserAddEdge?.Invoke();
                         }
                         catch (Exception cantAddEdgeException)
                         {
@@ -362,7 +214,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                             }
                             throw cantAddEdgeException;
                         }
-                        
+
                         yield return new WaitForSecondsRealtime(userTime);
                     }
                     permanentMarks.Add((node, to, from));
@@ -415,7 +267,18 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
         }
 
-        public static void UserlikeAddEdge(SlotReference originalTo, SlotReference originalFrom, ref GraphObject originalGraph, ref GraphObject copyGraph, ref Dictionary<AbstractMaterialNode, AbstractMaterialNode> nodeLookup)
+
+
+        public static IEnumerator UserlikeGraphCreation(string assetPath, Action afterUserAction = null)
+        {
+            return UserlikeGraphCreation(assetPath, afterUserAction, afterUserAction);
+        }
+
+        public static void UserlikeAddEdge(SlotReference originalTo,
+                                           SlotReference originalFrom,
+                                           ref GraphObject originalGraph,
+                                           ref GraphObject copyGraph,
+                                           ref Dictionary<AbstractMaterialNode, AbstractMaterialNode> nodeLookup)
         {
             AbstractMaterialNode toNodeOriginal = originalGraph.graph.GetNodeFromGuid(originalTo.nodeGuid);
             AbstractMaterialNode fromNodeOriginal = originalGraph.graph.GetNodeFromGuid(originalFrom.nodeGuid);
@@ -437,65 +300,183 @@ namespace UnityEditor.ShaderGraph.Drawing
             copyGraph.graph.Connect(copyFrom, copyTo);
         }
 
-        public static IEnumerator UserlikeAddNode(AbstractMaterialNode node, GraphObject graphObject, Dictionary<AbstractMaterialNode, AbstractMaterialNode> nodeLookup, MaterialGraphEditWindow testGraphWindow)
+        /// <summary>
+        /// Calls <see cref="UserlikeAddNodeUsingSearcherAndCopyValues(AbstractMaterialNode, GraphObject, MaterialGraphEditWindow, GraphEditorView)"/>
+        /// and invokes <see cref="MaterialGraphView"/>.ConvertToProperty through reflection 
+        /// </summary>
+        /// <param name="propertyNode"></param>
+        /// <param name="graphObject"></param>
+        /// <param name="graphEditWindow"></param>
+        /// <param name="graphEditorView"></param>
+        /// <param name="nodeLookup"></param>
+        /// <returns></returns>
+        private static IEnumerator UserLikeAddInlineNodeAndConvertToProperty(PropertyNode propertyNode,
+                                                                             GraphObject graphObject,
+                                                                             MaterialGraphEditWindow graphEditWindow,
+                                                                             GraphEditorView graphEditorView,
+                                                                             Dictionary<AbstractMaterialNode, AbstractMaterialNode> nodeLookup)
         {
-            AbstractMaterialNode newNode;
-            //ECL: Concretize property, will need to add full property later
-            if (node is PropertyNode propertyNode)
-            {
-                AbstractShaderProperty property = propertyNode.owner.properties.FirstOrDefault(x => x.guid == propertyNode.propertyGuid);
-                Assert.IsNotNull(property);
+            //find coresponding shader property
+            AbstractShaderProperty property = propertyNode.owner.properties.FirstOrDefault(x => x.guid == propertyNode.propertyGuid);
+            Assert.IsNotNull(property);
 
-                newNode = property.ToConcreteNode() as AbstractMaterialNode;
+            //ToConcrete does not usually copy over drawstate, so create template node ourselves 
+            AbstractMaterialNode concrete = property.ToConcreteNode();
+            concrete.drawState = propertyNode.drawState;
+            concrete.owner = propertyNode.owner;
+            yield return UserlikeAddNodeUsingSearcherAndCopyValues(concrete, graphObject, graphEditWindow, graphEditorView);
+            Assert.IsNotNull(searcherAddedNode);
+
+            yield return new WaitForSecondsRealtime(userTime);
+
+            MaterialGraphView materialGraphView = graphEditorView.graphView;
+            graphEditorView.HandleGraphChanges();
+            materialGraphView.selection.Clear();
+            materialGraphView.selection.Add(materialGraphView.nodes.ToList().OfType<MaterialNodeView>()
+                                       .Where(n => n.node == searcherAddedNode).First());
+
+            void convertSelectionToProperty() => materialGraphView.InvokePrivateAction("ConvertToProperty", new DropdownMenuAction[] { null });
+
+            searcherAddedNode = AddNodeIndirect(graphObject.graph, convertSelectionToProperty, typeof(PropertyNode));
+            Assert.IsNotNull(searcherAddedNode);
+
+            nodeLookup.Add(propertyNode, searcherAddedNode);
+            searcherAddedNode = null;
+        }
+        
+        private static AbstractMaterialNode searcherAddedNode;
+        /// <summary>
+        /// 
+        /// Try and add a node to the graph based on a template node in the most user way possible. This loads up the searcher and
+        /// searches it for an entry that matches the <see cref="TitleAttribute"/> on the class if is not a <see cref="SubGraphNode"/>,
+        /// otherwise searches with the <see cref="SubGraphNode"/>'s <see cref="SubGraphAsset.hlslName"/>. When it finds an entry, it
+        /// invokes <see cref="SearcherProvider.OnSearcherSelectEntry(SearcherItem, Vector2)"/> with the found <see cref="SearcherItem"/>.
+        /// Finally, it copies over all <see cref="MaterialSlot"/> values from <see cref="AbstractMaterialNode.GetInputSlots{T}(List{T})"/>
+        /// as well as a reflection search of any Properties with the <see cref="IControlAttribute"/> decorator.
+        /// 
+        /// </summary>
+        /// <param name="node">Template <see cref="AbstractMaterialNode"/> to add to the test graph</param>
+        /// <param name="graphObject"></param>
+        /// <param name="graphEditWindow"></param>
+        /// <param name="graphEditorView"></param>
+        /// <returns></returns>
+        private static IEnumerator UserlikeAddNodeUsingSearcherAndCopyValues(AbstractMaterialNode node,
+                                                                             GraphObject graphObject,
+                                                                             MaterialGraphEditWindow graphEditWindow,
+                                                                             GraphEditorView graphEditorView)
+        {
+            //Need to access the searcherprovider to call OnSearcherSelectEntry
+            SearchWindowProvider searchWindowProvider = graphEditorView.GetPrivateField<SearchWindowProvider>("m_SearchWindowProvider");
+            searchWindowProvider.connectedPort = null;
+            Searcher.Searcher searcher = (searchWindowProvider as SearcherProvider).LoadSearchWindow();
+            SearcherWindow.Show(graphEditWindow, searcher,
+                item => (searchWindowProvider as SearcherProvider).OnSearcherSelectEntry(item, graphEditWindow.position.center),
+                graphEditWindow.position.center, null);
+
+            yield return new WaitForSecondsRealtime(userTime);
+
+            //get searcher entries
+            Type newNodeType = node.GetType();
+            IEnumerable<SearcherItem> results;
+            if (node is SubGraphNode subGraphNode)
+            {
+                results = searcher.Search(subGraphNode.asset.hlslName);
             }
             else
             {
-                newNode = Activator.CreateInstance(node.GetType()) as AbstractMaterialNode;
-                var inputs = node.GetInputsWithNoConnection();
-                foreach (var input in inputs)
-                {
-                    MaterialSlot materialSlot = input as MaterialSlot;
-                    MaterialSlot newSlot = newNode.FindInputSlot<MaterialSlot>(materialSlot.id);
-                    newSlot.CopyValuesFrom(materialSlot);
-                }
+                TitleAttribute title = newNodeType.GetCustomAttributes(typeof(TitleAttribute), true).First() as TitleAttribute;
+                results = searcher.Search(title.title.Last());
+            }
 
-                foreach (var property in node.GetType().GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.FlattenHierarchy))
+            //find correct entry and invoke OnSearcherSelectEntry
+            foreach (SearchNodeItem searchEntry in results)
+            {
+                if (searchEntry.NodeGUID.node != null && searchEntry.NodeGUID.node.GetType() == newNodeType)
                 {
-                    var enumControlsCheck = property.GetCustomAttributes(typeof(IControlAttribute), true);
-                    if (enumControlsCheck.Length > 0)
-                    {
-                        property.SetValue(newNode, property.GetValue(node));
-                    }
+                    void searcherSelect() => ((SearcherProvider)searchWindowProvider)
+                                             .OnSearcherSelectEntry(searchEntry, graphEditorView.graphView
+                                                                                 .contentViewContainer
+                                                                                 .LocalToWorld(node.drawState.position.position));
+                    searcherAddedNode = AddNodeIndirect(graphObject.graph, searcherSelect, newNodeType);
+                    break;
                 }
             }
-            /* ECL: Searcher integration I am currently working on
-            GraphEditorView graphEditorView = testGraphWindow.GetPrivateProperty<GraphEditorView>("graphEditorView");
-            //MaterialGraphView materialGraphView = graphEditorView.graphView;
-            SearchWindowProvider searchWindowProvider = graphEditorView.GetPrivateField<SearchWindowProvider>("m_SearchWindowProvider");
-            searchWindowProvider.connectedPort = null;
-            Searcher.Searcher sercher = (searchWindowProvider as SearcherProvider).LoadSearchWindow();
-            SearcherWindow.Show(testGraphWindow, sercher,
-                item => (searchWindowProvider as SearcherProvider).OnSearcherSelectEntry(item, testGraphWindow.position.center),
-                testGraphWindow.position.center, null);
-            //foreach (SearcherWindow searcherWindow in Resources.FindObjectsOfTypeAll<SearcherWindow>())
-            //{
-            //    var name = searcherWindow.name;
-            //    var searcherControlField = searcherWindow.GetType().GetField("m_SearcherControl", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            //    name = null;
-            //}
-            yield return new WaitForSecondsRealtime(userTime);
-            var results = sercher.Search("add");
-            ((SearcherProvider)searchWindowProvider).OnSearcherSelectEntry(results.First(), node.drawState.position.center);
-            yield return new WaitForSecondsRealtime(userTime);
-            */
-            newNode.drawState = new DrawState
-            {
-                position = node.drawState.position,
-                expanded = true
-            };
+            Assert.IsNotNull(searcherAddedNode);
 
-            graphObject.graph.AddNode(newNode);
-            nodeLookup.Add(node, newNode);
+            var inputs = node.GetInputsWithNoConnection();
+            foreach (var input in inputs)
+            {
+                MaterialSlot materialSlot = input as MaterialSlot;
+                MaterialSlot newSlot = searcherAddedNode.FindInputSlot<MaterialSlot>(materialSlot.id);
+                newSlot.CopyValuesFrom(materialSlot);
+            }
+
+            //Apply control values from the template node to our new node
+            foreach (var property in node.GetType().GetProperties(System.Reflection.BindingFlags.Public
+                                                                | System.Reflection.BindingFlags.NonPublic
+                                                                | System.Reflection.BindingFlags.Instance
+                                                                | System.Reflection.BindingFlags.FlattenHierarchy))
+            {
+                var enumControlsCheck = property.GetCustomAttributes(typeof(IControlAttribute), true);
+                if (enumControlsCheck.Length > 0)
+                {
+                    property.SetValue(searcherAddedNode, property.GetValue(node));
+                }
+            }
+
+            //Make sure the searcher window gets closed
+            foreach (SearcherWindow searcherWindow in Resources.FindObjectsOfTypeAll<SearcherWindow>())
+            {
+                searcherWindow.Close();
+            }
+
+        }
+
+        private static IEnumerator DefaultAddNode(AbstractMaterialNode node,
+                                                  GraphObject graphObject,
+                                                  MaterialGraphEditWindow graphEditWindow,
+                                                  GraphEditorView graphEditorView,
+                                                  Dictionary<AbstractMaterialNode, AbstractMaterialNode> nodeLookup)
+        {
+            yield return UserlikeAddNodeUsingSearcherAndCopyValues(node, graphObject, graphEditWindow, graphEditorView);
+            nodeLookup.Add(node, searcherAddedNode);
+            searcherAddedNode = null;
+        }
+
+        private static AbstractMaterialNode AddNodeIndirect(GraphData graph, Action addAction, Type expectedNodeType)
+        {
+            var previouslyAdded = graph.addedNodes.ToList();
+            addAction.Invoke();
+            var newlyAdded = graph.addedNodes.Where(newlyAddedNode => previouslyAdded.Contains(newlyAddedNode) == false).ToList();
+            Assert.IsTrue(newlyAdded.Count > 0);
+            AbstractMaterialNode addedNode = newlyAdded.Where(newlyAddedNode => newlyAddedNode.GetType() == typeof(PropertyNode)).First();
+            Assert.IsNotNull(addedNode);
+            return addedNode;
+        }
+        /// <summary>
+        /// Evaluates and performs the correct add funciton, and passes reflected refs where needed
+        /// </summary>
+        /// <param name="node"></param>
+        /// <param name="testGraphWindow"></param>
+        /// <param name="nodeLookup"></param>
+        /// <returns></returns>
+        public static IEnumerator UserlikeAddNode(AbstractMaterialNode node,
+                                                  MaterialGraphEditWindow testGraphWindow,
+                                                  Dictionary<AbstractMaterialNode, AbstractMaterialNode> nodeLookup)
+        {
+            
+            GraphEditorView graphEditorView = testGraphWindow.GetPrivateProperty<GraphEditorView>("graphEditorView");
+            GraphObject graphObject = testGraphWindow.GetPrivateProperty<GraphObject>("graphObject");
+
+            if (node is PropertyNode propertyNode)
+            {
+                yield return UserLikeAddInlineNodeAndConvertToProperty(propertyNode, graphObject, testGraphWindow, graphEditorView, nodeLookup);
+            }
+            else
+            {
+                yield return DefaultAddNode(node, graphObject, testGraphWindow, graphEditorView, nodeLookup);
+            }
+
             yield return new WaitForSecondsRealtime(userTime);
         }
 
@@ -511,9 +492,10 @@ namespace UnityEditor.ShaderGraph.Drawing
             {
                 get
                 {
-                    string[] guids = AssetDatabase.FindAssets("t:shader", graphLocation);
+                    string[] guids = AssetDatabase.FindAssets("", graphLocation);
                     return guids.Select(guid => AssetDatabase.GUIDToAssetPath(guid)) //Get Paths
-                                .Where(assetPath => Path.GetExtension(assetPath) == "." + ShaderGraphImporter.Extension) //Only Shadergraphs
+                                .Where(assetPath => Path.GetExtension(assetPath).ToLower() == "." + ShaderGraphImporter.Extension
+                                                 || Path.GetExtension(assetPath).ToLower() == "." + ShaderSubGraphImporter.Extension) //Only Shadergraphs
                                 .Select(assetPath => new TestCaseData(new object[] { assetPath }).Returns(null)) //Setup data as expected by TestCaseSource
                                 .GetEnumerator();
                 }
@@ -532,6 +514,23 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             GraphCreationUtils.CreateEmptyTestGraph(assetPath);
             return GraphCreationUtils.UserlikeGraphCreation(assetPath);
+        }
+
+        [UnityTest, TestCase("Assets/CommonAssets/Graphs/BuildGraphTests/Shader_IslandWater.ShaderGraph", ExpectedResult = null)]
+        public IEnumerator TestUndoRedo(string assetPath)
+        {
+            int undoCount = 0;
+            int undoFrequency = 4;
+            GraphCreationUtils.CreateEmptyTestGraph(assetPath);
+            return GraphCreationUtils.UserlikeGraphCreation(assetPath, afterUserAction: () =>
+            {
+                undoCount = (undoCount + 1) % undoFrequency;
+                if(undoCount % undoFrequency == undoFrequency - 1)
+                {
+                    Undo.PerformUndo();
+                    Undo.PerformRedo();
+                }
+            });
         }
     }
 }

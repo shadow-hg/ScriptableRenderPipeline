@@ -33,6 +33,12 @@ namespace UnityEditor.ShaderGraph.UnitTests
             catch { throw new System.ArgumentException($"Unnable to convert {name} to type of {output.GetType().ToString()}"); }
             return output;
         }
+
+        public static void SetPrivateField(this object obj, string fieldName, object value)
+        {
+            FieldInfo fieldInfo = GetField(obj, fieldName, privateBindingFlags);
+            fieldInfo.SetValue(obj, value);
+        }
         public static T GetPrivateField<T>(this object obj, string fieldName)
         {
             object value = GetField(obj, fieldName, privateBindingFlags).GetValue(obj);
