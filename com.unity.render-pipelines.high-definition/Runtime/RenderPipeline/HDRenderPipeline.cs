@@ -46,7 +46,7 @@ namespace UnityEngine.Rendering.HighDefinition
 #endif
         }
 
-        static Volume GetOrCreateDefaultVolume()
+        internal static Volume GetOrCreateDefaultVolume()
         {
             if (s_DefaultVolume == null || s_DefaultVolume.Equals(null))
             {
@@ -242,6 +242,7 @@ namespace UnityEngine.Rendering.HighDefinition
         }
 
         readonly SkyManager m_SkyManager = new SkyManager();
+        internal SkyManager skyManager { get { return m_SkyManager; } }
         readonly AmbientOcclusionSystem m_AmbientOcclusionSystem;
 
         // Debugging
@@ -672,7 +673,6 @@ namespace UnityEngine.Rendering.HighDefinition
                 , overridesMaximumLODLevel = true
 #if UNITY_2020_1_OR_NEWER
                 , terrainDetailUnsupported = true
-                , rendererProbes = false
 #endif
             };
 
@@ -3340,6 +3340,11 @@ namespace UnityEngine.Rendering.HighDefinition
             m_SkyManager.RequestEnvironmentUpdate();
         }
 
+        internal void RequestStaticSkyUpdate()
+        {
+            m_SkyManager.RequestStaticEnvironmentUpdate();
+        }
+
         void PreRenderSky(HDCamera hdCamera, CommandBuffer cmd)
         {
             if (m_CurrentDebugDisplaySettings.IsMatcapViewEnabled(hdCamera))
@@ -4010,7 +4015,7 @@ namespace UnityEngine.Rendering.HighDefinition
             CoreUtils.SetKeyword(cmd, "DEBUG_DISPLAY", debugDisplayEnabledOrSceneLightingDisabled);
 
             // Setting this all the time due to a strange bug that either reports a (globally) bound texture as not bound or where SetGlobalTexture doesn't behave as expected.
-            // As a workaround we bind it regardless of debug display. Eventually with 
+            // As a workaround we bind it regardless of debug display. Eventually with
             cmd.SetGlobalTexture(HDShaderIDs._DebugMatCapTexture, defaultResources.textures.matcapTex);
 
             if (debugDisplayEnabledOrSceneLightingDisabled ||
