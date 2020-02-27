@@ -73,6 +73,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
 
     PositionInputs posInput;
     posInput.positionWS = fragInput.positionRWS;
+    posInput.positionSS = pathIntersection.pixelCoord;
 
     // Build the surfacedata and builtindata
     SurfaceData surfaceData;
