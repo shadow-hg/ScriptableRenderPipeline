@@ -550,7 +550,8 @@ namespace UnityEngine.Rendering.Universal
 
             // Disable depth and color copy. We should add it in the renderer instead to avoid performance pitfalls
             // of camera stacking breaking render pass execution implicitly.
-            if (cameraData.renderType == CameraRenderType.Overlay)
+            bool isOverlayCamera = (cameraData.renderType == CameraRenderType.Overlay);
+            if (isOverlayCamera)
             {
                 cameraData.requiresDepthTexture = false;
                 cameraData.requiresOpaqueTexture = false;
@@ -562,16 +563,28 @@ namespace UnityEngine.Rendering.Universal
             cameraData.requiresDepthTexture |= cameraData.isSceneViewCamera || CheckPostProcessForDepth(cameraData);
             cameraData.resolveFinalTarget = resolveFinalTarget;
 
-            bool requiresIntermediateRenderTexture = RenderingUtils.RequiresIntermediateRenderTexture(ref cameraData);
-            cameraData.requiresIntermediateRenderTexture = requiresIntermediateRenderTexture;
+            cameraData.requiresIntermediateRenderTexture = RenderingUtils.RequiresIntermediateRenderTexture(ref cameraData);
             cameraData.viewMatrix = camera.worldToCameraMatrix;
+            cameraData.projectionMatrix = camera.projectionMatrix;
 
             // Overlay cameras inherit viewport from base.
-            // If the viewport is different between them we might need to patch the projection
+            // If the viewport is different between them we might need to patch the projection to adjust aspect ratio
             // matrix to prevent squishing when rendering objects in overlay cameras.
-            cameraData.projectionMatrix = (!camera.orthographic && !cameraData.isStereoEnabled && cameraData.pixelRect != camera.pixelRect) ?
-                Matrix4x4.Perspective(camera.fieldOfView, cameraData.aspectRatio, camera.nearClipPlane, camera.farClipPlane) :
-                GL.GetGPUProjectionMatrix(camera.projectionMatrix, requiresIntermediateRenderTexture);
+            if (isOverlayCamera && !camera.orthographic && !cameraData.isStereoEnabled && cameraData.pixelRect != camera.pixelRect)
+            {
+                // m00 = (cotangent / aspect), therefore m00 * aspect gives us cotangent.
+                float cotangent = camera.projectionMatrix.m00 * camera.aspect;
+
+                // Get new m00 by dividing by base camera aspectRatio.
+                float newCotangent = cotangent / cameraData.aspectRatio;
+                cameraData.projectionMatrix.m00 = newCotangent;
+            }
+
+            // GL.GetGPUProjectionMatrix patches projection matrix to apply correct y and z directions that are consistent across all platforms.
+            // OpenGL uses bottom left coordinate system, other platforms top-left. All platforms except OpenGL render with a y-flip if not rendering to render texture :tableflip:.
+            // OpenGL uses z buffer range as [0, 1], other platforms use reverse z-buffer [1, 0] to improve z buffer precision
+            // https://docs.unity3d.com/Manual/SL-PlatformDifferences.html
+            cameraData.projectionMatrix = GL.GetGPUProjectionMatrix(cameraData.projectionMatrix, cameraData.requiresIntermediateRenderTexture);
         }
 
         static void InitializeRenderingData(UniversalRenderPipelineAsset settings, ref CameraData cameraData, ref CullingResults cullResults,

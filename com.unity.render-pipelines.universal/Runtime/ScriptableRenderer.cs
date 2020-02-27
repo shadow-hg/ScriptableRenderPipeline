@@ -108,7 +108,7 @@ namespace UnityEngine.Rendering.Universal
         bool m_FirstTimeCameraDepthTargetIsBound = true; // flag used to track when m_CameraDepthTarget should be cleared (if necessary), the first time m_CameraDepthTarget is bound as a render target
         bool m_XRRenderTargetNeedsClear = false;
 
-        const string k_SetCameraRenderStateTag = "Clear Render State";
+        const string k_SetCameraRenderStateTag = "Set Camera Data";
         const string k_SetRenderTarget = "Set RenderTarget";
         const string k_ReleaseResourcesTag = "Release Resources";
 
@@ -225,8 +225,7 @@ namespace UnityEngine.Rendering.Universal
         {
             ref CameraData cameraData = ref renderingData.cameraData;
             Camera camera = cameraData.camera;
-            
-            bool stereoEnabled = renderingData.cameraData.isStereoEnabled;
+            bool stereoEnabled = cameraData.isStereoEnabled;
 
             CommandBuffer cmd = CommandBufferPool.Get(k_SetCameraRenderStateTag);
 
@@ -244,7 +243,8 @@ namespace UnityEngine.Rendering.Universal
             
             // Initialize Camera Render State
             ClearRenderingState(cmd);
-            SetPerCameraShaderVariables(cmd, ref cameraData, time, deltaTime, smoothDeltaTime);
+            SetPerCameraShaderVariables(cmd, ref cameraData);
+            SetShaderTimeValues(cmd, time, deltaTime, smoothDeltaTime);
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
             
@@ -283,27 +283,16 @@ namespace UnityEngine.Rendering.Universal
             // The side effect is that this will override some shader properties we already setup and we will have to
             // reset them.
             context.SetupCameraProperties(camera, stereoEnabled, eyeIndex);
-
-            // Reset per-camera shader variable. If we don't do it we might have a mismatch between shadows and main rendering
-            // f.ex, time variables need to match!
             RenderingUtils.SetCameraMatrices(cmd, ref cameraData, true);
-            SetPerCameraShaderVariables(cmd, ref cameraData, time, deltaTime, smoothDeltaTime);
 
-            // If overlay camera, we have to reset projection related matrices due to inheriting viewport from base
-            // camera. This changes the aspect ratio, which requires to recompute projection.
-            // TODO: We need to expose all work done in SetupCameraProperties above to c# land. This not only
-            // avoids resetting values but also guarantee values are correct for all systems.
-            // Known Issue: billboard will not work with camera stacking when using viewport with aspect ratio different from default aspect.
-            if (cameraData.renderType == CameraRenderType.Overlay)
-            {
-                cmd.SetViewProjectionMatrices(cameraData.viewMatrix, cameraData.projectionMatrix);
-            }
+            // Reset shader time variables as they were overridden in SetupCameraProperties. If we don't do it we might have a mismatch between shadows and main rendering
+            SetShaderTimeValues(cmd, time, deltaTime, smoothDeltaTime);
 
 #if VISUAL_EFFECT_GRAPH_0_0_1_OR_NEWER
             //Triggers dispatch per camera, all global parameters should have been setup at this stage.
             VFX.VFXManager.ProcessCameraCommand(camera, cmd);
 #endif
-               
+
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
 
@@ -410,11 +399,9 @@ namespace UnityEngine.Rendering.Universal
 
         // Initialize Camera Render State
         // Place all per-camera rendering logic that is generic for all types of renderers here.
-        void SetPerCameraShaderVariables(CommandBuffer cmd, ref CameraData cameraData, float time, float deltaTime, float smoothDeltaTime)
+        void SetPerCameraShaderVariables(CommandBuffer cmd, ref CameraData cameraData)
         {
             Camera camera = cameraData.camera;
-            
-            SetShaderTimeValues(cmd, time, deltaTime, smoothDeltaTime);
             
             Rect pixelRect = cameraData.pixelRect;
             float scaledCameraWidth = (float)pixelRect.width * cameraData.renderScale;
@@ -448,17 +435,17 @@ namespace UnityEngine.Rendering.Universal
                 zBufferParams.z = -zBufferParams.z;
             }
 
-            // -1.0 if flipped projection, 1.0 otherwise
-            // projection is flipped when rendering to a render texture in non OpenGL platforms
-            // this is because Unity uses bottom left coordinate system for uv (OpenGL convention)
-            // final blit pass will un-flip it when rendering to screen
-            float projectionFlipSign = RenderingUtils.GetProjectionFlipSign(cameraData.projectionMatrix);
-            Vector4 projectionParams = new Vector4(projectionFlipSign, near, far, 1.0f * invFar);
+            // Projection flip sign logic is very deep in GfxDevice::SetInvertProjectionMatrix
+            // For now we don't deal with _ProjectionParams.x and let SetupCameraProperties handle it.
+            // We need to enable this when we remove SetupCameraProperties
+            // float projectionFlipSign = ???
+            // Vector4 projectionParams = new Vector4(projectionFlipSign, near, far, 1.0f * invFar);
+            // cmd.SetGlobalVector(ShaderPropertyId.projectionParams, projectionParams);
+
             Vector4 orthoParams = new Vector4(camera.orthographicSize * cameraData.aspectRatio, camera.orthographicSize, 0.0f, isOrthographic);
 
             // Camera and Screen variables as described in https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
             cmd.SetGlobalVector(ShaderPropertyId.worldSpaceCameraPos, camera.transform.position);
-            cmd.SetGlobalVector(ShaderPropertyId.projectionParams, projectionParams);
             cmd.SetGlobalVector(ShaderPropertyId.screenParams, new Vector4(cameraWidth, cameraHeight, 1.0f + 1.0f / cameraWidth, 1.0f + 1.0f / cameraHeight));
             cmd.SetGlobalVector(ShaderPropertyId.scaledScreenParams, new Vector4(scaledCameraWidth, scaledCameraHeight, 1.0f + 1.0f / scaledCameraWidth, 1.0f + 1.0f / scaledCameraHeight));
             cmd.SetGlobalVector(ShaderPropertyId.zBufferParams, zBufferParams);
