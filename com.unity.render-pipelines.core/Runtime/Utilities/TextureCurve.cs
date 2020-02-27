@@ -82,7 +82,7 @@ namespace UnityEngine.Rendering
         }
 
         /// <summary>
-        /// Cleans up the internal texture resource.
+        /// Releases the internal texture resource.
         /// </summary>
         public void Release()
         {
