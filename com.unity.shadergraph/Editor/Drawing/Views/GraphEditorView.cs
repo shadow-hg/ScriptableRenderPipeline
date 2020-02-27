@@ -46,6 +46,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         EdgeConnectorListener m_EdgeConnectorListener;
         BlackboardProvider m_BlackboardProvider;
         ColorManager m_ColorManager;
+        EditorWindow m_EditorWindow;
 
         public BlackboardProvider blackboardProvider
         {
@@ -105,6 +106,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_GraphViewElementsAddedToGroup = OnElementsAddedToGroup;
             m_GraphViewElementsRemovedFromGroup = OnElementsRemovedFromGroup;
 
+            m_EditorWindow = editorWindow;
             m_Graph = graph;
             m_MessageManager = messageManager;
             styleSheets.Add(Resources.Load<StyleSheet>("Styles/GraphEditorView"));
@@ -254,23 +256,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             m_SearchWindowProvider = ScriptableObject.CreateInstance<SearcherProvider>();
             m_SearchWindowProvider.Initialize(editorWindow, m_Graph, m_GraphView);
-            m_GraphView.nodeCreationRequest = (c) =>
-                {
-                    if(c is RedirectNodeCreationContext context)
-                    {
-                        var nodeData = new RedirectNodeData();
-                        nodeData.SetPosition(context.screenMousePosition);
-                        nodeData.m_Edge = context.edge;
-                        m_Graph.owner.RegisterCompleteObjectUndo("Add Redirect Node");
-                        m_Graph.AddNode(nodeData);
-                        return;
-                    }
-
-                    m_SearchWindowProvider.connectedPort = null;
-                    SearcherWindow.Show(editorWindow, (m_SearchWindowProvider as SearcherProvider).LoadSearchWindow(),
-                        item => (m_SearchWindowProvider as SearcherProvider).OnSearcherSelectEntry(item, c.screenMousePosition - editorWindow.position.position),
-                        c.screenMousePosition - editorWindow.position.position, null);
-                };
+            m_GraphView.nodeCreationRequest = NodeCreationRequest;
 
             m_EdgeConnectorListener = new EdgeConnectorListener(m_Graph, m_SearchWindowProvider, editorWindow);
 
@@ -291,6 +277,103 @@ namespace UnityEditor.ShaderGraph.Drawing
                 AddEdge(edge);
 
             Add(content);
+        }
+
+        void NodeCreationRequest(NodeCreationContext c)
+        {
+            if(c is RedirectNodeCreationContext context)
+            {
+                var nodeData = new RedirectNodeData();
+                nodeData.SetPosition(context.screenMousePosition);
+                nodeData.m_Edge = context.edge;
+
+                // Need to check if the Nodes that are connected are in a group or not
+                // If they are in the same group we also add in the Redirect Node
+                var leftSlot = context.edge.output.GetSlot();
+                var rightSlot = context.edge.input.GetSlot();
+
+                // Valuetype gets the type should be the type for input and output
+                switch(rightSlot.valueType)
+                {
+                    case SlotValueType.Boolean:
+                        nodeData.AddSlot(new BooleanMaterialSlot(0, "", "", SlotType.Input, false));
+                        nodeData.AddSlot(new BooleanMaterialSlot(1, "", "", SlotType.Output, false));
+                        break;
+                    case SlotValueType.Vector1:
+                        nodeData.AddSlot(new Vector1MaterialSlot(0, "", "", SlotType.Input, 0));
+                        nodeData.AddSlot(new Vector1MaterialSlot(1, "", "", SlotType.Output, 0));
+                        break;
+                    case SlotValueType.Vector2:
+                        nodeData.AddSlot(new Vector2MaterialSlot(0, "", "", SlotType.Input, Vector4.zero));
+                        nodeData.AddSlot(new Vector2MaterialSlot(1, "", "", SlotType.Output, Vector4.zero));
+                        break;
+                    case SlotValueType.Vector3:
+                        nodeData.AddSlot(new Vector3MaterialSlot(0, "", "", SlotType.Input, Vector4.zero));
+                        nodeData.AddSlot(new Vector3MaterialSlot(1, "", "", SlotType.Output, Vector4.zero));
+                        break;
+                    case SlotValueType.Vector4:
+                        nodeData.AddSlot(new Vector4MaterialSlot(0, "", "", SlotType.Input, Vector4.zero));
+                        nodeData.AddSlot(new Vector4MaterialSlot(1, "", "", SlotType.Output, Vector4.zero));
+                        break;
+                    case SlotValueType.Matrix2:
+                        nodeData.AddSlot(new Matrix2MaterialSlot(0, "", "", SlotType.Input));
+                        nodeData.AddSlot(new Matrix2MaterialSlot(1, "", "", SlotType.Output));
+                        break;
+                    case SlotValueType.Matrix3:
+                        nodeData.AddSlot(new Matrix3MaterialSlot(0, "", "", SlotType.Input));
+                        nodeData.AddSlot(new Matrix3MaterialSlot(1, "", "", SlotType.Output));
+                        break;
+                    case SlotValueType.Matrix4:
+                        nodeData.AddSlot(new Matrix4MaterialSlot(0, "", "", SlotType.Input));
+                        nodeData.AddSlot(new Matrix4MaterialSlot(1, "", "", SlotType.Output));
+                        break;
+                    case SlotValueType.Texture2D:
+                        nodeData.AddSlot(new Texture2DMaterialSlot(0, "", "", SlotType.Input));
+                        nodeData.AddSlot(new Texture2DMaterialSlot(1, "", "", SlotType.Output));
+                        break;
+                    case SlotValueType.Texture2DArray:
+                        nodeData.AddSlot(new Texture2DArrayMaterialSlot(0, "", "", SlotType.Input));
+                        nodeData.AddSlot(new Texture2DArrayMaterialSlot(1, "", "", SlotType.Output));
+                        break;
+                    case SlotValueType.Texture3D:
+                        nodeData.AddSlot(new Texture3DMaterialSlot(0, "", "", SlotType.Input));
+                        nodeData.AddSlot(new Texture3DMaterialSlot(1, "", "", SlotType.Output));
+                        break;
+                    case SlotValueType.Cubemap:
+                        nodeData.AddSlot(new CubemapMaterialSlot(0, "", "", SlotType.Input));
+                        nodeData.AddSlot(new CubemapMaterialSlot(1, "", "", SlotType.Output));
+                        break;
+                    case SlotValueType.SamplerState:
+                        nodeData.AddSlot(new SamplerStateMaterialSlot(0, "", "", SlotType.Input));
+                        nodeData.AddSlot(new SamplerStateMaterialSlot(1, "", "", SlotType.Output));
+                        break;
+                    case SlotValueType.Gradient:
+                        nodeData.AddSlot(new GradientMaterialSlot(0, "", "", SlotType.Input));
+                        nodeData.AddSlot(new GradientMaterialSlot(1, "", "", SlotType.Output));
+                        break;
+                    case SlotValueType.Dynamic:
+                        nodeData.AddSlot(new DynamicValueMaterialSlot(0, "", "", SlotType.Input, Matrix4x4.zero));
+                        nodeData.AddSlot(new DynamicValueMaterialSlot(1, "", "", SlotType.Output, Matrix4x4.zero));
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                var groupGuidLeftNode = m_Graph.GetNodeFromGuid(leftSlot.slotReference.nodeGuid).groupGuid;
+                var groupGuidRightNode = m_Graph.GetNodeFromGuid(rightSlot.slotReference.nodeGuid).groupGuid;
+                if (groupGuidLeftNode == groupGuidRightNode)
+                {
+                    nodeData.groupGuid = groupGuidLeftNode;
+                }
+                m_Graph.owner.RegisterCompleteObjectUndo("Add Redirect Node");
+                m_Graph.AddNode(nodeData);
+                return;
+            }
+
+            m_SearchWindowProvider.connectedPort = null;
+            SearcherWindow.Show(m_EditorWindow, (m_SearchWindowProvider as SearcherProvider).LoadSearchWindow(),
+                item => (m_SearchWindowProvider as SearcherProvider).OnSearcherSelectEntry(item, c.screenMousePosition - m_EditorWindow.position.position),
+                c.screenMousePosition - m_EditorWindow.position.position, null);
         }
 
         void UpdateSubWindowsVisibility()
@@ -439,6 +522,10 @@ namespace UnityEditor.ShaderGraph.Drawing
                     {
                         if (edge.input.node is IShaderNodeView materialNodeView)
                             nodesToUpdate.Add(materialNodeView);
+                        if (edge.input.node is RedirectNode)
+                        {
+                            Debug.Log(edge.input.node);
+                        }
                     }
                     if (edge.output != null)
                     {
@@ -582,6 +669,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                     .FirstOrDefault(p => p.node != null && p.node.guid == node.guid);
                 if (nodeView != null)
                 {
+
+
                     nodeView.Dispose();
                     m_GraphView.RemoveElement((Node)nodeView);
 
@@ -689,6 +778,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                     var nodeView = (IShaderNodeView)edgeView.input.node;
                     if (nodeView?.node != null)
                     {
+                        // MT need to look into doing things around here for fixing missing input on Redirect node after deleting the edge going into the redirect node
+                        Debug.Log(nodeView.node.name);
                         nodesToUpdate.Add(nodeView);
                     }
 
@@ -861,6 +952,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 {
                     if (element is ShaderGroup groupView && groupView.userData.guid == stickyNoteData.groupGuid)
                     {
+                        // Todo for redirect nodes
                         groupView.AddElement(stickyNote);
                     }
                 }
@@ -1019,7 +1111,14 @@ namespace UnityEditor.ShaderGraph.Drawing
             // Set the processed blackboard layout.
             m_BlackboardProvider.blackboard.SetPosition(blackboardRect);
 
-            previewManager.ResizeMasterPreview(m_FloatingWindowsLayout.masterPreviewSize);
+            if (!float.IsNaN(m_FloatingWindowsLayout.masterPreviewSize.x) && !float.IsNaN(m_FloatingWindowsLayout.masterPreviewSize.y))
+            {
+                previewManager.ResizeMasterPreview(m_FloatingWindowsLayout.masterPreviewSize);
+            }
+            else
+            {
+                Debug.Log("IS A NAAAAAAAAAAAAAAAAAAAAAAAAAAN");
+            }
 
             // After the layout is restored from the previous session, start tracking layout changes in the blackboard.
             m_BlackboardProvider.blackboard.RegisterCallback<GeometryChangedEvent>(StoreBlackboardLayoutOnGeometryChanged);
@@ -1045,7 +1144,11 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             if (m_MasterPreviewView.expanded)
             {
-                m_FloatingWindowsLayout.masterPreviewSize = m_MasterPreviewView.previewTextureView.layout.size;
+                var newSize = m_MasterPreviewView.previewTextureView.layout.size;
+                if (!float.IsNaN(newSize.x) && !float.IsNaN(newSize.y))
+                {
+                    m_FloatingWindowsLayout.masterPreviewSize = m_MasterPreviewView.previewTextureView.layout.size;
+                }
             }
 
             string serializedWindowLayout = JsonUtility.ToJson(m_FloatingWindowsLayout);

@@ -63,6 +63,10 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         public void ResizeMasterPreview(Vector2 newSize)
         {
+            if (float.IsNaN(newSize.x) || float.IsNaN(newSize.y))
+            {
+                throw new ArgumentException("New size is NANANANANANNNANNANANANANNANANANNNANANANNA");
+            }
             m_NewMasterPreviewSize = newSize;
         }
 
@@ -100,7 +104,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                 renderData.renderTexture.width = renderData.renderTexture.height = 400;
             }
 
-            renderData.renderTexture.Create();
+            var createResult = renderData.renderTexture.Create();
+            Assert.IsTrue(createResult);
 
             var shaderData = new PreviewShaderData
             {
@@ -455,7 +460,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     continue;
                 }
                 ShaderUtil.ClearCachedData(renderData.shaderData.shader);
-                
+
                 BeginCompile(renderData, results.shader);
                 //get the preview mode from generated results
                 renderData.previewMode = results.previewMode;
