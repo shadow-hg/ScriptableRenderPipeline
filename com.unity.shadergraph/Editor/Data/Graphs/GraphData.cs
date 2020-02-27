@@ -1056,6 +1056,9 @@ namespace UnityEditor.ShaderGraph
             if (other == null)
                 throw new ArgumentException("Can only replace with another AbstractMaterialGraph", "other");
 
+            concretePrecision = other.concretePrecision;
+            m_ActiveOutputNodeGuid = other.activeOutputNodeGuid;
+
             using (var removedInputsPooledObject = ListPool<Guid>.GetDisposable())
             {
                 var removedInputGuids = removedInputsPooledObject.value;
@@ -1125,9 +1128,7 @@ namespace UnityEditor.ShaderGraph
                 AddGroup(groupData);
 
             foreach (var stickyNote in other.stickyNotes)
-            {
                 AddStickyNote(stickyNote);
-            }
 
             foreach (var node in other.GetNodes<AbstractMaterialNode>())
                 AddNodeNoValidate(node);
