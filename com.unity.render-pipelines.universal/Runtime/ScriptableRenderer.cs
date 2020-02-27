@@ -286,6 +286,7 @@ namespace UnityEngine.Rendering.Universal
 
             // Reset per-camera shader variable. If we don't do it we might have a mismatch between shadows and main rendering
             // f.ex, time variables need to match!
+            RenderingUtils.SetCameraMatrices(cmd, ref cameraData, true);
             SetPerCameraShaderVariables(cmd, ref cameraData, time, deltaTime, smoothDeltaTime);
 
             // If overlay camera, we have to reset projection related matrices due to inheriting viewport from base
@@ -462,9 +463,6 @@ namespace UnityEngine.Rendering.Universal
             cmd.SetGlobalVector(ShaderPropertyId.scaledScreenParams, new Vector4(scaledCameraWidth, scaledCameraHeight, 1.0f + 1.0f / scaledCameraWidth, 1.0f + 1.0f / scaledCameraHeight));
             cmd.SetGlobalVector(ShaderPropertyId.zBufferParams, zBufferParams);
             cmd.SetGlobalVector(ShaderPropertyId.orthoParams, orthoParams);
-            // TODO: missing unity_CameraWorldClipPlanes[6], currently set by context.SetupCameraProperties
-
-            RenderingUtils.SetCameraMatrices(cmd, ref cameraData, true);
         }
 
         internal void Clear(CameraRenderType cameraType)
