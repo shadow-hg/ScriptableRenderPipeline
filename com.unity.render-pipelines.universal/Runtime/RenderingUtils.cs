@@ -164,6 +164,8 @@ namespace UnityEngine.Rendering.Universal
                 Matrix4x4 inverseViewMatrix = Matrix4x4.Inverse(viewMatrix);
                 cmd.SetGlobalMatrix(ShaderPropertyId.cameraToWorldMatrix, inverseViewMatrix);
             }
+
+            // TODO: missing unity_CameraWorldClipPlanes[6], currently set by context.SetupCameraProperties
         }
 
         /// <summary>
