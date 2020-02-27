@@ -50,9 +50,6 @@ namespace UnityEngine.Rendering
         /// <returns>A key.</returns>
         public Keyframe this[int index] => m_Curve[index];
 
-        // Track whether Dispose has been called.
-        bool disposed = false;
-
         /// <summary>
         /// Creates a new <see cref="TextureCurve"/> from an existing <c>AnimationCurve</c>.
         /// </summary>
