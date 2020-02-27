@@ -96,7 +96,7 @@ namespace UnityEngine.Experimental.Rendering.Universal
                 {
                     Matrix4x4 projectionMatrix = Matrix4x4.Perspective(m_CameraSettings.cameraFieldOfView, cameraAspect,
                         camera.nearClipPlane, camera.farClipPlane);
-                    projectionMatrix = GL.GetGPUProjectionMatrix(projectionMatrix, cameraData.requiresIntermediateRenderTexture);
+                    projectionMatrix = GL.GetGPUProjectionMatrix(projectionMatrix, cameraData.requiresFlip);
 
                     Matrix4x4 viewMatrix = cameraData.GetViewMatrix();
                     Vector4 cameraTranslation = viewMatrix.GetColumn(3);

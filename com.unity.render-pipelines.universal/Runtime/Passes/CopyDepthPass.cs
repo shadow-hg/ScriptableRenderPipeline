@@ -104,7 +104,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             // scaleBias.y = scale
             // scaleBias.z = bias
             // scaleBias.w = unused
-            float flipSign = cameraData.requiresIntermediateRenderTexture ? -1.0f : 1.0f;
+            float flipSign = (cameraData.requiresFlip) ? -1.0f : 1.0f;
             Vector4 scaleBias = (flipSign < 0.0f) ? new Vector4(flipSign, 1.0f, -1.0f, 1.0f) : new Vector4(flipSign, 0.0f, 1.0f, 1.0f);
             cmd.SetGlobalVector(m_ScaleBiasId, scaleBias);
 
