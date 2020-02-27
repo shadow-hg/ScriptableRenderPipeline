@@ -144,19 +144,19 @@ namespace UnityEngine.Rendering.Universal
         /// <param name="cmd">CommandBuffer to submit data to GPU.</param>
         /// <param name="cameraData">CameraData containing camera matrices information.</param>
         /// <param name="setInverseMatrices">Set this to true if you also need to set inverse camera matrices.</param>
-        public static void SetCameraMatrices(CommandBuffer cmd, ref CameraData cameraData, bool setInverseMatrices)
+
+        // Note: Not ready to make this public yet due to issues with settings up camera data and Unity overriding it
+        internal static void SetCameraMatrices(CommandBuffer cmd, ref CameraData cameraData, bool setInverseMatrices)
         {
             // We cannot override camera matrices in VR. They are set using context.SetupCameraProperties until XR Pure SDK lands.
             if (cameraData.isStereoEnabled)
                 return;
 
-            Matrix4x4 viewMatrix = cameraData.viewMatrix;
+            Matrix4x4 viewMatrix = cameraData.GetViewMatrix();
+            Matrix4x4 projectionMatrix = cameraData.GetDeviceProjectionMatrix();
 
-            // Note: CameraData.projectionMatrix is computed with GL.GetGPUProjecitonMatrix.
-            // This account for platform specific y and z direction differences in OpenGL vs other platforms.
-            Matrix4x4 projectionMatrix = cameraData.projectionMatrix;
-
-            SetViewAndProjectionMatrices(cmd, viewMatrix, projectionMatrix, setInverseMatrices);
+            // TODO: We need to solve some issues with Unity overriding matrices with cmd.Blit and other things before we can support this.
+            //SetViewAndProjectionMatrices(cmd, viewMatrix, projectionMatrix, setInverseMatrices);
             cmd.SetGlobalMatrix(ShaderPropertyId.worldToCameraMatrix, viewMatrix);
 
             if (setInverseMatrices)

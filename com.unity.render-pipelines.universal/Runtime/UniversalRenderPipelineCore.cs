@@ -43,14 +43,49 @@ namespace UnityEngine.Rendering.Universal
 
     [MovedFrom("UnityEngine.Rendering.LWRP")] public struct CameraData
     {
+        // Internal camera data as we are not yet sure how to expose View in stereo context.
+        // We might change this API soon.
+        Matrix4x4 m_ViewMatrix;
+        Matrix4x4 m_ProjectionMatrix;
+
+        internal void SetViewAndProjectionMatrix(Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix)
+        {
+            m_ViewMatrix = viewMatrix;
+            m_ProjectionMatrix = projectionMatrix;
+        }
+
+        /// <summary>
+        /// Returns the camera view matrix.
+        /// </summary>
+        /// <returns></returns>
+        public Matrix4x4 GetViewMatrix()
+        {
+            return m_ViewMatrix;
+        }
+
+        /// <summary>
+        /// Returns the camera projection matrix.
+        /// </summary>
+        /// <returns></returns>
+        public Matrix4x4 GetProjectionMatrix()
+        {
+            return m_ProjectionMatrix;
+        }
+
+        /// <summary>
+        /// Return the device projection matrix. This contains platform specific changes to handle y-flip and reverse z.
+        /// For more info on platform differences check: https://docs.unity3d.com/Manual/SL-PlatformDifferences.html
+        /// </summary>
+        /// <returns></returns>
+        public Matrix4x4 GetDeviceProjectionMatrix()
+        {
+            return GL.GetGPUProjectionMatrix(m_ProjectionMatrix, requiresIntermediateRenderTexture);
+        }
+
         public Camera camera;
         public CameraRenderType renderType;
         public RenderTexture targetTexture;
         public RenderTextureDescriptor cameraTargetDescriptor;
-        // Internal camera data as we are not yet sure how to expose View in stereo context.
-        // We might change this API soon.
-        internal Matrix4x4 viewMatrix;
-        internal Matrix4x4 projectionMatrix;
         internal Rect pixelRect;
         internal int pixelWidth;
         internal int pixelHeight;

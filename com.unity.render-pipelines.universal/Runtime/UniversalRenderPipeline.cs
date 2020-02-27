@@ -564,8 +564,7 @@ namespace UnityEngine.Rendering.Universal
             cameraData.resolveFinalTarget = resolveFinalTarget;
 
             cameraData.requiresIntermediateRenderTexture = RenderingUtils.RequiresIntermediateRenderTexture(ref cameraData);
-            cameraData.viewMatrix = camera.worldToCameraMatrix;
-            cameraData.projectionMatrix = camera.projectionMatrix;
+            Matrix4x4 projectionMatrix = camera.projectionMatrix;
 
             // Overlay cameras inherit viewport from base.
             // If the viewport is different between them we might need to patch the projection to adjust aspect ratio
@@ -577,14 +576,10 @@ namespace UnityEngine.Rendering.Universal
 
                 // Get new m00 by dividing by base camera aspectRatio.
                 float newCotangent = cotangent / cameraData.aspectRatio;
-                cameraData.projectionMatrix.m00 = newCotangent;
+                projectionMatrix.m00 = newCotangent;
             }
 
-            // GL.GetGPUProjectionMatrix patches projection matrix to apply correct y and z directions that are consistent across all platforms.
-            // OpenGL uses bottom left coordinate system, other platforms top-left. All platforms except OpenGL render with a y-flip if not rendering to render texture :tableflip:.
-            // OpenGL uses z buffer range as [0, 1], other platforms use reverse z-buffer [1, 0] to improve z buffer precision
-            // https://docs.unity3d.com/Manual/SL-PlatformDifferences.html
-            cameraData.projectionMatrix = GL.GetGPUProjectionMatrix(cameraData.projectionMatrix, cameraData.requiresIntermediateRenderTexture);
+            cameraData.SetViewAndProjectionMatrix(camera.worldToCameraMatrix, projectionMatrix);
         }
 
         static void InitializeRenderingData(UniversalRenderPipelineAsset settings, ref CameraData cameraData, ref CullingResults cullResults,
