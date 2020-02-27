@@ -133,41 +133,6 @@ namespace UnityEngine.Rendering.Universal
                    !isCompatibleBackbufferTextureDimension || !cameraData.isDefaultViewport || isCapturing || Display.main.requiresBlitToBackbuffer;
         }
 
-
-        /// <summary>
-        /// Set camera matrices. This method will set <c>UNITY_MATRIX_V</c>, <c>UNITY_MATRIX_P</c>, <c>UNITY_MATRIX_VP</c> to camera matrices.
-        /// Additionally this will also set <c>unity_CameraProjection</c> and <c>unity_CameraProjection</c>.
-        /// If <c>setInverseMatrices</c> is set to true this function will also set <c>UNITY_MATRIX_I_V</c> and <c>UNITY_MATRIX_I_VP</c>.
-        /// This function has no effect when rendering in stereo. When in stereo rendering you cannot override camera matrices.
-        /// If you need to set general purpose view and projection matrices call <see cref="SetViewAndProjectionMatrices(CommandBuffer, Matrix4x4, Matrix4x4, bool)"/> instead.
-        /// </summary>
-        /// <param name="cmd">CommandBuffer to submit data to GPU.</param>
-        /// <param name="cameraData">CameraData containing camera matrices information.</param>
-        /// <param name="setInverseMatrices">Set this to true if you also need to set inverse camera matrices.</param>
-
-        // Note: Not ready to make this public yet due to issues with settings up camera data and Unity overriding it
-        internal static void SetCameraMatrices(CommandBuffer cmd, ref CameraData cameraData, bool setInverseMatrices)
-        {
-            // We cannot override camera matrices in VR. They are set using context.SetupCameraProperties until XR Pure SDK lands.
-            if (cameraData.isStereoEnabled)
-                return;
-
-            Matrix4x4 viewMatrix = cameraData.GetViewMatrix();
-            Matrix4x4 projectionMatrix = cameraData.GetDeviceProjectionMatrix();
-
-            // TODO: We need to solve some issues with Unity overriding matrices with cmd.Blit and other things before we can support this.
-            //SetViewAndProjectionMatrices(cmd, viewMatrix, projectionMatrix, setInverseMatrices);
-            cmd.SetGlobalMatrix(ShaderPropertyId.worldToCameraMatrix, viewMatrix);
-
-            if (setInverseMatrices)
-            {
-                Matrix4x4 inverseViewMatrix = Matrix4x4.Inverse(viewMatrix);
-                cmd.SetGlobalMatrix(ShaderPropertyId.cameraToWorldMatrix, inverseViewMatrix);
-            }
-
-            // TODO: missing unity_CameraWorldClipPlanes[6], currently set by context.SetupCameraProperties
-        }
-
         /// <summary>
         /// Set view and projection matrices.
         /// This function will set <c>UNITY_MATRIX_V</c>, <c>UNITY_MATRIX_P</c>, <c>UNITY_MATRIX_VP</c> to given view and projection matrices.

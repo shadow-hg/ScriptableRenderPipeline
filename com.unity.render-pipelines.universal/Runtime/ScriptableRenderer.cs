@@ -36,9 +36,113 @@ namespace UnityEngine.Rendering.Universal
             public bool cameraStacking { get; set; } = false;
         }
 
+        /// <summary>
+        /// Set camera matrices. This method will set <c>UNITY_MATRIX_V</c>, <c>UNITY_MATRIX_P</c>, <c>UNITY_MATRIX_VP</c> to camera matrices.
+        /// Additionally this will also set <c>unity_CameraProjection</c> and <c>unity_CameraProjection</c>.
+        /// If <c>setInverseMatrices</c> is set to true this function will also set <c>UNITY_MATRIX_I_V</c> and <c>UNITY_MATRIX_I_VP</c>.
+        /// This function has no effect when rendering in stereo. When in stereo rendering you cannot override camera matrices.
+        /// If you need to set general purpose view and projection matrices call <see cref="SetViewAndProjectionMatrices(CommandBuffer, Matrix4x4, Matrix4x4, bool)"/> instead.
+        /// </summary>
+        /// <param name="cmd">CommandBuffer to submit data to GPU.</param>
+        /// <param name="cameraData">CameraData containing camera matrices information.</param>
+        /// <param name="setInverseMatrices">Set this to true if you also need to set inverse camera matrices.</param>
+        public static void SetCameraMatrices(CommandBuffer cmd, ref CameraData cameraData, bool setInverseMatrices)
+        {
+            // We cannot override camera matrices in VR. They are set using context.SetupCameraProperties until XR Pure SDK lands.
+            if (cameraData.isStereoEnabled)
+                return;
+
+            Matrix4x4 viewMatrix = cameraData.GetViewMatrix();
+            Matrix4x4 projectionMatrix = cameraData.GetProjectionMatrix();
+
+            // TODO: Investigate why SetViewAndProjectionMatrices is causing y-flip / winding order issue
+            // for now using cmd.SetViewProjecionMatrices
+            //SetViewAndProjectionMatrices(cmd, viewMatrix, cameraData.GetDeviceProjectionMatrix(), setInverseMatrices);
+            cmd.SetViewProjectionMatrices(viewMatrix, projectionMatrix);
+
+            // unity_MatrixInvVP is not set by cmd.SetViewProjectionMatrices, we set it here
+            Matrix4x4 viewAndProjectionMatrix = projectionMatrix * viewMatrix;
+            Matrix4x4 inverseViewProjection = Matrix4x4.Inverse(viewAndProjectionMatrix);
+            cmd.SetGlobalMatrix(ShaderPropertyId.inverseViewAndProjectionMatrix, inverseViewProjection);
+
+            cmd.SetGlobalMatrix(ShaderPropertyId.worldToCameraMatrix, viewMatrix);
+
+            if (setInverseMatrices)
+            {
+                Matrix4x4 inverseViewMatrix = Matrix4x4.Inverse(viewMatrix);
+                cmd.SetGlobalMatrix(ShaderPropertyId.cameraToWorldMatrix, inverseViewMatrix);
+            }
+
+            // TODO: missing unity_CameraWorldClipPlanes[6], currently set by context.SetupCameraProperties
+        }
+
+        /// <summary>
+        /// Set camera and screen shader variables as described in https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
+        /// </summary>
+        /// <param name="cmd">CommandBuffer to submit data to GPU.</param>
+        /// <param name="cameraData">CameraData containing camera matrices information.</param>
+        void SetPerCameraShaderVariables(CommandBuffer cmd, ref CameraData cameraData)
+        {
+            Camera camera = cameraData.camera;
+
+            Rect pixelRect = cameraData.pixelRect;
+            float scaledCameraWidth = (float)pixelRect.width * cameraData.renderScale;
+            float scaledCameraHeight = (float)pixelRect.height * cameraData.renderScale;
+            float cameraWidth = (float)pixelRect.width;
+            float cameraHeight = (float)pixelRect.height;
+
+            float near = camera.nearClipPlane;
+            float far = camera.farClipPlane;
+            float invNear = Mathf.Approximately(near, 0.0f) ? 0.0f : 1.0f / near;
+            float invFar = Mathf.Approximately(far, 0.0f) ? 0.0f : 1.0f / far;
+            float isOrthographic = camera.orthographic ? 1.0f : 0.0f;
+
+            // From http://www.humus.name/temp/Linearize%20depth.txt
+            // But as depth component textures on OpenGL always return in 0..1 range (as in D3D), we have to use
+            // the same constants for both D3D and OpenGL here.
+            // OpenGL would be this:
+            // zc0 = (1.0 - far / near) / 2.0;
+            // zc1 = (1.0 + far / near) / 2.0;
+            // D3D is this:
+            float zc0 = 1.0f - far * invNear;
+            float zc1 = far * invNear;
+
+            Vector4 zBufferParams = new Vector4(zc0, zc1, zc0 * invFar, zc1 * invFar);
+
+            if (SystemInfo.usesReversedZBuffer)
+            {
+                zBufferParams.y += zBufferParams.x;
+                zBufferParams.x = -zBufferParams.x;
+                zBufferParams.w += zBufferParams.z;
+                zBufferParams.z = -zBufferParams.z;
+            }
+
+            // Projection flip sign logic is very deep in GfxDevice::SetInvertProjectionMatrix
+            // For now we don't deal with _ProjectionParams.x and let SetupCameraProperties handle it.
+            // We need to enable this when we remove SetupCameraProperties
+            // float projectionFlipSign = ???
+            // Vector4 projectionParams = new Vector4(projectionFlipSign, near, far, 1.0f * invFar);
+            // cmd.SetGlobalVector(ShaderPropertyId.projectionParams, projectionParams);
+
+            Vector4 orthoParams = new Vector4(camera.orthographicSize * cameraData.aspectRatio, camera.orthographicSize, 0.0f, isOrthographic);
+
+            // Camera and Screen variables as described in https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
+            cmd.SetGlobalVector(ShaderPropertyId.worldSpaceCameraPos, camera.transform.position);
+            cmd.SetGlobalVector(ShaderPropertyId.screenParams, new Vector4(cameraWidth, cameraHeight, 1.0f + 1.0f / cameraWidth, 1.0f + 1.0f / cameraHeight));
+            cmd.SetGlobalVector(ShaderPropertyId.scaledScreenParams, new Vector4(scaledCameraWidth, scaledCameraHeight, 1.0f + 1.0f / scaledCameraWidth, 1.0f + 1.0f / scaledCameraHeight));
+            cmd.SetGlobalVector(ShaderPropertyId.zBufferParams, zBufferParams);
+            cmd.SetGlobalVector(ShaderPropertyId.orthoParams, orthoParams);
+        }
+
+        /// <summary>
+        /// Set shader time variables as described in https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
+        /// </summary>
+        /// <param name="cmd">CommandBuffer to submit data to GPU.</param>
+        /// <param name="time">Time.</param>
+        /// <param name="deltaTime">Delta time.</param>
+        /// <param name="smoothDeltaTime">Smooth delta time.</param>
         void SetShaderTimeValues(CommandBuffer cmd, float time, float deltaTime, float smoothDeltaTime)
         {
-            // We make these parameters to mirror those described in `https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
             float timeEights = time / 8f;
             float timeFourth = time / 4f;
             float timeHalf = time / 2f;
@@ -278,12 +382,13 @@ namespace UnityEngine.Rendering.Universal
             // - XR Camera Matrices. This condition should be lifted when Pure XR SDK lands.
             // - Camera billboard properties.
             // - Camera frustum planes: unity_CameraWorldClipPlanes[6]
+            // - _ProjectionParams.x logic is deep inside GfxDevice
             // NOTE: The only reason we have to call this here and not at the beginning (before shadows)
             // is because this need to be called for each eye in multi pass VR.
             // The side effect is that this will override some shader properties we already setup and we will have to
             // reset them.
             context.SetupCameraProperties(camera, stereoEnabled, eyeIndex);
-            RenderingUtils.SetCameraMatrices(cmd, ref cameraData, true);
+            SetCameraMatrices(cmd, ref cameraData, true);
 
             // Reset shader time variables as they were overridden in SetupCameraProperties. If we don't do it we might have a mismatch between shadows and main rendering
             SetShaderTimeValues(cmd, time, deltaTime, smoothDeltaTime);
@@ -395,61 +500,6 @@ namespace UnityEngine.Rendering.Universal
             cmd.DisableShaderKeyword(ShaderKeywordStrings.SoftShadows);
             cmd.DisableShaderKeyword(ShaderKeywordStrings.MixedLightingSubtractive);
             cmd.DisableShaderKeyword(ShaderKeywordStrings.LinearToSRGBConversion);
-        }
-
-        // Initialize Camera Render State
-        // Place all per-camera rendering logic that is generic for all types of renderers here.
-        void SetPerCameraShaderVariables(CommandBuffer cmd, ref CameraData cameraData)
-        {
-            Camera camera = cameraData.camera;
-            
-            Rect pixelRect = cameraData.pixelRect;
-            float scaledCameraWidth = (float)pixelRect.width * cameraData.renderScale;
-            float scaledCameraHeight = (float)pixelRect.height * cameraData.renderScale;
-            float cameraWidth = (float)pixelRect.width;
-            float cameraHeight = (float)pixelRect.height;
-
-            float near = camera.nearClipPlane;
-            float far = camera.farClipPlane;
-            float invNear = Mathf.Approximately(near, 0.0f) ? 0.0f : 1.0f / near;
-            float invFar = Mathf.Approximately(far, 0.0f) ? 0.0f : 1.0f / far;
-            float isOrthographic = camera.orthographic ? 1.0f : 0.0f;
-            
-            // From http://www.humus.name/temp/Linearize%20depth.txt
-            // But as depth component textures on OpenGL always return in 0..1 range (as in D3D), we have to use
-            // the same constants for both D3D and OpenGL here.
-            // OpenGL would be this:
-            // zc0 = (1.0 - far / near) / 2.0;
-            // zc1 = (1.0 + far / near) / 2.0;
-            // D3D is this:
-            float zc0 = 1.0f - far * invNear;
-            float zc1 = far * invNear;
-
-            Vector4 zBufferParams = new Vector4(zc0, zc1,  zc0 * invFar, zc1 * invFar);
-
-            if (SystemInfo.usesReversedZBuffer)
-            {
-                zBufferParams.y += zBufferParams.x;
-                zBufferParams.x = -zBufferParams.x;
-                zBufferParams.w += zBufferParams.z;
-                zBufferParams.z = -zBufferParams.z;
-            }
-
-            // Projection flip sign logic is very deep in GfxDevice::SetInvertProjectionMatrix
-            // For now we don't deal with _ProjectionParams.x and let SetupCameraProperties handle it.
-            // We need to enable this when we remove SetupCameraProperties
-            // float projectionFlipSign = ???
-            // Vector4 projectionParams = new Vector4(projectionFlipSign, near, far, 1.0f * invFar);
-            // cmd.SetGlobalVector(ShaderPropertyId.projectionParams, projectionParams);
-
-            Vector4 orthoParams = new Vector4(camera.orthographicSize * cameraData.aspectRatio, camera.orthographicSize, 0.0f, isOrthographic);
-
-            // Camera and Screen variables as described in https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html
-            cmd.SetGlobalVector(ShaderPropertyId.worldSpaceCameraPos, camera.transform.position);
-            cmd.SetGlobalVector(ShaderPropertyId.screenParams, new Vector4(cameraWidth, cameraHeight, 1.0f + 1.0f / cameraWidth, 1.0f + 1.0f / cameraHeight));
-            cmd.SetGlobalVector(ShaderPropertyId.scaledScreenParams, new Vector4(scaledCameraWidth, scaledCameraHeight, 1.0f + 1.0f / scaledCameraWidth, 1.0f + 1.0f / scaledCameraHeight));
-            cmd.SetGlobalVector(ShaderPropertyId.zBufferParams, zBufferParams);
-            cmd.SetGlobalVector(ShaderPropertyId.orthoParams, orthoParams);
         }
 
         internal void Clear(CameraRenderType cameraType)
