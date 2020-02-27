@@ -35,11 +35,29 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             }
         }
 
+        int GetNumChildrenForLayerAtIndex(int indx)
+        {
+            int num = 0;
+            for(int i = indx + 1; i < m_InputLayers.Count; ++i)
+            {
+                if (m_InputLayers[i].GetOutputTarget() == CompositorLayer.OutputTarget.CameraStack)
+                {
+                    num++;
+                }
+            }
+            return num;
+        }
+
         public void RemoveLayerAtIndex(int indx)
         {
-            Debug.Assert(indx < m_InputLayers.Count);
-            m_InputLayers[indx].Destroy();
-            m_InputLayers.RemoveAt(indx);
+            Debug.Assert(indx >= 0 && indx < m_InputLayers.Count);
+
+            int numChildren = GetNumChildrenForLayerAtIndex(indx);
+            for (int i = numChildren; i >= 0; --i)
+            {
+                m_InputLayers[indx + i].Destroy();
+                m_InputLayers.RemoveAt(indx + i);
+            }
         }
 
         public void OnDestroy()

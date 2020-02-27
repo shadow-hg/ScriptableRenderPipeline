@@ -51,6 +51,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
         {
             m_compositionManager.AddNewLayer(m_layerList.index + 1, (CompositorLayer.LayerType)type);
             m_SerializedProperties.LayerList.serializedObject.Update();
+            m_compositionManager.UpdateLayerSetup();
         }
 
         void AddFilterOfTypeCallback(object type)
@@ -253,9 +254,6 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             EditorGUILayout.EndVertical();
             if (EditorGUI.EndChangeCheck())
             {
-                // Some properties were changed, mark the profile as dirty so it can be saved if the user saves the scene
-                EditorUtility.SetDirty(m_compositionManager.profile);
-
                 // Also the layers might need to be re-initialized
                 layerListChange = true;
             }
@@ -285,9 +283,13 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
 
             if (layerListChange)
             {
+                // Some properties were changed, mark the profile as dirty so it can be saved if the user saves the scene
+                EditorUtility.SetDirty(m_compositionManager);
+                EditorUtility.SetDirty(m_compositionManager.profile);
                 m_compositionManager.UpdateLayerSetup();
             }
 
+            
         }
  
         void DrawLayerProperties(Rect rect, SerializedCompositionLayer serializedProperties, int layerIndex, RenderTexture preview = null)

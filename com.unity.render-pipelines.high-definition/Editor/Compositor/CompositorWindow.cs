@@ -128,6 +128,9 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             CompositionManager compositor = CompositionManager.GetInstance();
             compositor.shaderPropertiesAreDirty = true;
             m_RequiresRedraw = true;
+
+            EditorUtility.SetDirty(compositor);
+            EditorUtility.SetDirty(compositor.profile);
         }
 
         private void OnDestroy()
