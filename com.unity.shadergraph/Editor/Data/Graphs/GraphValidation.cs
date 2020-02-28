@@ -1,13 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEngine;
-using UnityEditor.Graphing;
-using UnityEditor.Graphing.Util;
-using UnityEditor.Rendering;
-using UnityEditor.ShaderGraph.Internal;
-using Edge = UnityEditor.Graphing.Edge;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -22,7 +13,7 @@ namespace UnityEditor.ShaderGraph
 
             public static void ValidateGraph(GraphData graph)
             {
-                GraphUtils.ApplyActionLeafFirst(graph, ValidateNode);
+                GraphDataUtils.ApplyActionLeafFirst(graph, ValidateNode);
             }
         }
     }
