@@ -69,7 +69,7 @@ namespace UnityEditor.Graphing.Util
         public static Vector2 CalculateCentroid(IEnumerable<Vector2> nodePositions)
         {
             Vector2 centroid = Vector2.zero;
-            var count = 1;
+            int count = 1;
             foreach (var position in nodePositions)
             {
                 centroid = centroid + (position - centroid) / count;

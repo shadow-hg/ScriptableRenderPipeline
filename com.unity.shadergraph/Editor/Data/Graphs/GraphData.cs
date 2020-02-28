@@ -1139,7 +1139,7 @@ namespace UnityEditor.ShaderGraph
         }
 
         internal void PasteGraph(CopyPasteGraph graphToPaste, List<AbstractMaterialNode> remappedNodes,
-            List<IEdge> remappedEdges, Vector2 cursorGraphPosition)
+            List<IEdge> remappedEdges)
         {
             var groupGuidMap = new Dictionary<Guid, Guid>();
             foreach (var group in graphToPaste.groups)
@@ -1174,13 +1174,8 @@ namespace UnityEditor.ShaderGraph
                 m_PastedStickyNotes.Add(pastedStickyNote);
             }
 
-            var nodeList = graphToPaste.GetNodes<AbstractMaterialNode>();
-
-            // Compute the centroid of the copied nodes at their original positions
-            var nodePositions = nodeList.Select(n => n.drawState.position.position);
-            var centroid = UIUtilities.CalculateCentroid(nodePositions);
-
             var nodeGuidMap = new Dictionary<Guid, Guid>();
+            var nodeList = graphToPaste.GetNodes<AbstractMaterialNode>();
             foreach (var node in nodeList)
             {
                 AbstractMaterialNode pastedNode = node;
@@ -1225,14 +1220,6 @@ namespace UnityEditor.ShaderGraph
                     }
                 }
 
-                var drawState = node.drawState;
-                var position = drawState.position;
-                // Get the relative position to the calculated centroid and apply that relative offset
-                var relativeOffsetFromCentroid = position.position - centroid;
-                position.x = cursorGraphPosition.x + relativeOffsetFromCentroid.x;
-                position.y = cursorGraphPosition.y + relativeOffsetFromCentroid.y;
-                drawState.position = position;
-                node.drawState = drawState;
                 remappedNodes.Add(pastedNode);
                 AddNode(pastedNode);
 
