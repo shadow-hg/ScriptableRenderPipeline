@@ -78,19 +78,27 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         // AOVs
         [HideInInspector]
         public MaterialSharedProperty m_AOVBitmask = 0;
+
         [HideInInspector]
         public Dictionary<string, int> m_AOVMap;
+
         List<RTHandle> m_AOVHandles;
+
+        [SerializeField]
         List<RenderTexture> m_AOVRenderTargets;
 
-        [HideInInspector]
-        public bool m_ExpandLayer = true;
-
         RTHandle m_RTHandle;
+
+        [SerializeField]
         RenderTexture m_RenderTarget;
+
+        [SerializeField]
         RTHandle m_AOVTmpRTHandle;
 
+        [SerializeField]
         Camera m_LayerCamera;
+
+        [SerializeField]
         bool m_ClearsBackGround = false;
 
         //static HashSet<Camera> s_CameraPool = new HashSet<Camera>();
@@ -209,7 +217,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
             // Note: Movie & image layers are rendered at the output resolution (and not the movie/image resolution)
             // This is required to have post-processing effects like film grain at full res.
-            if (m_Camera == null)
+            if (m_Camera == null && m_OutputTarget == OutputTarget.CameraStack)
             {
                 m_Camera = CompositionManager.GetSceceCamera();
             }
@@ -241,6 +249,12 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             if (m_OutputTarget != OutputTarget.CameraStack && m_RTHandle == null)
             {
                 m_RenderTarget = new RenderTexture(pixelWidth, pixelHeight, 24, (GraphicsFormat)m_ColorBufferFormat);
+                m_RTHandle = RTHandles.Alloc(m_RenderTarget);
+            }
+
+            // check and fix RT handle
+            if (m_RenderTarget != null && m_RTHandle == null)
+            {
                 m_RTHandle = RTHandles.Alloc(m_RenderTarget);
             }
 
@@ -277,6 +291,13 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                         CoreUtils.Destroy(rt);
                     }
                     m_AOVRenderTargets.Clear();
+                    /*
+                    foreach (var rt in m_AOVHandles)
+                    {
+                        RTHandles.Release(rt);
+                    }
+                    m_AOVHandles.Clear();
+                    */
                 }
                 if(m_AOVMap != null)
                 {
@@ -519,6 +540,8 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         }
         public void SetupLayerCamera(CompositorLayer targetLayer, bool isFirstLayer = false)
         {
+            Debug.Assert(m_LayerCamera != null);
+
             if (targetLayer.GetRenderTarget() == null)
             {
                 m_LayerCamera.enabled = false;

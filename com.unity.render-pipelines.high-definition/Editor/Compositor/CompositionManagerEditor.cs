@@ -37,6 +37,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
 
         bool m_IsEditorDirty = true;
         bool m_EnablePreview;
+        bool layerListChange;
         CompositionManager m_compositionManager;
 
         public bool isDirty
@@ -155,6 +156,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             // Now draw the list of layers
             EditorGUILayout.Separator();
 
+            layerListChange = false;
             if (m_layerList == null)
             {
                 var serializedLayerList = m_SerializedProperties.LayerList;
@@ -172,7 +174,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 };
                 m_layerList.onReorderCallback += (list) =>
                 {
-                    m_compositionManager.SetupLayerPriorities();
+                    layerListChange = true;
                     m_IsEditorDirty = true;
                 };
 
@@ -221,7 +223,6 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 m_layerList.headerHeight = 0;
             }
 
-            bool layerListChange = false;
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.BeginVertical();
             EditorGUILayout.LabelField(TextUI.RenderSchedule, headerStyle);
@@ -288,8 +289,6 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 EditorUtility.SetDirty(m_compositionManager.profile);
                 m_compositionManager.UpdateLayerSetup();
             }
-
-            
         }
  
         void DrawLayerProperties(Rect rect, SerializedCompositionLayer serializedProperties, int layerIndex, RenderTexture preview = null)
