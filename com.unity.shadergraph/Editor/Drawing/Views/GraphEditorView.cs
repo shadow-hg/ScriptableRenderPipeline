@@ -355,6 +355,14 @@ namespace UnityEditor.ShaderGraph.Drawing
                         nodeData.AddSlot(new DynamicValueMaterialSlot(0, "", "", SlotType.Input, Matrix4x4.zero));
                         nodeData.AddSlot(new DynamicValueMaterialSlot(1, "", "", SlotType.Output, Matrix4x4.zero));
                         break;
+                    case SlotValueType.DynamicMatrix:
+                        nodeData.AddSlot(new DynamicMatrixMaterialSlot(0, "", "", SlotType.Input));
+                        nodeData.AddSlot(new DynamicMatrixMaterialSlot(1, "", "", SlotType.Output));
+                        break;
+                    case SlotValueType.DynamicVector:
+                        nodeData.AddSlot(new DynamicVectorMaterialSlot(0, "", "", SlotType.Input, Vector4.zero));
+                        nodeData.AddSlot(new DynamicVectorMaterialSlot(1, "", "", SlotType.Output, Vector4.zero));
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
