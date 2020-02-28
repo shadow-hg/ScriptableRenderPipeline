@@ -44,6 +44,10 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 {
                     num++;
                 }
+                else
+                {
+                    break;
+                }
             }
             return num;
         }
