@@ -73,13 +73,13 @@ namespace UnityEngine.Rendering.Universal
         }
 
         /// <summary>
-        /// Return the device projection matrix. This contains platform specific changes to handle y-flip and reverse z.
+        /// Return the camera device projection matrix. This contains platform specific changes to handle y-flip and reverse z.
         /// For more info on platform differences check: https://docs.unity3d.com/Manual/SL-PlatformDifferences.html
         /// </summary>
         /// <returns></returns>
         public Matrix4x4 GetDeviceProjectionMatrix()
         {
-            return GL.GetGPUProjectionMatrix(m_ProjectionMatrix, requiresFlip);
+            return GL.GetGPUProjectionMatrix(m_ProjectionMatrix, isDeviceProjectionMatrixFlipped);
         }
 
         public Camera camera;
@@ -100,16 +100,18 @@ namespace UnityEngine.Rendering.Universal
 
         /// <summary>
         /// True if the pipeline requires to create an intermediate render texture.
-        /// If you are implementing a custom renderer for URP you should check this setting
+        /// If you are implementing a custom renderer for URP you should listen to this setting to create
+        /// temporary camera textures and then perform a blit to camera target at then end.
         /// </summary>
         public bool requiresIntermediateRenderTexture;
 
         /// <summary>
-        /// True if the pipeline requires flip to handle texture coordinate correctly.
-        /// If you are implementing a custom blit passes you can use this to figure out if you should
-        /// flip texture when rendering with cmd.Draw* functions.
+        /// True if the camera device projection matrix is flipped. This happens when the pipeline is rendering
+        /// to a render texture in non OpenGL platforms. If you are doing a custom Blit pass to copy camera textures
+        /// (_CameraColorTexture, _CameraDepthAttachment) you need to check this flag to know if you should flip the
+        /// matrix when rendering with for cmd.Draw* and reading from camera textures.
         /// </summary>
-        internal bool requiresFlip;
+        public bool isDeviceProjectionMatrixFlipped;
 
         public SortingCriteria defaultOpaqueSortFlags;
 

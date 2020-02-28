@@ -564,7 +564,7 @@ namespace UnityEngine.Rendering.Universal
             cameraData.resolveFinalTarget = resolveFinalTarget;
 
             cameraData.requiresIntermediateRenderTexture = RenderingUtils.RequiresIntermediateRenderTexture(ref cameraData);
-            cameraData.requiresFlip = SystemInfo.graphicsUVStartsAtTop && (cameraData.requiresIntermediateRenderTexture || camera.targetTexture != null);
+            cameraData.isDeviceProjectionMatrixFlipped = SystemInfo.graphicsUVStartsAtTop && (cameraData.requiresIntermediateRenderTexture || camera.targetTexture != null);
             Matrix4x4 projectionMatrix = camera.projectionMatrix;
 
             // Overlay cameras inherit viewport from base.
