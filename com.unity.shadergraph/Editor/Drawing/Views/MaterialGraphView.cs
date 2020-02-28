@@ -518,7 +518,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 .OfType<PropertyNode>();
 
             foreach (var propNode in selectedNodeViews)
-                GraphData.GraphConcretization.ReplacePropertyNodeWithConcreteNode(propNode.owner, propNode);
+                ((GraphData)propNode.owner).ReplacePropertyNodeWithConcreteNode(propNode);
         }
 
         DropdownMenuAction.Status ConvertToSubgraphStatus(DropdownMenuAction action)
