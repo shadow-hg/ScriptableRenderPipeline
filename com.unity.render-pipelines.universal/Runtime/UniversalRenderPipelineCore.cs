@@ -132,7 +132,12 @@ namespace UnityEngine.Rendering.Universal
         public AntialiasingMode antialiasing;
         public AntialiasingQuality antialiasingQuality;
         internal ScriptableRenderer renderer;
-        internal bool resolveFinalTarget;
+
+        /// <summary>
+        /// True if this camera is resolving rendering to the final camera render target.
+        /// When rendering a stack of cameras only the last camera in the stack will resolve to camera target.
+        /// </summary>
+        public bool resolveFinalTarget;
     }
 
     [MovedFrom("UnityEngine.Rendering.LWRP")] public struct ShadowData
