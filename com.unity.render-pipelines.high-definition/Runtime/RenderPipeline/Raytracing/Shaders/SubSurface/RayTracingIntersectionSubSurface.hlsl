@@ -12,5 +12,5 @@ struct RayIntersectionSubSurface
    	// Pixel coordinate matching this ray path
     uint2 pixelCoord;
    	// Cone representation of the ray
-	RayCone cone;
+	  RayCone cone;
 };

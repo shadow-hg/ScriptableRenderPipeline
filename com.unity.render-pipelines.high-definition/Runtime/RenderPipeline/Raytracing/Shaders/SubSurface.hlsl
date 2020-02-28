@@ -74,7 +74,7 @@ void ScatteringWalk(float3 normalWS, float3 diffuseColor, float3 subSurfaceColor
 
         // Random number used to do channel selection
         float channelSelection = GetBNDSequenceSample(pixelCoord, rayCount, 4 * walkIdx + 3);
-        
+
         // Compute the per-channel weight
         float3 weights = scatteringResult.outputThroughput * SafeDivide(sigmaS, sigmaT);
 
@@ -117,7 +117,7 @@ void ScatteringWalk(float3 normalWS, float3 diffuseColor, float3 subSurfaceColor
         // Initialize the intersection data
         internalRayIntersection.t = -1.0;
         internalRayIntersection.outNormal = 0.0;
-        
+
         // Do the next step
         // TODO: Maybe include only the subsurface meshes.
         TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_FORCE_OPAQUE, RAYTRACINGRENDERERFLAG_OPAQUE, 0, 1, 0, internalRayDesc, internalRayIntersection);
@@ -128,7 +128,7 @@ void ScatteringWalk(float3 normalWS, float3 diffuseColor, float3 subSurfaceColor
         // How much did the ray travel?
         float t = scatteringResult.hit ? internalRayIntersection.t : currentDist;
 
-        // Evalaute the transmittance for the current segment
+        // Evaluate the transmittance for the current segment
         transmittance = exp(-t * sigmaT);
 
         // Evaluate the pdf for the current segment
@@ -137,7 +137,7 @@ void ScatteringWalk(float3 normalWS, float3 diffuseColor, float3 subSurfaceColor
         // Contribute to the throughput
         scatteringResult.outputThroughput *= SafeDivide(scatteringResult.hit ? transmittance : sigmaS * transmittance, pdf);
 
-        // If we exit right away, the diffuse color is thr throughput value
+        // If we exit right away, the diffuse color is the throughput value
         if (scatteringResult.hit && walkIdx == 0)
             scatteringResult.outputThroughput *= diffuseColor;
 
