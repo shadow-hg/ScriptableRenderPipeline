@@ -16,6 +16,11 @@ platforms:
     components:
       - editor
       - il2cpp
+  - os: android
+    components:
+      - editor
+      - il2cpp
+      - android
   - os: windows
     components:
       - editor
@@ -45,7 +50,11 @@ editor:priming:{{ editor.version }}:{{ platform.os }}:
     - >
       unity-downloader-cli
       {{ editor.cmd }}
+      {% if platform.os == "android" %}
+      -o windows
+      {% else %}
       -o {{ platform.os }}
+      {% endif %}
       --wait
       --skip-download
 {% for component in platform.components -%}
