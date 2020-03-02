@@ -60,6 +60,7 @@ struct SurfaceData
     float anisotropy;
     float anisotropyWeight;
     float anisotropyIOR;
+    float anisotropyOffset;
     float3 customRefractionColor;
 };
 
@@ -80,6 +81,7 @@ struct BSDFData
     float anisotropy;
     float anisotropyWeight;
     float anisotropyIOR;
+    float anisotropyOffset;
     float3 customRefractionColor;
 };
 

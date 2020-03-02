@@ -30,7 +30,7 @@ float GetPhaseTerm(float3 lightDirOS, float3 V, BSDFData bsdfData)
 {
     float3 biasedOceanLightDirection = lightDirOS;
     float invIOR = 1.f - bsdfData.anisotropyIOR;
-    biasedOceanLightDirection.y -= (invIOR * 2.f);
+    biasedOceanLightDirection.y -= (invIOR * 2.f - bsdfData.anisotropyOffset);
     biasedOceanLightDirection = normalize(biasedOceanLightDirection);
     float3 singleScatteringRay = refract(-V, bsdfData.lowFrequencyNormalWS, bsdfData.anisotropyIOR);
 
@@ -90,6 +90,7 @@ BSDFData ConvertSurfaceDataToBSDFData(uint2 positionSS, SurfaceData surfaceData)
     bsdfData.anisotropy = surfaceData.anisotropy;
     bsdfData.anisotropyWeight = surfaceData.anisotropyWeight;
     bsdfData.anisotropyIOR = surfaceData.anisotropyIOR;
+    bsdfData.anisotropyOffset = surfaceData.anisotropyOffset;
     bsdfData.customRefractionColor = surfaceData.customRefractionColor;
 
     return bsdfData;
