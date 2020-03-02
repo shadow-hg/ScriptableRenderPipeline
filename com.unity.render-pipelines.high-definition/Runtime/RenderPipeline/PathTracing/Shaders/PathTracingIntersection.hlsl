@@ -1,5 +1,5 @@
-#ifndef UNITY_PATH_TRACING_INTERSECION_INCLUDED
-#define UNITY_PATH_TRACING_INTERSECION_INCLUDED
+#ifndef UNITY_PATH_TRACING_INTERSECTION_INCLUDED
+#define UNITY_PATH_TRACING_INTERSECTION_INCLUDED
 
 #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/Raytracing/Shaders/RaytracingIntersection.hlsl"
 
@@ -19,4 +19,4 @@ struct PathIntersection
 	float maxRoughness;
 };
 
-#endif // UNITY_PATH_TRACING_INTERSECION_INCLUDED
+#endif // UNITY_PATH_TRACING_INTERSECTION_INCLUDED

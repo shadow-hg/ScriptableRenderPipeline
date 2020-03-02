@@ -63,8 +63,8 @@ MaterialData CreateMaterialData(BSDFData bsdfData)
         mtlData.bsdfWeight[2] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1]) * lerp(Fspec, 0.5, 0.5 * (bsdfData.roughnessT + bsdfData.roughnessB)) * (1.0 + Fspec * bsdfData.specularOcclusion) : 0.0;
         mtlData.bsdfWeight[3] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1] - mtlData.bsdfWeight[2]) * bsdfData.transmittanceMask : 0.0;
         mtlData.bsdfWeight[0] = (1.0 - mtlData.bsdfWeight[1]) * (1.0 - bsdfData.transmittanceMask) * Luminance(bsdfData.diffuseColor) * bsdfData.ambientOcclusion;
-
     }
+#ifdef _SURFACE_TYPE_TRANSPARENT
     else // Below
     {
         float NdotV = -dot(bsdfData.normalWS, mtlData.V);
@@ -77,6 +77,7 @@ MaterialData CreateMaterialData(BSDFData bsdfData)
         mtlData.bsdfWeight[2] = consistentNormal ? F : 0.0;
         mtlData.bsdfWeight[3] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1]) * bsdfData.transmittanceMask : 0.0;
     }
+#endif
 
     // If we are basically black, no need to compute anything else for this material
     if (!IsBlack(mtlData))
@@ -94,7 +95,13 @@ MaterialData CreateMaterialData(BSDFData bsdfData)
     return mtlData;
 }
 
-// Little helper to get the specular compensation term
+// Little helper to get diffuse value weight
+float GetDiffuseWeight(BSDFData bsdfData, float fresnelClearCoat)
+{
+    return bsdfData.ambientOcclusion * (1.0 - bsdfData.subsurfaceMask) * (1.0 - bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat);
+}
+
+// Another helper to get the specular compensation term
 float3 GetSpecularCompensation(BSDFData bsdfData)
 {
     return 1.0 + bsdfData.specularOcclusion * bsdfData.fresnel0;
@@ -125,7 +132,7 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
                 result.specPdf += mtlData.bsdfWeight[1] * pdf;
             }
 
-            result.diffValue *= mtlData.bsdfData.ambientOcclusion * (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat);
+            result.diffValue *= GetDiffuseWeight(mtlData.bsdfData, fresnelClearCoat);
 
             if (mtlData.bsdfWeight[2] > BSDF_WEIGHT_EPSILON)
             {
@@ -146,7 +153,7 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
             if (mtlData.bsdfWeight[0] > BSDF_WEIGHT_EPSILON)
             {
                 BRDF::EvaluateDiffuse(mtlData, sampleDir, result.diffValue, result.diffPdf);
-                result.diffValue *= mtlData.bsdfData.ambientOcclusion * (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat);
+                result.diffValue *= GetDiffuseWeight(mtlData.bsdfData, fresnelClearCoat);
                 result.diffPdf *= mtlData.bsdfWeight[0];
             }
 
@@ -176,28 +183,31 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
             if (mtlData.bsdfWeight[0] > BSDF_WEIGHT_EPSILON)
             {
                 BRDF::EvaluateDiffuse(mtlData, sampleDir, result.diffValue, result.diffPdf);
-                result.diffValue *= mtlData.bsdfData.ambientOcclusion * (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat);
+                result.diffValue *= GetDiffuseWeight(mtlData.bsdfData, fresnelClearCoat);
                 result.diffPdf *= mtlData.bsdfWeight[0];
             }
         }
+#ifdef _SURFACE_TYPE_TRANSPARENT
         else // Specular BTDF
         {
             if (!BTDF::SampleAnisoGGX(mtlData, inputSample, sampleDir, result.specValue, result.specPdf))
                 return false;
 
-#ifdef _REFRACTION_THIN
+    #ifdef _REFRACTION_THIN
             sampleDir = refract(sampleDir, mtlData.bsdfData.normalWS, mtlData.bsdfData.ior);
             if (!any(sampleDir))
                 return false;
-#endif
+    #endif
 
             result.specValue *= mtlData.bsdfData.transmittanceMask;
             result.specPdf *= mtlData.bsdfWeight[3];
         }
+#endif
     }
     else // Below
     {
-#ifdef _REFRACTION_THIN
+#ifdef _SURFACE_TYPE_TRANSPARENT
+    #ifdef _REFRACTION_THIN
         if (mtlData.bsdfData.transmittanceMask)
         {
             // Just go through (although we should not end up here)
@@ -205,7 +215,7 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
             result.specValue = DELTA_PDF;
             result.specPdf = DELTA_PDF;
         }
-#else
+    #else
         if (inputSample.z < mtlData.bsdfWeight[2]) // Specular BRDF
         {
             if (!BRDF::SampleDelta(mtlData, sampleDir, result.specValue, result.specPdf))
@@ -220,6 +230,9 @@ bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleD
 
             result.specPdf *= mtlData.bsdfWeight[3];
         }
+    #endif
+#else
+        return false;
 #endif
     }
 
@@ -247,7 +260,7 @@ void EvaluateMaterial(MaterialData mtlData, float3 sampleDir, out MaterialResult
         if (mtlData.bsdfWeight[0] > BSDF_WEIGHT_EPSILON)
         {
             BRDF::EvaluateDiffuse(mtlData, sampleDir, result.diffValue, result.diffPdf);
-            result.diffValue *= (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - fresnelClearCoat); // AO purposedly ignored here
+            result.diffValue *= (1.0 - mtlData.bsdfData.transmittanceMask) * (1.0 - mtlData.bsdfData.subsurfaceMask) * (1.0 - fresnelClearCoat); // AO purposedly ignored here
             result.diffPdf *= mtlData.bsdfWeight[0];
         }
 

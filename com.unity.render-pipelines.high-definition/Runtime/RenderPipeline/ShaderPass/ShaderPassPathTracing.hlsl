@@ -187,11 +187,11 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
             nextPathIntersection.remainingDepth = pathIntersection.remainingDepth - 1;
             nextPathIntersection.t = rayDescriptor.TMax;
 
-            // In order to achieve filtering for the textures, we need to compute the spread angle of the pixel
-            nextPathIntersection.cone.spreadAngle = pathIntersection.cone.spreadAngle + roughnessToSpreadAngle(nextPathIntersection.maxRoughness);
-
             // Adjust the max roughness, based on the estimated diff/spec ratio
             nextPathIntersection.maxRoughness = (mtlResult.specPdf * max(bsdfData.roughnessT, bsdfData.roughnessB) + mtlResult.diffPdf) / pdf;
+
+            // In order to achieve filtering for the textures, we need to compute the spread angle of the pixel
+            nextPathIntersection.cone.spreadAngle = pathIntersection.cone.spreadAngle + roughnessToSpreadAngle(nextPathIntersection.maxRoughness);
 
 #ifdef _SURFACE_TYPE_TRANSPARENT
             // When transmitting with an IOR close to 1.0, roughness is barely noticeable -> take that into account for roughness clamping
