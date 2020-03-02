@@ -358,7 +358,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         public void DestroyRT()
         {
-            if (m_LayerCamera != null && m_LayerCamera.name.Contains("CompositorLayer"))
+            if (m_LayerCamera != null)
             {
                 var cameraData = m_LayerCamera.GetComponent<HDAdditionalCameraData>();
                 if (cameraData)
