@@ -215,9 +215,10 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 m_LayerName = layerID;
             }
 
-            // Note: Movie & image layers are rendered at the output resolution (and not the movie/image resolution)
-            // This is required to have post-processing effects like film grain at full res.
-            if (m_Camera == null && m_OutputTarget == OutputTarget.CameraStack)
+
+            // Compositor output layers (that allocate the render targets) also need a reference camera, just to get the reference pixel width/height 
+            // Note: Movie & image layers are rendered at the output resolution (and not the movie/image resolution). This is required to have post-processing effects like film grain at full res.
+            if (m_Camera == null)
             {
                 m_Camera = CompositionManager.GetSceceCamera();
             }
@@ -235,6 +236,10 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 }
                 m_LayerCamera.name = "Compositor" + layerID;
                 m_LayerCamera.gameObject.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy | HideFlags.HideAndDontSave;
+                if(m_LayerCamera.tag == "MainCamera")
+                {
+                    m_LayerCamera.tag = "Untagged";
+                }
 
                 // Remove the compositor copy (if exists) from the cloned camera. This will happen if the compositor script was attached to the camera we are cloning 
                 var compositionManager = m_LayerCamera.GetComponent<CompositionManager>();
@@ -246,14 +251,13 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             }
             m_ClearsBackGround = false;
 
-            if (m_OutputTarget != OutputTarget.CameraStack && m_RTHandle == null)
+            if (m_OutputTarget != OutputTarget.CameraStack && m_RenderTarget == null)
             {
                 m_RenderTarget = new RenderTexture(pixelWidth, pixelHeight, 24, (GraphicsFormat)m_ColorBufferFormat);
-                m_RTHandle = RTHandles.Alloc(m_RenderTarget);
             }
 
             // check and fix RT handle
-            if (m_RenderTarget != null && m_RTHandle == null)
+            if (m_OutputTarget != OutputTarget.CameraStack && m_RTHandle == null)
             {
                 m_RTHandle = RTHandles.Alloc(m_RenderTarget);
             }
@@ -363,10 +367,20 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 }
                 m_LayerCamera.targetTexture = null;
                 CoreUtils.Destroy(m_LayerCamera);
+                m_LayerCamera = null;
             }
 
-            RTHandles.Release(m_RTHandle);
-            CoreUtils.Destroy(m_RenderTarget);
+            if (m_RTHandle != null)
+            {
+                RTHandles.Release(m_RTHandle);
+                m_RTHandle = null;
+            }
+
+            if (m_RenderTarget != null)
+            {
+                CoreUtils.Destroy(m_RenderTarget);
+                m_RenderTarget = null;
+            }
 
             if (m_AOVHandles != null)
             {
@@ -383,10 +397,6 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 }
             }
             m_AOVMap?.Clear();
-
-
-            m_RTHandle = null;
-            m_LayerCamera = null;
             m_AOVMap = null;
         }
 

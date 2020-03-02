@@ -34,7 +34,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 var outputCamera = Object.Instantiate(camera);
                 RemoveAudioListeners(outputCamera);
                 outputCamera.name = k_DefaultCameraName;
-                outputCamera.tag = null;
+                outputCamera.tag = "Untagged";
                 outputCamera.cullingMask = 0; // we don't want to render any 3D objects on the compositor camera
                 compositor.outputCamera = outputCamera;
             }
