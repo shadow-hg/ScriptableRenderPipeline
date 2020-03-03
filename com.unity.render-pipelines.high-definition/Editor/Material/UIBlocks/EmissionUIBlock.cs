@@ -159,12 +159,12 @@ namespace UnityEditor.Rendering.HighDefinition
             // Emission for GI?
             if ((m_Features & Features.EnableEmissionForGI) != 0)
             {
-                BakedEmissionEnabledProperty();
+                BakedEmissionEnabledProperty(materialEditor);
             }
         }
 
 
-        public bool BakedEmissionEnabledProperty()
+        public static bool BakedEmissionEnabledProperty(MaterialEditor materialEditor)
         {
             Material[] materials = Array.ConvertAll(materialEditor.targets, (UnityEngine.Object o) => { return (Material)o; });
             
