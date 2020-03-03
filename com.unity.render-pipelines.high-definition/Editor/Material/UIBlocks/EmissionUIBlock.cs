@@ -167,12 +167,7 @@ namespace UnityEditor.Rendering.HighDefinition
         public bool BakedEmissionEnabledProperty()
         {
             Material[] materials = Array.ConvertAll(materialEditor.targets, (UnityEngine.Object o) => { return (Material)o; });
-
-            var settings = GetLightingSettingsOrDefaultsFallback();
-
-            MaterialGlobalIlluminationFlags defaultEnabled = settings.realtimeGI ? MaterialGlobalIlluminationFlags.RealtimeEmissive
-                : (settings.bakedGI ? MaterialGlobalIlluminationFlags.BakedEmissive : MaterialGlobalIlluminationFlags.None);
-
+            
             // Calculate isMixed
             bool enabled = materials[0].globalIlluminationFlags == MaterialGlobalIlluminationFlags.BakedEmissive;
             bool isMixed = false;
