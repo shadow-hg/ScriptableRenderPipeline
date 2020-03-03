@@ -83,12 +83,14 @@ namespace UnityEngine.Rendering.HighDefinition
         static string k_PanelDisplayStats = "Display Stats";
         static string k_PanelMaterials = "Material";
         static string k_PanelLighting = "Lighting";
+        static string k_PanelVolume = "Volume";
         static string k_PanelRendering = "Rendering";
         static string k_PanelDecals = "Decals";
 
         DebugUI.Widget[] m_DebugDisplayStatsItems;
         DebugUI.Widget[] m_DebugMaterialItems;
         DebugUI.Widget[] m_DebugLightingItems;
+        DebugUI.Widget[] m_DebugVolumeItems;
         DebugUI.Widget[] m_DebugRenderingItems;
         DebugUI.Widget[] m_DebugDecalsItems;
 
@@ -137,7 +139,7 @@ namespace UnityEngine.Rendering.HighDefinition
             public LightingDebugSettings lightingDebugSettings = new LightingDebugSettings();
             /// <summary>Current mip map debug settings.</summary>
             public MipMapDebugSettings mipMapDebugSettings = new MipMapDebugSettings();
-            /// <summary>Current colorr picker debug settings.</summary>
+            /// <summary>Current color picker debug settings.</summary>
             public ColorPickerDebugSettings colorPickerDebugSettings = new ColorPickerDebugSettings();
             /// <summary>Current false color debug settings.</summary>
             public FalseColorDebugSettings falseColorDebugSettings = new FalseColorDebugSettings();
@@ -145,6 +147,8 @@ namespace UnityEngine.Rendering.HighDefinition
             public DecalsDebugSettings decalsDebugSettings = new DecalsDebugSettings();
             /// <summary>Current transparency debug settings.</summary>
             public TransparencyDebugSettings transparencyDebugSettings = new TransparencyDebugSettings();
+            /// <summary>Current volume debug settings.</summary>
+            public VolumeDebugSettings volumeDebugSettings = new VolumeDebugSettings();
             /// <summary>Current number of samples for MSAA textures.</summary>
             public MSAASamples msaaSamples = MSAASamples.None;
             /// <summary>Index of screen space shadow to display.</summary>
@@ -176,6 +180,8 @@ namespace UnityEngine.Rendering.HighDefinition
             internal int colorPickerDebugModeEnumIndex;
             internal int msaaSampleDebugModeEnumIndex;
             internal int debugCameraToFreezeEnumIndex;
+            internal int volumeComponentEnumIndex;
+            internal int volumeCameraEnumIndex;
 
             // When settings mutually exclusives enum values, we need to reset the other ones.
             internal void ResetExclusiveEnumIndices()
@@ -550,6 +556,20 @@ namespace UnityEngine.Rendering.HighDefinition
         }
 
         /// <summary>
+        /// Set the current Volume Component to debug.
+        /// </summary>
+        /// <param name="value">Desired component index.</param>
+        public void SetDebugVolumeComponentType(int value)
+        {
+            data.volumeDebugSettings.selectedComponent = value;
+        }
+
+        public void SetDebugVolumeCamera(int value)
+        {
+            data.volumeDebugSettings.selectedCamera = value;
+        }
+
+        /// <summary>
         /// Set the current Mip Map Debug Mode.
         /// </summary>
         /// <param name="value">Desired Mip Map debug mode.</param>
@@ -721,6 +741,12 @@ namespace UnityEngine.Rendering.HighDefinition
         {
             UnregisterDebugItems(k_PanelMaterials, m_DebugMaterialItems);
             RegisterMaterialDebug();
+        }
+
+        void RefreshVolumeDebug<T>(DebugUI.Field<T> field, T value)
+        {
+            UnregisterDebugItems(k_PanelVolume, m_DebugVolumeItems);
+            RegisterVolumeDebug();
         }
 
         void RegisterLightingDebug()
@@ -1099,6 +1125,153 @@ namespace UnityEngine.Rendering.HighDefinition
             panel.children.Add(m_DebugLightingItems);
         }
 
+        void RegisterVolumeDebug()
+        {
+            var list = new List<DebugUI.Widget>();
+
+            int componentIndex = 0;
+            var componentNames = new List<GUIContent>() { new GUIContent("None") };
+            var componentValues = new List<int>() { componentIndex++ };
+
+            foreach (var type in VolumeManager.instance.baseComponentTypes)
+            {
+                componentNames.Add(new GUIContent() { text = type.Name });
+                componentValues.Add(componentIndex++);
+            }
+
+            list.Add(new DebugUI.EnumField
+            {
+                displayName = "Component",
+                getter = () => data.volumeDebugSettings.selectedComponent,
+                setter = value => SetDebugVolumeComponentType(value),
+                enumNames = componentNames.ToArray(),
+                enumValues = componentValues.ToArray(),
+                getIndex = () => data.volumeComponentEnumIndex,
+                setIndex = value => { data.volumeComponentEnumIndex = value; },
+                onValueChanged = RefreshVolumeDebug,
+            });
+
+            if (data.volumeDebugSettings.selectedComponent != 0)
+            {
+                componentIndex = 0;
+                componentNames = new List<GUIContent>() { new GUIContent("None") };
+                componentValues = new List<int>() { componentIndex++ };
+
+                foreach (var camera in VolumeDebugSettings.cameras)
+                {
+                    componentNames.Add(new GUIContent() { text = camera.name });
+                    componentValues.Add(componentIndex++);
+                }
+
+                list.Add(new DebugUI.EnumField
+                {
+                    displayName = "Camera",
+                    getter = () => data.volumeDebugSettings.selectedCamera,
+                    setter = value => SetDebugVolumeCamera(value),
+                    enumNames = componentNames.ToArray(),
+                    enumValues = componentValues.ToArray(),
+                    getIndex = () => data.volumeCameraEnumIndex,
+                    setIndex = value => { data.volumeCameraEnumIndex = value; },
+                    onValueChanged = RefreshVolumeDebug,
+                });
+
+                if (data.volumeDebugSettings.selectedCamera != 0)
+                {
+                    Type type = data.volumeDebugSettings.selectedComponentType;
+
+                    var fields = type
+                        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        .Where(t => t.FieldType.IsSubclassOf(typeof(VolumeParameter)))
+                        .OrderBy(t => t.MetadataToken);
+
+                    var volumes = data.volumeDebugSettings.GetVolumes();
+                    var table = new DebugUI.Table() { displayName = "Parameter", isReadOnly = true };
+
+                    var inst = (VolumeComponent)ScriptableObject.CreateInstance(type);
+
+                    DebugUI.Widget makeWidget(string name, VolumeParameter param)
+                    {
+                        if (param == null)
+                            return new DebugUI.Value() { displayName = name, getter = () => "-" };
+
+                        if (param.GetType() == typeof(ColorParameter))
+                        {
+                            var p = (ColorParameter)param;
+                            return new DebugUI.ColorField()
+                            {
+                                displayName = name,
+                                hdr = p.hdr,
+                                showAlpha = p.showAlpha,
+                                getter = () => p.value,
+                                setter = _ => { }
+                            };
+                        }
+
+                        if (param.GetType() == typeof(BoolParameter))
+                        {
+                            var p = (BoolParameter)param;
+                            return new DebugUI.BoolField()
+                            {
+                                displayName = name,
+                                getter = () => p.value,
+                                setter = _ => { }
+                            };
+                        }
+
+                        var property = param.GetType().GetProperty("value");
+                        return new DebugUI.Value()
+                        {
+                            displayName = name,
+                            getter = () => {
+                                var value = property.GetValue(param);
+                                return value == null ? "None" : value.ToString();
+                            }
+                        };
+                    }
+
+                    // First row for volume info
+                    var row = new DebugUI.Table.Row()
+                    {
+                        displayName = "Volume Info",
+                        children = { new DebugUI.Value() { displayName = "Interpolated Value", getter = () => "" } }
+                    };
+
+                    foreach (var volume in volumes.Reverse())
+                        row.children.Add(new DebugUI.Value()
+                        {
+                            displayName = volume.name + " (" + volume.profileRef.name + ")",
+                            getter = () => data.volumeDebugSettings.GetVolumeInfo(volume, type),
+                        });
+
+                    row.children.Add(new DebugUI.Value() { displayName = "Default Value", getter = () => "" });
+                    table.children.Add(row);
+
+                    // One row per parameter
+                    foreach (var f in fields)
+                    {
+                        row = new DebugUI.Table.Row()
+                        {
+                            displayName = f.Name,
+                            children = { makeWidget("Interpolated Value", data.volumeDebugSettings.GetParameter(type, f)) }
+                        };
+
+                        foreach (var volume in volumes.Reverse())
+                            row.children.Add(makeWidget(volume.name + " (" + volume.profileRef.name + ")", data.volumeDebugSettings.GetParameter(volume, type, f)));
+
+                        row.children.Add(makeWidget("Default Value", data.volumeDebugSettings.GetParameter(inst, f)));
+
+                        table.children.Add(row);
+                    }
+
+                    list.Add(table);
+                }
+            }
+
+            m_DebugVolumeItems = list.ToArray();
+            var panel = DebugManager.instance.GetPanel(k_PanelVolume, true);
+            panel.children.Add(m_DebugVolumeItems);
+        }
+
         void RegisterRenderingDebug()
         {
             var widgetList = new List<DebugUI.Widget>();
@@ -1201,6 +1374,7 @@ namespace UnityEngine.Rendering.HighDefinition
             RegisterDisplayStatsDebug();
             RegisterMaterialDebug();
             RegisterLightingDebug();
+            RegisterVolumeDebug();
             RegisterRenderingDebug();
             DebugManager.instance.RegisterData(this);
         }
@@ -1214,6 +1388,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
             UnregisterDebugItems(k_PanelMaterials, m_DebugMaterialItems);
             UnregisterDebugItems(k_PanelLighting, m_DebugLightingItems);
+            UnregisterDebugItems(k_PanelVolume, m_DebugVolumeItems);
             UnregisterDebugItems(k_PanelRendering, m_DebugRenderingItems);
             DebugManager.instance.UnregisterData(this);
         }
