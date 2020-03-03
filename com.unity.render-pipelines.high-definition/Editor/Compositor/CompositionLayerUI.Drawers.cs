@@ -29,7 +29,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             static public readonly GUIContent ClearMode = EditorGUIUtility.TrTextContent("Clear Color", "To override the clear mode of this layer, activate the option by clicking on the check-box and then select the desired value.");
             static public readonly GUIContent AAMode = EditorGUIUtility.TrTextContent("Anti Aliasing", "To override the anti-aliasing mode, activate the option by clicking on the check-box and then select the desired value.");
             static public readonly GUIContent CullingMask = EditorGUIUtility.TrTextContent("Culling Mask", "To override the culling mask, activate the option by clicking on the check-box and then select the desired value.");
-            static public readonly GUIContent VolumeMask = EditorGUIUtility.TrTextContent("Volume Mask", "Specifies the type of output variable in this layer. This option affects all cameras that are stacked in this layer. Selecting none (no AOV) indicates that the layer's color will be outputted.");
+            static public readonly GUIContent VolumeMask = EditorGUIUtility.TrTextContent("Volume Mask", "To override the volume mask, activate the option by clicking on the check-box and then select the desired value.");
         }
 
         public static void DrawItemInList(Rect rect, SerializedCompositionLayer serialized, RenderTexture thumbnail = null, float aspectRatio = 1.0f)
