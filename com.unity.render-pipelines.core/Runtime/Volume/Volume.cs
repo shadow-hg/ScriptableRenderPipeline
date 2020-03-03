@@ -82,7 +82,7 @@ namespace UnityEngine.Rendering
             set => m_InternalProfile = value;
         }
 
-        internal VolumeProfile profileRef => m_InternalProfile == null ? sharedProfile : m_InternalProfile;
+        public VolumeProfile profileRef => m_InternalProfile == null ? sharedProfile : m_InternalProfile;
 
         /// <summary>
         /// Checks if the Volume has an instantiated Profile or if it uses a shared Profile.

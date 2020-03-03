@@ -225,7 +225,10 @@ namespace UnityEngine.Rendering
                 int count = component.parameters.Count;
 
                 for (int i = 0; i < count; i++)
+                {
+                    target.parameters[i].overrideState = false;
                     target.parameters[i].SetValue(component.parameters[i]);
+                }
             }
         }
 
@@ -381,6 +384,51 @@ namespace UnityEngine.Rendering
                 // No need to clamp01 the interpolation factor as it'll always be in [0;1[ range
                 OverrideData(stack, volume.profileRef.components, interpFactor * Mathf.Clamp01(volume.weight));
             }
+        }
+
+        /// <summary>
+        /// Get all volumes active and containing a specific component.
+        /// </summary>
+        /// <param name="componentType">The Component Type that must be present in the volumes.</param>
+        /// <param name="layerMask">The LayerMask that Unity uses to filter Volumes that it should consider
+        /// for blending.</param>
+        /// <returns>A list of active volumes containing a component of the supplied type.</returns>
+        /// </summary>
+        public Volume[] GetActiveVolumes(Type componentType, LayerMask layerMask)
+        {
+            CheckBaseTypes();
+
+            // Sort the cached volume list(s) for the given layer mask if needed and return it
+            var volumes = GrabVolumes(layerMask);
+            var activeVolumes = new List<Volume>();
+
+            // Traverse all volumes
+            foreach (var volume in volumes)
+            {
+                // Skip disabled volumes and volumes without any data or weight
+                if (!volume.enabled || volume.profileRef == null || volume.weight <= 0f)
+                    continue;
+
+                if (!volume.profileRef.Has(componentType))
+                    continue;
+
+                // Global volumes always have influence
+                if (volume.isGlobal)
+                {
+                    activeVolumes.Add(volume);
+                    continue;
+                }
+
+                // If volume isn't global and has no collider, skip it as it's useless
+                var colliders = m_TempColliders;
+                volume.GetComponents(colliders);
+                if (colliders.Count == 0)
+                    continue;
+
+                activeVolumes.Add(volume);
+            }
+
+            return activeVolumes.ToArray();
         }
 
         List<Volume> GrabVolumes(LayerMask mask)
