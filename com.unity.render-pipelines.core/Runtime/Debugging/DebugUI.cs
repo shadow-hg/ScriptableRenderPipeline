@@ -178,6 +178,12 @@ namespace UnityEngine.Rendering
             /// </summary>
             public float refreshRate = 0.1f;
 
+            public Value()
+            {
+                displayName = "";
+            }
+
+
             /// <summary>
             /// Returns the value of the widget.
             /// </summary>

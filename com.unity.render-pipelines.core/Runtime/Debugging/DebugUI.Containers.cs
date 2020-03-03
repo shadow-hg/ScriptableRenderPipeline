@@ -205,5 +205,104 @@ namespace UnityEngine.Rendering
                 displayName = "VBox";
             }
         }
+
+        /// <summary>
+        /// Array Container.
+        /// </summary>
+        public class Table : Container
+        {
+            /// <summary>
+            /// Row Container.
+            /// </summary>
+            public class Row : Foldout
+            {
+                public Row() { displayName = "Row"; }
+            }
+
+            public bool isReadOnly = false;
+
+            /// <summary>
+            /// Constructor.
+            /// </summary>
+            public Table() { displayName = "Array"; }
+
+#if UNITY_EDITOR
+            public Vector2 scroll = Vector2.zero;
+
+            public float displayWidth = 5000.0f;
+            public int columnCount { get; private set; }
+
+            UnityEditor.IMGUI.Controls.MultiColumnHeader m_Header = null;
+            public UnityEditor.IMGUI.Controls.MultiColumnHeader Header
+            {
+                get
+                {
+                    if (m_Header != null)
+                        return m_Header;
+
+                    if (children.Count != 0)
+                    {
+                        columnCount = ((Container)children[0]).children.Count;
+                        for (int i = 1; i < children.Count; i++)
+                        {
+                            if (((Container)children[i]).children.Count != columnCount)
+                            {
+                                Debug.LogError("All rows must have the same number of children.");
+                                return null;
+                            }
+                        }
+                    }
+
+                    UnityEditor.IMGUI.Controls.MultiColumnHeaderState.Column CreateColumn(string name)
+                    {
+                        var col = new UnityEditor.IMGUI.Controls.MultiColumnHeaderState.Column()
+                        {
+                            canSort = false,
+                            headerTextAlignment = TextAlignment.Center,
+                            headerContent = new GUIContent(name),
+                        };
+
+                        GUIStyle style = UnityEditor.IMGUI.Controls.MultiColumnHeader.DefaultStyles.columnHeaderCenterAligned;
+                        style.CalcMinMaxWidth(col.headerContent, out col.width, out float _);
+                        col.width = Mathf.Min(col.width, 50f);
+                        return col;
+                    }
+
+                    columnCount++;
+                    var cols = new UnityEditor.IMGUI.Controls.MultiColumnHeaderState.Column[columnCount];
+                    cols[0] = CreateColumn(displayName);
+                    for (int i = 1; i < columnCount; i++)
+                        cols[i] = CreateColumn(((Container)children[0]).children[i - 1].displayName);
+
+                    var state = new UnityEditor.IMGUI.Controls.MultiColumnHeaderState(cols);
+                    m_Header = new UnityEditor.IMGUI.Controls.MultiColumnHeader(state);
+                    m_Header.ResizeToFit();
+                    return m_Header;
+                }
+            }
+
+            /// <summary>
+            /// Method called when a children is added.
+            /// </summary>
+            /// <param name="sender">Sender widget.</param>
+            /// <param name="e">List of added children.</param>
+            protected override void OnItemAdded(ObservableList<Widget> sender, ListChangedEventArgs<Widget> e)
+            {
+                base.OnItemAdded(sender, e);
+                m_Header = null;
+            }
+
+            /// <summary>
+            /// Method called when a children is removed.
+            /// </summary>
+            /// <param name="sender">Sender widget.</param>
+            /// <param name="e">List of removed children.</param>
+            protected override void OnItemRemoved(ObservableList<Widget> sender, ListChangedEventArgs<Widget> e)
+            {
+                base.OnItemRemoved(sender, e);
+                m_Header = null;
+            }
+#endif
+        }
     }
 }
