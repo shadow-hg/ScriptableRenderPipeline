@@ -435,7 +435,7 @@ Build_{{ project.name }}_Android_{{ android_api.name }}_{{ editor.version }}:
   dependencies:
     - path: .yamato/z_editor.yml#editor:priming:{{ editor.version }}:{{ platform.os }}
       rerun: {{ editor.rerun_strategy }}
-    - path: .yamato/upm-ci-universal.yml#Build_{{ project.name }}_Android_OpenGLES_{{ editor.version }}
+    - path: .yamato/upm-ci-universal.yml#Build_{{ project.name }}_Android_{{ android_api.name }}_{{ editor.version }}
       rerun: {{ editor.rerun_strategy }}
   artifacts:
     logs:
