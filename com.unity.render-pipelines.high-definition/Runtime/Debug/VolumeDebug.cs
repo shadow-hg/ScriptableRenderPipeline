@@ -15,13 +15,47 @@ namespace UnityEngine.Rendering.HighDefinition
         public int      selectedComponent = 0;
 
         /// <summary>Current HD camera selected.</summary>
-        public HDCamera selectedHDCamera
+        public VolumeStack selectedCameraVolumeStack
         {
             get
             {
                 if (selectedCamera <= 0 || selectedCamera > cameras.Count)
                     return null;
-                return HDCamera.GetOrCreate(cameras[selectedCamera - 1].GetComponent<Camera>());
+                Camera cam = cameras[selectedCamera - 1].GetComponent<Camera>();
+                var stack = HDCamera.GetOrCreate(cam).volumeStack;
+                if (stack != null)
+                    return stack;
+                return VolumeManager.instance.stack;
+            }
+        }
+
+        public LayerMask selectedCameraLayerMask
+        {
+            get
+            {
+                if (selectedCamera <= 0 || selectedCamera > cameras.Count)
+                    return (LayerMask)0;
+                return cameras[selectedCamera - 1].volumeLayerMask;
+            }
+        }
+
+        public Vector3 selectedCameraPosition
+        {
+            get
+            {
+                if (selectedCamera <= 0 || selectedCamera > cameras.Count)
+                    return Vector3.zero;
+                Camera cam = cameras[selectedCamera - 1].GetComponent<Camera>();
+
+                var anchor = HDCamera.GetOrCreate(cam).volumeAnchor;
+                if (anchor == null) // means the hdcamera has not been initialized
+                {
+                    // So we have to update the stack manually
+                    anchor = cameras[selectedCamera - 1].volumeAnchorOverride;
+                    if (anchor == null) anchor = cam.transform;
+                    VolumeManager.instance.Update(selectedCameraVolumeStack, anchor, selectedCameraLayerMask);
+                }
+                return anchor.position;
             }
         }
 
@@ -43,13 +77,13 @@ namespace UnityEngine.Rendering.HighDefinition
                 int i = 0;
                 foreach (var t in VolumeManager.instance.baseComponentTypes)
                 {
+                    i++;
                     if (t == value)
                     {
                         selectedComponent = i;
                         selectedComponentType = t;
                         return;
                     }
-                    i++;
                 }
             }
         }
@@ -71,7 +105,37 @@ namespace UnityEngine.Rendering.HighDefinition
 
         public Volume[] GetVolumes()
         {
-            return VolumeManager.instance.GetActiveVolumes(selectedComponentType, selectedHDCamera.volumeLayerMask);
+            var componentType = selectedComponentType;
+
+            // Sort the cached volume list(s) for the given layer mask if needed and return it
+            var volumes = VolumeManager.instance.GrabVolumes(selectedCameraLayerMask);
+            var activeVolumes = new List<Volume>();
+
+            // Traverse all volumes
+            foreach (var volume in volumes)
+            {
+                // Skip disabled volumes and volumes without any data or weight
+                if (!volume.enabled || volume.profileRef == null || volume.weight <= 0f)
+                    continue;
+
+                if (!volume.profileRef.Has(componentType))
+                    continue;
+
+                // Global volumes always have influence
+                if (volume.isGlobal)
+                {
+                    activeVolumes.Add(volume);
+                    continue;
+                }
+
+                // If volume isn't global and has no collider, skip it as it's useless
+                if (volume.GetComponent<Collider>() == null)
+                    continue;
+
+                activeVolumes.Add(volume);
+            }
+
+            return activeVolumes.ToArray();
         }
 
         public VolumeParameter GetParameter(VolumeComponent component, FieldInfo field)
@@ -81,14 +145,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
         public VolumeParameter GetParameter(Type type, FieldInfo field)
         {
-            VolumeStack stack = VolumeManager.instance.stack;
-
-            var camera = selectedHDCamera;
-            if (camera != null)
-                stack = camera.volumeStack;
-            if (stack == null)
-                return null;
-
+            VolumeStack stack = selectedCameraVolumeStack;
             return GetParameter(stack.GetComponent(type), field);
         }
 
@@ -107,7 +164,7 @@ namespace UnityEngine.Rendering.HighDefinition
             if (volume.isGlobal)
                 return "Global (" + Mathf.Clamp01(volume.weight) + ")";
 
-            var triggerPos = selectedHDCamera.volumeAnchor.position;
+            var triggerPos = selectedCameraPosition;
             var colliders = volume.GetComponents<Collider>();
 
             // Find closest distance to volume, 0 means it's inside it

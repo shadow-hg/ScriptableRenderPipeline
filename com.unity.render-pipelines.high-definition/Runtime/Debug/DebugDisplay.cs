@@ -556,20 +556,6 @@ namespace UnityEngine.Rendering.HighDefinition
         }
 
         /// <summary>
-        /// Set the current Volume Component to debug.
-        /// </summary>
-        /// <param name="value">Desired component index.</param>
-        public void SetDebugVolumeComponentType(int value)
-        {
-            data.volumeDebugSettings.selectedComponent = value;
-        }
-
-        public void SetDebugVolumeCamera(int value)
-        {
-            data.volumeDebugSettings.selectedCamera = value;
-        }
-
-        /// <summary>
         /// Set the current Mip Map Debug Mode.
         /// </summary>
         /// <param name="value">Desired Mip Map debug mode.</param>
@@ -1143,7 +1129,7 @@ namespace UnityEngine.Rendering.HighDefinition
             {
                 displayName = "Component",
                 getter = () => data.volumeDebugSettings.selectedComponent,
-                setter = value => SetDebugVolumeComponentType(value),
+                setter = value => data.volumeDebugSettings.selectedComponent = value,
                 enumNames = componentNames.ToArray(),
                 enumValues = componentValues.ToArray(),
                 getIndex = () => data.volumeComponentEnumIndex,
@@ -1167,7 +1153,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 {
                     displayName = "Camera",
                     getter = () => data.volumeDebugSettings.selectedCamera,
-                    setter = value => SetDebugVolumeCamera(value),
+                    setter = value => data.volumeDebugSettings.selectedCamera = value,
                     enumNames = componentNames.ToArray(),
                     enumValues = componentValues.ToArray(),
                     getIndex = () => data.volumeCameraEnumIndex,
@@ -1259,7 +1245,6 @@ namespace UnityEngine.Rendering.HighDefinition
                             row.children.Add(makeWidget(volume.name + " (" + volume.profileRef.name + ")", data.volumeDebugSettings.GetParameter(volume, type, f)));
 
                         row.children.Add(makeWidget("Default Value", data.volumeDebugSettings.GetParameter(inst, f)));
-
                         table.children.Add(row);
                     }
 

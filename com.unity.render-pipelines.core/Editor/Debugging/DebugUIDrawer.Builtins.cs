@@ -653,26 +653,6 @@ namespace UnityEditor.Rendering
     [DebugUIDrawer(typeof(DebugUI.Table))]
     public sealed class DebugUIDrawerTable : DebugUIDrawer
     {
-
-        internal static Rect DrawOutline(Rect rect)
-        {
-            if (Event.current.type != EventType.Repaint)
-                return rect;
-
-            float size = 1.0f;
-            var color = EditorGUIUtility.isProSkin ? new Color(0.6f, 0.6f, 0.6f, 1.333f) : new Color(0.12f, 0.12f, 0.12f, 1.333f);
-
-            Color orgColor = GUI.color;
-            GUI.color = GUI.color * color;
-            GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, size), EditorGUIUtility.whiteTexture);
-            GUI.DrawTexture(new Rect(rect.x, rect.yMax - size, rect.width, size), EditorGUIUtility.whiteTexture);
-            GUI.DrawTexture(new Rect(rect.x, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
-            GUI.DrawTexture(new Rect(rect.xMax - size, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
-
-            GUI.color = orgColor;
-            return new Rect(rect.x + size, rect.y + size, rect.width - 2 * size, rect.height - 2 * size);
-        }
-
         /// <summary>
         /// OnGUI implementation for Table DebugUIDrawer.
         /// </summary>
@@ -732,6 +712,25 @@ namespace UnityEditor.Rendering
             GUI.EndScrollView(false);
 
             return false;
+        }
+
+        internal Rect DrawOutline(Rect rect)
+        {
+            if (Event.current.type != EventType.Repaint)
+                return rect;
+
+            float size = 1.0f;
+            var color = EditorGUIUtility.isProSkin ? new Color(0.6f, 0.6f, 0.6f, 1.333f) : new Color(0.12f, 0.12f, 0.12f, 1.333f);
+
+            Color orgColor = GUI.color;
+            GUI.color = GUI.color * color;
+            GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, size), EditorGUIUtility.whiteTexture);
+            GUI.DrawTexture(new Rect(rect.x, rect.yMax - size, rect.width, size), EditorGUIUtility.whiteTexture);
+            GUI.DrawTexture(new Rect(rect.x, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
+            GUI.DrawTexture(new Rect(rect.xMax - size, rect.y + 1, size, rect.height - 2 * size), EditorGUIUtility.whiteTexture);
+
+            GUI.color = orgColor;
+            return new Rect(rect.x + size, rect.y + size, rect.width - 2 * size, rect.height - 2 * size);
         }
 
         internal void DisplayChild(Rect rect, DebugUI.Widget child, bool disable)
