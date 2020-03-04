@@ -89,7 +89,7 @@ namespace UnityEngine.Experimental.Rendering.Universal
             CommandBuffer cmd = CommandBufferPool.Get(m_ProfilerTag);
             using (new ProfilingScope(cmd, m_ProfilingSampler))
             {
-                if (cameraData.isStereoEnabled)
+                if (m_CameraSettings.overrideCamera && cameraData.isStereoEnabled)
                     Debug.LogWarning("RenderObjects pass is configured to override camera matrices. While rendering in stereo camera matrices cannot be overriden.");
 
                 if (m_CameraSettings.overrideCamera && !cameraData.isStereoEnabled)
