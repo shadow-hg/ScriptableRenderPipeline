@@ -50,9 +50,6 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
         return;
     }
 
-    // Grab depth information
-    uint currentDepth = _RaytracingMaxRecursion - pathIntersection.remainingDepth;
-
     // The first thing that we should do is grab the intersection vertex
     IntersectionVertex currentVertex;
     GetCurrentIntersectionVertex(attributeData, currentVertex);
@@ -61,8 +58,15 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
     FragInputs fragInput;
     BuildFragInputsFromIntersection(currentVertex, WorldRayDirection(), fragInput);
 
-    // Let's compute the world space position (the non-camera relative one if camera relative rendering is enabled)
-    const float3 position = GetAbsolutePositionWS(fragInput.positionRWS);
+    // Such an invalid remainingDepth value means we are called from a subsurface computation
+    if (pathIntersection.remainingDepth > _RaytracingMaxRecursion)
+    {
+        pathIntersection.color = fragInput.tangentToWorld[2];
+        return;
+    }
+
+    // Grab depth information
+    uint currentDepth = _RaytracingMaxRecursion - pathIntersection.remainingDepth;
 
     // Make sure to add the additional travel distance
     pathIntersection.cone.width += pathIntersection.t * abs(pathIntersection.cone.spreadAngle);
@@ -98,6 +102,9 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
 
 #ifdef HAS_LIGHTLOOP
 
+    // Let's compute the world space position (the non-camera relative one if camera relative rendering is enabled)
+    float3 shadingPosition = GetAbsolutePositionWS(fragInput.positionRWS);
+
     // Generate the new sample (following values of the sequence)
     float3 inputSample = 0.0;
     inputSample.x = GetSample(pathIntersection.pixelCoord, _RaytracingFrameIndex, 4 * currentDepth);
@@ -110,17 +117,13 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
     // And reset the ray intersection color, which will store our final result
     pathIntersection.color = computeDirect ? builtinData.emissiveColor : 0.0;
 
-    // We adjust the BSDF data before doing anything else with it, to account for things computed in pre-lighting stage when rasterizing
-    PreprocessBSDFData(pathIntersection, builtinData, bsdfData);
-
-    // Initialize our material data
-    MaterialData mtlData = CreateMaterialData(bsdfData);
-
-    if (IsBlack(mtlData))
+    // Initialize our material data (this will alter the bsdfData to suit path tracing, and choose between BSDF or SSS evaluation)
+    MaterialData mtlData;
+    if (!CreateMaterialData(pathIntersection, builtinData, bsdfData, shadingPosition, inputSample.z, mtlData))
         return;
 
     // Create the list of active lights
-    LightList lightList = CreateLightList(position, bsdfData.geomNormalWS, builtinData.renderingLayers);
+    LightList lightList = CreateLightList(shadingPosition, mtlData.bsdfData.geomNormalWS, builtinData.renderingLayers);
 
     // Bunch of variables common to material and light sampling
     float pdf;
@@ -128,7 +131,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
     MaterialResult mtlResult;
 
     RayDesc rayDescriptor;
-    rayDescriptor.Origin = position + bsdfData.geomNormalWS * _RaytracingRayBias;
+    rayDescriptor.Origin = shadingPosition + mtlData.bsdfData.geomNormalWS * _RaytracingRayBias;
     rayDescriptor.TMin = 0.0;
 
     PathIntersection nextPathIntersection;
@@ -136,7 +139,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
     // Light sampling
     if (computeDirect)
     {
-        if (SampleLights(lightList, inputSample, rayDescriptor.Origin, bsdfData.normalWS, rayDescriptor.Direction, value, pdf, rayDescriptor.TMax))
+        if (SampleLights(lightList, inputSample, rayDescriptor.Origin, mtlData.bsdfData.normalWS, rayDescriptor.Direction, value, pdf, rayDescriptor.TMax))
         {
             EvaluateMaterial(mtlData, rayDescriptor.Direction, mtlResult);
 
@@ -175,7 +178,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
         {
             bool isSampleBelow = IsBelow(mtlData, rayDescriptor.Direction);
 
-            rayDescriptor.Origin = position + GetPositionBias(bsdfData.geomNormalWS, _RaytracingRayBias, isSampleBelow);
+            rayDescriptor.Origin = shadingPosition + GetPositionBias(mtlData.bsdfData.geomNormalWS, _RaytracingRayBias, isSampleBelow);
             rayDescriptor.TMax = FLT_INF;
 
             // Copy path constants across
@@ -188,7 +191,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
             nextPathIntersection.t = rayDescriptor.TMax;
 
             // Adjust the max roughness, based on the estimated diff/spec ratio
-            nextPathIntersection.maxRoughness = (mtlResult.specPdf * max(bsdfData.roughnessT, bsdfData.roughnessB) + mtlResult.diffPdf) / pdf;
+            nextPathIntersection.maxRoughness = (mtlResult.specPdf * max(mtlData.bsdfData.roughnessT, mtlData.bsdfData.roughnessB) + mtlResult.diffPdf) / pdf;
 
             // In order to achieve filtering for the textures, we need to compute the spread angle of the pixel
             nextPathIntersection.cone.spreadAngle = pathIntersection.cone.spreadAngle + roughnessToSpreadAngle(nextPathIntersection.maxRoughness);
@@ -196,7 +199,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
 #ifdef _SURFACE_TYPE_TRANSPARENT
             // When transmitting with an IOR close to 1.0, roughness is barely noticeable -> take that into account for roughness clamping
             if (IsBelow(mtlData) != isSampleBelow)
-                nextPathIntersection.maxRoughness = lerp(pathIntersection.maxRoughness, nextPathIntersection.maxRoughness, smoothstep(1.0, 1.3, bsdfData.ior));
+                nextPathIntersection.maxRoughness = lerp(pathIntersection.maxRoughness, nextPathIntersection.maxRoughness, smoothstep(1.0, 1.3, mtlData.bsdfData.ior));
 #endif
 
             // Shoot ray for indirect lighting
@@ -219,11 +222,11 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
             if (isSampleBelow)
             {
     #ifdef _REFRACTION_THIN
-                nextPathIntersection.color *= exp(-bsdfData.absorptionCoefficient * REFRACTION_THIN_DISTANCE);
+                nextPathIntersection.color *= exp(-mtlData.bsdfData.absorptionCoefficient * REFRACTION_THIN_DISTANCE);
     #else
                 // FIXME: maxDist might need some more tweaking
                 float maxDist = surfaceData.atDistance * 10.0;
-                nextPathIntersection.color *= exp(-bsdfData.absorptionCoefficient * min(nextPathIntersection.t, maxDist));
+                nextPathIntersection.color *= exp(-mtlData.bsdfData.absorptionCoefficient * min(nextPathIntersection.t, maxDist));
     #endif
             }
 #endif
