@@ -161,33 +161,39 @@ namespace UnityEngine.Rendering.HighDefinition
 
         public string GetVolumeInfo(Volume volume, Type type)
         {
-            if (volume.isGlobal)
-                return "Global (" + Mathf.Clamp01(volume.weight) + ")";
+            if (!volume.profileRef.TryGet(type, out VolumeComponent component))
+                return "Component Removed";
 
-            var triggerPos = selectedCameraPosition;
-            var colliders = volume.GetComponents<Collider>();
+            var scope = volume.isGlobal ? "Global" : "Local";
+            if (!component.active)
+                return scope + " (Inactive)";
 
-            // Find closest distance to volume, 0 means it's inside it
-            float closestDistanceSqr = float.PositiveInfinity;
-            foreach (var collider in colliders)
+            float weight = Mathf.Clamp01(volume.weight);
+            if (!volume.isGlobal)
             {
-                if (!collider.enabled)
-                    continue;
+                var triggerPos = selectedCameraPosition;
+                var colliders = volume.GetComponents<Collider>();
 
-                var closestPoint = collider.ClosestPoint(triggerPos);
-                var d = (closestPoint - triggerPos).sqrMagnitude;
+                // Find closest distance to volume, 0 means it's inside it
+                float closestDistanceSqr = float.PositiveInfinity;
+                foreach (var collider in colliders)
+                {
+                    if (!collider.enabled)
+                        continue;
 
-                if (d < closestDistanceSqr)
-                    closestDistanceSqr = d;
+                    var closestPoint = collider.ClosestPoint(triggerPos);
+                    var d = (closestPoint - triggerPos).sqrMagnitude;
+
+                    if (d < closestDistanceSqr)
+                        closestDistanceSqr = d;
+                }
+                float blendDistSqr = volume.blendDistance * volume.blendDistance;
+                if (closestDistanceSqr > blendDistSqr)
+                    weight = 0f;
+                else if (blendDistSqr > 0f)
+                    weight *= 1f - (closestDistanceSqr / blendDistSqr);
             }
-            float blendDistSqr = volume.blendDistance * volume.blendDistance;
-            if (closestDistanceSqr > blendDistSqr)
-                return "Local (0)";
-
-            float interpFactor = 1f;
-            if (blendDistSqr > 0f)
-                interpFactor = 1f - (closestDistanceSqr / blendDistSqr);
-            return "Local (" + (interpFactor * Mathf.Clamp01(volume.weight)) + ")";
+            return scope + " (" + weight.ToString() + ")";
         }
     }
 }
