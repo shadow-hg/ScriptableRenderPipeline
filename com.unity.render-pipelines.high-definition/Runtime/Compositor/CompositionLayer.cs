@@ -523,6 +523,17 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             return m_OutputTarget;
         }
 
+        public bool ValidateRTSize(int referenceWidth, int referenceHeight)
+        {
+            if (m_RenderTarget == null)
+            {
+                return true;
+            }
+
+            float scale = EnumToScale(m_ResolutionScale);
+            return ((m_RenderTarget.width == referenceWidth * scale) && (m_RenderTarget.height == referenceHeight * scale));
+        }
+
         public void SetupClearColor()
         {
             m_LayerCamera.enabled = true;

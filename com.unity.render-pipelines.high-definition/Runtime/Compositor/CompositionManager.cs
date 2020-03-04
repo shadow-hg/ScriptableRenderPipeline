@@ -475,6 +475,16 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 m_ShaderPropertiesAreDirty = false;
                 SetupCompositorLayers();//< required to allocate RT for the new layers
             }
+
+            foreach (var layer in m_InputLayers)
+            {
+                if (!layer.ValidateRTSize(m_OutputCamera.pixelWidth, m_OutputCamera.pixelHeight))
+                {
+                    DeleteLayerRTs();
+                    SetupCompositorLayers();
+                    break;
+                }
+            }
 #endif
 
             if (m_CompositionProfile)
