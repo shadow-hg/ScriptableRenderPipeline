@@ -37,6 +37,11 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         int GetNumChildrenForLayerAtIndex(int indx)
         {
+            if (m_InputLayers[indx].GetOutputTarget() == CompositorLayer.OutputTarget.CameraStack)
+            {
+                return 0;
+            }
+
             int num = 0;
             for(int i = indx + 1; i < m_InputLayers.Count; ++i)
             {
