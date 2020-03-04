@@ -146,6 +146,12 @@ namespace UnityEditor.ShaderGraph.Drawing
                 }
             }
             evt.menu.AppendSeparator();
+            if (evt.target is StickyNote)
+            {
+                evt.menu.AppendAction("Select/Unused Nodes", SelectUnusedNodes);
+                evt.menu.AppendSeparator();
+            }
+
             // This needs to work on nodes, groups and properties
             if ((evt.target is Node) || (evt.target is StickyNote))
             {
@@ -195,6 +201,8 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             if (evt.target is ShaderGroup shaderGroup)
             {
+                evt.menu.AppendAction("Select/Unused Nodes", SelectUnusedNodes);
+                evt.menu.AppendSeparator();
                 if (!selection.Contains(shaderGroup))
                 {
                     selection.Add(shaderGroup);
@@ -215,13 +223,30 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             graph.owner.RegisterCompleteObjectUndo("Select Unused Nodes");
             ClearSelection();
-            var nodeView = graph.GetNodes<IMasterNode>();
+
+            List<AbstractMaterialNode> endNodes = new List<AbstractMaterialNode>();
+            if (!graph.isSubGraph)
+            {
+                var nodeView = graph.GetNodes<IMasterNode>();
+                foreach (IMasterNode masterNode in nodeView)
+                {
+                    endNodes.Add(masterNode as AbstractMaterialNode);
+                }
+            }
+            else
+            {
+                var nodes = graph.GetNodes<SubGraphOutputNode>();
+                foreach (var node in nodes)
+                {
+                    endNodes.Add(node);
+                }
+            }
+
             var nodesConnectedToAMasterNode = new List<AbstractMaterialNode>();
 
-            // Get the list of nodes from Master nodes
-            foreach (var masterNode in nodeView)
+            // Get the list of nodes from Master nodes or SubGraphOutputNode
+            foreach (var abs in endNodes)
             {
-                var abs = masterNode as AbstractMaterialNode;
                 NodeUtils.DepthFirstCollectNodesFromNode(nodesConnectedToAMasterNode, abs);
             }
 
