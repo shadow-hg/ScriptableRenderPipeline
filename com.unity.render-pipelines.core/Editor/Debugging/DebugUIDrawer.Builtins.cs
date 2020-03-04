@@ -720,7 +720,7 @@ namespace UnityEditor.Rendering
                 return rect;
 
             float size = 1.0f;
-            var color = EditorGUIUtility.isProSkin ? new Color(0.6f, 0.6f, 0.6f, 1.333f) : new Color(0.12f, 0.12f, 0.12f, 1.333f);
+            var color = EditorGUIUtility.isProSkin ? new Color(0.12f, 0.12f, 0.12f, 1.333f) : new Color(0.6f, 0.6f, 0.6f, 1.333f);
 
             Color orgColor = GUI.color;
             GUI.color = GUI.color * color;
