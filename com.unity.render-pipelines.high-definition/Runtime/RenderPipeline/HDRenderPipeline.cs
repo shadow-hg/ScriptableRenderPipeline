@@ -2685,7 +2685,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 {
                     using (new ProfilingScope(null, ProfilingSampler.Get(HDProfileId.CustomPassCullResultsCull)))
                     {
-                        cullingResults.customPassCullingResults = CustomPassVolume.Cull(renderContext, hdCamera);
+                        cullingResults.customPassCullingResults = CustomPassVolume.Cull(cullingParams, renderContext, hdCamera);
                     }
                 }
 

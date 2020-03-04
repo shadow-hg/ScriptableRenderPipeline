@@ -205,16 +205,13 @@ namespace UnityEngine.Rendering.HighDefinition
             }
         }
 
-        internal static CullingResults? Cull(ScriptableRenderContext renderContext, HDCamera hdCamera)
+        internal static CullingResults? Cull(ScriptableCullingParameters cullingParameters, ScriptableRenderContext renderContext, HDCamera hdCamera)
         {
             CullingResults?  result = null;
 
             // We need to sort the volumes first to know which one will be executed
             // TODO: cache the results per camera in the HDRenderPipeline so it's not executed twice per camera
             Update(hdCamera);
-
-            // For each injection points, we gather the culling results for 
-            hdCamera.camera.TryGetCullingParameters(out var cullingParameters);
 
             // By default we don't want the culling to return any objects
             cullingParameters.cullingMask = 0;
