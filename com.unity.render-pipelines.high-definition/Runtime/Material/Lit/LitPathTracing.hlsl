@@ -138,6 +138,12 @@ float3 GetSpecularCompensation(BSDFData bsdfData)
     return 1.0 + bsdfData.specularOcclusion * bsdfData.fresnel0;
 }
 
+// Little helper to get the specular compensation term
+float3 GetSpecularCompensation(BSDFData bsdfData)
+{
+    return 1.0 + bsdfData.specularOcclusion * bsdfData.fresnel0;
+}
+
 bool SampleMaterial(MaterialData mtlData, float3 inputSample, out float3 sampleDir, out MaterialResult result)
 {
     Init(result);
