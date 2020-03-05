@@ -233,6 +233,9 @@ namespace UnityEngine.Rendering
             /// <param name="visible">True if the column should be visible.</param>
             public void SetColumnVisibility(int index, bool visible)
             {
+                if (index < 0 || index >= m_ColumnCount)
+                    return;
+
 #if UNITY_EDITOR
                 var header = Header;
                 index++;
@@ -259,11 +262,7 @@ namespace UnityEngine.Rendering
             /// </summary>
             public Vector2 scroll = Vector2.zero;
 
-            /// <summary>
-            /// The number of columns in the table.
-            /// </summary>
-            public int columnCount { get; private set; }
-
+            int m_ColumnCount;
             UnityEditor.IMGUI.Controls.MultiColumnHeader m_Header = null;
 
             /// <summary>
@@ -278,10 +277,10 @@ namespace UnityEngine.Rendering
 
                     if (children.Count != 0)
                     {
-                        columnCount = ((Container)children[0]).children.Count;
+                        m_ColumnCount = ((Container)children[0]).children.Count;
                         for (int i = 1; i < children.Count; i++)
                         {
-                            if (((Container)children[i]).children.Count != columnCount)
+                            if (((Container)children[i]).children.Count != m_ColumnCount)
                             {
                                 Debug.LogError("All rows must have the same number of children.");
                                 return null;
@@ -304,12 +303,11 @@ namespace UnityEngine.Rendering
                         return col;
                     }
 
-                    columnCount++;
-                    var cols = new UnityEditor.IMGUI.Controls.MultiColumnHeaderState.Column[columnCount];
+                    var cols = new UnityEditor.IMGUI.Controls.MultiColumnHeaderState.Column[m_ColumnCount + 1];
                     cols[0] = CreateColumn(displayName);
                     cols[0].allowToggleVisibility = false;
-                    for (int i = 1; i < columnCount; i++)
-                        cols[i] = CreateColumn(((Container)children[0]).children[i - 1].displayName);
+                    for (int i = 0; i < m_ColumnCount; i++)
+                        cols[i + 1] = CreateColumn(((Container)children[0]).children[i].displayName);
 
                     var state = new UnityEditor.IMGUI.Controls.MultiColumnHeaderState(cols);
                     m_Header = new UnityEditor.IMGUI.Controls.MultiColumnHeader(state) { height = 23 };
