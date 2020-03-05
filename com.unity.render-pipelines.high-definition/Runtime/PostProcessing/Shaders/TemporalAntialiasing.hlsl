@@ -284,18 +284,18 @@ float2 GetClosestFragment(TEXTURE2D_X(DepthTexture), int2 positionSS)
 float2 GetClosestFragmentCompute(float2 positionSS)
 {
     float center = LoadCameraDepth(positionSS);
-    float nw = LoadCameraDepth(positionSS + int2(-2, -2));
-    float ne = LoadCameraDepth(positionSS + int2(2, -2));
-    float sw = LoadCameraDepth(positionSS + int2(-2, 2));
-    float se = LoadCameraDepth(positionSS + int2(2, 2));
+    float nw = LoadCameraDepth(positionSS + int2(-1, -1));
+    float ne = LoadCameraDepth(positionSS + int2(1, -1));
+    float sw = LoadCameraDepth(positionSS + int2(-1, 1));
+    float se = LoadCameraDepth(positionSS + int2(1, 1));
 
     float4 neighborhood = float4(nw, ne, sw, se);
 
     float3 closest = float3(0.0, 0.0, center);
-    closest = lerp(closest, float3(-2, -2, neighborhood.x), COMPARE_DEPTH(neighborhood.x, closest.z));
-    closest = lerp(closest, float3(2, -2, neighborhood.y), COMPARE_DEPTH(neighborhood.y, closest.z));
-    closest = lerp(closest, float3(-2, 2, neighborhood.z), COMPARE_DEPTH(neighborhood.z, closest.z));
-    closest = lerp(closest, float3(2, 2, neighborhood.w), COMPARE_DEPTH(neighborhood.w, closest.z));
+    closest = lerp(closest, float3(-1, -1, neighborhood.x), COMPARE_DEPTH(neighborhood.x, closest.z));
+    closest = lerp(closest, float3(1, -1, neighborhood.y), COMPARE_DEPTH(neighborhood.y, closest.z));
+    closest = lerp(closest, float3(-1, 1, neighborhood.z), COMPARE_DEPTH(neighborhood.z, closest.z));
+    closest = lerp(closest, float3(1, 1, neighborhood.w), COMPARE_DEPTH(neighborhood.w, closest.z));
 
     return positionSS + closest.xy;
 }
@@ -555,7 +555,7 @@ void VarianceNeighbourhood(inout NeighbourhoodSamples samples, float historyLuma
     // and high temporal contrast, we let the history to be closer to be unclipped. To achieve, the min/max bounds
     // are extended artificially more.
 #if ANTI_FLICKER
-    stDevMultiplier = 1.3;
+    stDevMultiplier = 1.4;
     float temporalContrast = saturate(abs(colorLuma - historyLuma) / Max3(0.2, colorLuma, historyLuma));
     stDevMultiplier += lerp(0.0, antiFlicker, smoothstep(0.1, 0.7, temporalContrast));
 #endif
@@ -690,7 +690,7 @@ CTYPE SharpenColor(NeighbourhoodSamples samples, CTYPE color, float sharpenStren
 {
     float3 linearC = color * PerceptualInvWeight(color);
     float3 linearAvg = samples.avgNeighbour * PerceptualInvWeight(samples.avgNeighbour);
-    linearC = linearC + (linearC - linearAvg) * sharpenStrength * 2;
+    linearC = linearC + (linearC - linearAvg) * sharpenStrength * 3;
 
 #if YCOCG
     linearC.x = clamp(linearC.x, 0, CLAMP_MAX);
