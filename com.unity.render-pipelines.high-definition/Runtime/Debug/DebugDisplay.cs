@@ -1258,11 +1258,11 @@ namespace UnityEngine.Rendering.HighDefinition
                         row = new DebugUI.Table.Row()
                         {
                             displayName = f.Name,
-                            children = { makeWidget("Interpolated Value", data.volumeDebugSettings.GetParameter(type, f)) }
+                            children = { makeWidget("Interpolated Value", data.volumeDebugSettings.GetParameter(f)) }
                         };
 
                         foreach (var volume in volumes)
-                            row.children.Add(makeWidget(volume.name + " (" + volume.profileRef.name + ")", data.volumeDebugSettings.GetParameter(volume, type, f)));
+                            row.children.Add(makeWidget(volume.name + " (" + volume.profileRef.name + ")", data.volumeDebugSettings.GetParameter(volume, f)));
 
                         row.children.Add(makeWidget("Default Value", data.volumeDebugSettings.GetParameter(inst, f)));
                         table.children.Add(row);

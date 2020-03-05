@@ -82,6 +82,14 @@ namespace UnityEngine.Rendering
             set => m_InternalProfile = value;
         }
 
+        /// <summary>
+        /// Gets the first instantiated <see cref="VolumeProfile"/> assigned to the Volume.
+        /// </summary>
+        /// <remarks>
+        /// You should not modify Profiles that <c>profileRef</c> returns. If you want
+        /// to modify the Profile of a Volume, use <see cref="profile"/> instead.
+        /// </remarks>
+        /// <seealso cref="profile"/>
         public VolumeProfile profileRef => m_InternalProfile == null ? sharedProfile : m_InternalProfile;
 
         /// <summary>

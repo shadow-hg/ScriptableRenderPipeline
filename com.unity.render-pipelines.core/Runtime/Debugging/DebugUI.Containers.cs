@@ -211,26 +211,26 @@ namespace UnityEngine.Rendering
         /// </summary>
         public class Table : Container
         {
-            /// <summary>
-            /// Row Container.
-            /// </summary>
+            /// <summary>Row Container.</summary>
             public class Row : Foldout
             {
+                /// <summary>Constructor.</summary>
                 public Row() { displayName = "Row"; }
             }
 
+            /// <summary>
+            /// True if the table is read only.
+            /// </summary>
             public bool isReadOnly = false;
 
-            /// <summary>
-            /// Constructor.
-            /// </summary>
+            /// <summary>Constructor.</summary>
             public Table() { displayName = "Array"; }
 
             /// <summary>
             /// Set column visibility.
+            /// </summary>
             /// <param name="index">Index of the column.</param>
             /// <param name="visible">True if the column should be visible.</param>
-            /// </summary>
             public void SetColumnVisibility(int index, bool visible)
             {
 #if UNITY_EDITOR
@@ -254,11 +254,21 @@ namespace UnityEngine.Rendering
             }
 
 #if UNITY_EDITOR
+            /// <summary>
+            /// The scroll position of the table.
+            /// </summary>
             public Vector2 scroll = Vector2.zero;
 
+            /// <summary>
+            /// The number of columns in the table.
+            /// </summary>
             public int columnCount { get; private set; }
 
             UnityEditor.IMGUI.Controls.MultiColumnHeader m_Header = null;
+
+            /// <summary>
+            /// The table header for drawing
+            /// </summary>
             public UnityEditor.IMGUI.Controls.MultiColumnHeader Header
             {
                 get
