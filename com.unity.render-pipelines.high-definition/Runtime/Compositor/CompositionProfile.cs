@@ -78,10 +78,17 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             }
         }
 
-        public void ClearShaderProperties()
+        public void ValidateLayerList(int oldIndex)
         {
-            m_ShaderProperties.Clear();
-            m_InputLayers.Clear();
+            if (m_InputLayers.Count > 1)
+            {
+                if (m_InputLayers[0].GetOutputTarget() == CompositorLayer.OutputTarget.CameraStack)
+                {
+                    var tmp = m_InputLayers[0];
+                    m_InputLayers.RemoveAt(0);
+                    m_InputLayers.Insert(oldIndex, tmp);
+                }
+            }
         }
 
         public void AddPropertiesFromShaderAndMaterial (Shader shader, Material material)

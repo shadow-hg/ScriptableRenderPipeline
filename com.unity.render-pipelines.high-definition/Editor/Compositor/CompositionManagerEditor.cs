@@ -172,10 +172,15 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                     var serializedProperties = m_SerializedLayerProperties[index];
                     CompositionLayerUI.DrawItemInList(rect, serializedProperties, m_compositionManager.GetRenderTarget(index), m_compositionManager.aspectRatio);
                 };
-                m_layerList.onReorderCallback += (list) =>
+                m_layerList.onReorderCallbackWithDetails += (list, oldIndex, newIndex) =>
                 {
                     layerListChange = true;
                     m_IsEditorDirty = true;
+
+                    if (newIndex == 0)
+                    {
+                        m_compositionManager.profile.ValidateLayerList(oldIndex);
+                    }
                 };
 
                 m_layerList.elementHeightCallback = (index) =>

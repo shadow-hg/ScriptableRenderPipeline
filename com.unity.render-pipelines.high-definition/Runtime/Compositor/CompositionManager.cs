@@ -536,7 +536,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         {
             if (indx >= 0 && indx < m_CompositionProfile.m_InputLayers.Count)
             {
-                return m_CompositionProfile.m_InputLayers[indx].GetRenderTarget();
+                return m_CompositionProfile.m_InputLayers[indx].GetRenderTarget(true, true);
             }
             return null;
         }

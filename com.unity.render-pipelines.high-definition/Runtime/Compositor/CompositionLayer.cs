@@ -496,9 +496,9 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             }
         }
 
-        public RenderTexture GetRenderTarget(bool allowAOV = true)
+        public RenderTexture GetRenderTarget(bool allowAOV = true, bool alwaysShow = false)
         {
-            if (m_Show)
+            if (m_Show || alwaysShow)
             {
                 if (m_AOVMap != null && allowAOV)
                 {
@@ -561,7 +561,10 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         }
         public void SetupLayerCamera(CompositorLayer targetLayer, bool isFirstLayer = false)
         {
-            Debug.Assert(m_LayerCamera != null);
+            if (!m_LayerCamera || (targetLayer == null))
+            {
+                return;
+            }
 
             if (targetLayer.GetRenderTarget() == null)
             {
