@@ -60,6 +60,8 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
         void AddFilterOfTypeCallback(object type)
         {
             m_compositionManager.AddInputFilterAtLayer(CompositionFilter.Create((CompositionFilter.FilterType)type), m_layerList.index);
+            m_SerializedProperties.LayerList.serializedObject.Update();
+            CacheSerializedObjects();
         }
 
         void DrawCompositionParameters()
@@ -330,21 +332,23 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             {
                 if (m_filterList == null)
                 {
-                    m_filterList = new ReorderableList(serializedObject, serializedProperties.InputFilters, true, true, true, true);
+                    m_filterList = new ReorderableList(serializedProperties.InputFilters.serializedObject, serializedProperties.InputFilters, true, true, true, true);
                     m_filterList.onAddCallback = (list) =>
                     {
                         var menu = new GenericMenu();
                         menu.AddItem(new GUIContent("Chroma Keying"), false, AddFilterOfTypeCallback, 0);
                         menu.AddItem(new GUIContent("Alpha Mask"), false, AddFilterOfTypeCallback, 1);
                         menu.ShowAsContext();
-                        m_IsEditorDirty = true;
+
+                        EditorUtility.SetDirty(m_compositionManager.profile);
+                        EditorUtility.SetDirty(m_compositionManager);
                     };
 
                     m_filterList.drawElementCallback = (Rect r, int index, bool isActive, bool isFocused) =>
                     {
-                        if (index < serializedProperties.FilterList.Count)
-                        {
-                            var serializedFilter = serializedProperties.FilterList[index];
+                        if (index < m_SerializedLayerProperties[m_layerList.index].FilterList.Count)
+                        { 
+                            var serializedFilter = m_SerializedLayerProperties[m_layerList.index].FilterList[index];
                             CompositionFilterUI.Draw(r, serializedFilter);
                         }
                     };
@@ -364,9 +368,9 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
 
                     m_filterList.elementHeightCallback = (index) =>
                     {
-                        if (index < serializedProperties.FilterList.Count)
+                        if (index < m_SerializedLayerProperties[m_layerList.index].FilterList.Count)
                         {
-                            var filter = serializedProperties.FilterList[index];
+                            var filter = m_SerializedLayerProperties[m_layerList.index].FilterList[index];
                             return filter.GetHeight();
                         }
                         return 0;

@@ -596,6 +596,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             {
                 cmd.SetGlobalVector(SGShaderIDs._WorldSpaceCameraPos, new Vector3(0.0f, 0.0f, 0.0f));
                 cmd.SetViewport(new Rect(0, 0, camera.camera.pixelWidth, camera.camera.pixelHeight));
+                cmd.ClearRenderTarget(true, false, Color.black);
             }
 
             if (camera.camera.targetTexture)
