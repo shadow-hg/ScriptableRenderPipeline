@@ -390,9 +390,15 @@ namespace UnityEngine.Rendering
         /// Get all volumes on a given layer mask sorted by influence
         /// </summary>
         /// <param name="layerMask">The LayerMask that Unity uses to filter Volumes that it should consider.</param>
-        /// <returns>A list of volume.</returns>
+        /// <returns>An array of volume.</returns>
         /// </summary>
-        public List<Volume> GrabVolumes(LayerMask mask)
+        public Volume[] GetVolumes(LayerMask mask)
+        {
+            var volumes = GrabVolumes(mask);
+            return volumes.ToArray();
+        }
+
+        List<Volume> GrabVolumes(LayerMask mask)
         {
             List<Volume> list;
 

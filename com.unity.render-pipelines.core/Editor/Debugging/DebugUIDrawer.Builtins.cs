@@ -674,7 +674,7 @@ namespace UnityEditor.Rendering
             // Compute rects
             var headerRect = new Rect(rect.x, rect.y, rect.width, header.height);
             var contentRect = new Rect(rect.x, headerRect.yMax, rect.width, rect.height - headerRect.height);
-            var viewRect = new Rect(contentRect.x, contentRect.y, w.displayWidth, contentRect.height);
+            var viewRect = new Rect(contentRect.x, contentRect.y, header.state.widthOfAllVisibleColumns, contentRect.height);
             var rowRect = contentRect;
             rowRect.height = EditorGUIUtility.singleLineHeight;
             viewRect.height -= EditorGUIUtility.singleLineHeight;
@@ -686,6 +686,7 @@ namespace UnityEditor.Rendering
             w.scroll = GUI.BeginScrollView(contentRect, w.scroll, viewRect);
             {
                 var columns = header.state.columns;
+                var visible = header.state.visibleColumns;
                 for (int r = 0; r < w.children.Count; r++)
                 {
                     var row = Cast<DebugUI.Container>(w.children[r]);
@@ -698,16 +699,14 @@ namespace UnityEditor.Rendering
                     rowRect.xMin -= 2;
                     rowRect.xMax += 2;
 
-                    for (int c = 1; c < columns.Length; c++)
+                    for (int c = 1; c < visible.Length; c++)
                     {
                         rowRect.x += rowRect.width;
-                        rowRect.width = columns[c].width;
-                        DisplayChild(rowRect, row.children[c - 1], w.isReadOnly);
+                        rowRect.width = columns[visible[c]].width;
+                        DisplayChild(rowRect, row.children[visible[c] - 1], w.isReadOnly);
                     }
                     rowRect.y += rowRect.height;
                 }
-
-                w.displayWidth = rowRect.x + rowRect.width;
             }
             GUI.EndScrollView(false);
 

@@ -1163,18 +1163,6 @@ namespace UnityEngine.Rendering.HighDefinition
 
                 if (data.volumeDebugSettings.selectedCamera != 0)
                 {
-                    Type type = data.volumeDebugSettings.selectedComponentType;
-
-                    var fields = type
-                        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                        .Where(t => t.FieldType.IsSubclassOf(typeof(VolumeParameter)))
-                        .OrderBy(t => t.Name);
-
-                    var volumes = data.volumeDebugSettings.GetVolumes();
-                    var table = new DebugUI.Table() { displayName = "Parameter", isReadOnly = true };
-
-                    var inst = (VolumeComponent)ScriptableObject.CreateInstance(type);
-
                     DebugUI.Widget makeWidget(string name, VolumeParameter param)
                     {
                         if (param == null)
@@ -1215,19 +1203,51 @@ namespace UnityEngine.Rendering.HighDefinition
                         };
                     }
 
+                    Type type = data.volumeDebugSettings.selectedComponentType;
+
+                    var fields = type
+                        .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        .Where(t => t.FieldType.IsSubclassOf(typeof(VolumeParameter)))
+                        .OrderBy(t => t.Name);
+
+                    var volumes = data.volumeDebugSettings.GetVolumes();
+                    var table = new DebugUI.Table() { displayName = "Parameter", isReadOnly = true };
+
+                    var inst = (VolumeComponent)ScriptableObject.CreateInstance(type);
+
                     // First row for volume info
                     var row = new DebugUI.Table.Row()
                     {
                         displayName = "Volume Info",
-                        children = { new DebugUI.Value() { displayName = "Interpolated Value", getter = () => "" } }
+                        children = { new DebugUI.Value() { displayName = "Interpolated Value", getter = () => {
+                                var newVolumes = data.volumeDebugSettings.GetVolumes();
+                                if (data.volumeDebugSettings.RefreshVolumes(newVolumes))
+                                    RefreshVolumeDebug(null, false);
+                                else
+                                {
+                                    for (int i = 0; i < newVolumes.Length; i++)
+                                    {
+                                        var weight = data.volumeDebugSettings.GetVolumeWeight(newVolumes[i]);
+                                        table.SetColumnVisibility(i + 1, weight > 0f);
+                                    }
+                                }
+                                return "";
+                            }
+                        } }
                     };
 
-                    foreach (var volume in volumes.Reverse())
+                    foreach (var volume in volumes)
+                    {
                         row.children.Add(new DebugUI.Value()
                         {
                             displayName = volume.name + " (" + volume.profileRef.name + ")",
-                            getter = () => data.volumeDebugSettings.GetVolumeInfo(volume, type),
+                            getter = () => {
+                                var scope = volume.isGlobal ? "Global" : "Local";
+                                var weight = data.volumeDebugSettings.GetVolumeWeight(volume);
+                                return scope + " (" + (weight * 100f) + "%)";
+                            }
                         });
+                    }
 
                     row.children.Add(new DebugUI.Value() { displayName = "Default Value", getter = () => "" });
                     table.children.Add(row);
@@ -1241,7 +1261,7 @@ namespace UnityEngine.Rendering.HighDefinition
                             children = { makeWidget("Interpolated Value", data.volumeDebugSettings.GetParameter(type, f)) }
                         };
 
-                        foreach (var volume in volumes.Reverse())
+                        foreach (var volume in volumes)
                             row.children.Add(makeWidget(volume.name + " (" + volume.profileRef.name + ")", data.volumeDebugSettings.GetParameter(volume, type, f)));
 
                         row.children.Add(makeWidget("Default Value", data.volumeDebugSettings.GetParameter(inst, f)));

@@ -226,10 +226,36 @@ namespace UnityEngine.Rendering
             /// </summary>
             public Table() { displayName = "Array"; }
 
+            /// <summary>
+            /// Set column visibility.
+            /// <param name="index">Index of the column.</param>
+            /// <param name="visible">True if the column should be visible.</param>
+            /// </summary>
+            public void SetColumnVisibility(int index, bool visible)
+            {
+#if UNITY_EDITOR
+                var header = Header;
+                index++;
+                if (header.IsColumnVisible(index) != visible)
+                {
+                    var newVisibleColumns = new System.Collections.Generic.List<int>(header.state.visibleColumns);
+                    if (newVisibleColumns.Contains(index))
+                    {
+                        newVisibleColumns.Remove(index);
+                    }
+                    else
+                    {
+                        newVisibleColumns.Add(index);
+                        newVisibleColumns.Sort();
+                    }
+                    header.state.visibleColumns = newVisibleColumns.ToArray();
+                }
+#endif
+            }
+
 #if UNITY_EDITOR
             public Vector2 scroll = Vector2.zero;
 
-            public float displayWidth = 5000.0f;
             public int columnCount { get; private set; }
 
             UnityEditor.IMGUI.Controls.MultiColumnHeader m_Header = null;
@@ -271,6 +297,7 @@ namespace UnityEngine.Rendering
                     columnCount++;
                     var cols = new UnityEditor.IMGUI.Controls.MultiColumnHeaderState.Column[columnCount];
                     cols[0] = CreateColumn(displayName);
+                    cols[0].allowToggleVisibility = false;
                     for (int i = 1; i < columnCount; i++)
                         cols[i] = CreateColumn(((Container)children[0]).children[i - 1].displayName);
 

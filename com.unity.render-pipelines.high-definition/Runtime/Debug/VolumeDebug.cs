@@ -98,41 +98,6 @@ namespace UnityEngine.Rendering.HighDefinition
         }
 
 
-        public Volume[] GetVolumes()
-        {
-            var componentType = selectedComponentType;
-
-            // Sort the cached volume list(s) for the given layer mask if needed and return it
-            var volumes = VolumeManager.instance.GrabVolumes(selectedCameraLayerMask);
-            var activeVolumes = new List<Volume>();
-
-            // Traverse all volumes
-            foreach (var volume in volumes)
-            {
-                // Skip disabled volumes and volumes without any data or weight
-                if (!volume.enabled || volume.profileRef == null || volume.weight <= 0f)
-                    continue;
-
-                if (!volume.profileRef.Has(componentType))
-                    continue;
-
-                // Global volumes always have influence
-                if (volume.isGlobal)
-                {
-                    activeVolumes.Add(volume);
-                    continue;
-                }
-
-                // If volume isn't global and has no collider, skip it as it's useless
-                if (volume.GetComponent<Collider>() == null)
-                    continue;
-
-                activeVolumes.Add(volume);
-            }
-
-            return activeVolumes.ToArray();
-        }
-
         public VolumeParameter GetParameter(VolumeComponent component, FieldInfo field)
         {
             return (VolumeParameter)field.GetValue(component);
@@ -154,18 +119,13 @@ namespace UnityEngine.Rendering.HighDefinition
             return param;
         }
 
-        public string GetVolumeInfo(Volume volume, Type type)
+        float[] weights = null;
+        float ComputeWeight(Volume volume)
         {
-            if (!volume.enabled)
-                return "Volume Disabled";
-            if (!volume.gameObject.activeInHierarchy)
-                return "GameObject Inactive";
-            if (!volume.profileRef.TryGet(type, out VolumeComponent component))
-                return "Component Removed";
-
-            var scope = volume.isGlobal ? "Global" : "Local";
-            if (!component.active)
-                return scope + " (Inactive)";
+            if (!volume.gameObject.activeInHierarchy) return 0;
+            if (!volume.enabled || volume.profileRef == null || volume.weight <= 0f) return 0;
+            if (!volume.profileRef.TryGet(selectedComponentType, out VolumeComponent component)) return 0;
+            if (!component.active) return 0;
 
             float weight = Mathf.Clamp01(volume.weight);
             if (!volume.isGlobal)
@@ -192,7 +152,48 @@ namespace UnityEngine.Rendering.HighDefinition
                 else if (blendDistSqr > 0f)
                     weight *= 1f - (closestDistanceSqr / blendDistSqr);
             }
-            return scope + " (" + weight.ToString() + ")";
+            return weight;
+        }
+
+        Volume[] volumes = null;
+        public Volume[] GetVolumes()
+        {
+            return VolumeManager.instance.GetVolumes(selectedCameraLayerMask).Reverse().ToArray();
+        }
+
+        public bool RefreshVolumes(Volume[] newVolumes)
+        {
+            if (volumes == null || !newVolumes.SequenceEqual(volumes))
+            {
+                volumes = (Volume[])newVolumes.Clone();
+                weights = null;
+                return true;
+            }
+
+            float total = 0f;
+            weights = new float[volumes.Length];
+            for (int i = 0; i < volumes.Length; i++)
+            {
+                float weight = ComputeWeight(volumes[i]);
+                if (i != 0)
+                    weight *= 1f - total;
+                weights[i] = Mathf.Clamp01(weight);
+                total += weight;
+            }
+
+            return false;
+        }
+
+        public float GetVolumeWeight(Volume volume)
+        {
+            if (weights == null)
+                return 0;
+
+            int index = Array.IndexOf(volumes, volume);
+            if (index == -1)
+                return 0;
+
+            return weights[index];
         }
     }
 }
