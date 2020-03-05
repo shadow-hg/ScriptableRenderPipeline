@@ -11,6 +11,7 @@ using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 
 using Object = UnityEngine.Object;
+using System.IO;
 
 namespace UnityEditor.VFX
 {
@@ -707,9 +708,21 @@ namespace UnityEditor.VFX
                 var descs = new VFXShaderSourceDesc[generatedCodeData.Count];
                 var assetName = string.Empty;
                 if (resource.asset != null)
-                    assetName = resource.asset.name;
-                else if (resource.name != null)
-                    assetName = resource.name;
+                {
+                    assetName = resource.asset.name; //Most Common case, asset is already available
+                }
+                else
+                {
+                    var assetPath = AssetDatabase.GetAssetPath(resource); //Can occur during Copy/Past or Rename
+                    if (!string.IsNullOrEmpty(assetPath))
+                    {
+                        assetName = Path.GetFileNameWithoutExtension(assetPath);
+                    }
+                    else if (resource.name != null) //Unable to retrieve asset path, last fallback use serialized resource name
+                    {
+                        assetName = resource.name;
+                    }
+                }
 
                 for (int i = 0; i < generatedCodeData.Count; ++i)
                 {
