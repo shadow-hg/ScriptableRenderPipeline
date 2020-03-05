@@ -89,7 +89,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                             GUI.DrawTexture(iconRect, EditorGUIUtility.ObjectContent(null, typeof(Camera)).image);
                             break;
                         case (int)CompositorLayer.LayerType.Video:
-                            GUI.DrawTexture(iconRect, EditorGUIUtility.ObjectContent(null, typeof(UnityEngine.Video.VideoPlayer)).image);
+                            GUI.DrawTexture(iconRect, EditorGUIUtility.ObjectContent(null, typeof(UnityEngine.Video.VideoClip)).image);
                             break;
                         case (int)CompositorLayer.LayerType.Image:
                             GUI.DrawTexture(iconRect, EditorGUIUtility.ObjectContent(null, typeof(Texture)).image);
