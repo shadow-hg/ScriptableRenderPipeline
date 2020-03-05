@@ -15,13 +15,13 @@ bool RussianRouletteTest(float threshold, float value, float rand, out float fac
 {
     if (skip || value >= threshold)
     {
-    	factor = 1.0;
+        factor = 1.0;
         return true;
     }
 
     if (rand * threshold >= value)
     {
-    	factor = 1.0;
+        factor = 1.0;
         return false;
     }
 
