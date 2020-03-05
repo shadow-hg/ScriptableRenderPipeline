@@ -993,7 +993,7 @@ namespace UnityEngine.Rendering.HighDefinition
             m_TAAPropertyBlock.SetTexture(HDShaderIDs._DepthTexture, depthMipChain);
 
             float minAntiflicker = 0.0f;
-            float maxAntiflicker = 1.5f;
+            float maxAntiflicker = 2.0f;
             float motionRejectionMultiplier = Mathf.Lerp(0.0f, 250.0f, camera.taaMotionVectorRejection * camera.taaMotionVectorRejection * camera.taaMotionVectorRejection); 
 
             var taaParameters = new Vector4(camera.taaHistorySharpening, Mathf.Lerp(minAntiflicker, maxAntiflicker, camera.taaAntiFlicker), motionRejectionMultiplier, 0.0f);
