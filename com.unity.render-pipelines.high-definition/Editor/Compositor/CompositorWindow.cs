@@ -54,6 +54,9 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 GameObject go = new GameObject("HDRP Compositor") { hideFlags = HideFlags.HideInHierarchy };
                 compositor = go.AddComponent<CompositionManager>();
 
+                // Mark as dirty, so if the user closes the scene right away, the change will be saved.
+                EditorUtility.SetDirty(compositor);
+
                 // Now add the default configuration
                 CompositionUtils.LoadDefaultCompositionGraph(compositor);
                 CompositionUtils.LoadOrCreateCompositionProfileAsset(compositor);

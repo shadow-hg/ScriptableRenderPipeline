@@ -572,7 +572,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
                 return;
             }
 
-            var cameraData = m_LayerCamera.GetComponent<HDAdditionalCameraData>();
+            var cameraData = HDUtils.TryGetAdditionalCameraDataOrDefault(m_LayerCamera);
             m_LayerCamera.targetTexture = targetLayer.GetRenderTarget(false);
 
             if (targetLayer.m_AOVBitmask == 0)
