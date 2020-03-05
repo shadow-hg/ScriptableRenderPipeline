@@ -156,6 +156,10 @@ namespace UnityEngine.Rendering.HighDefinition
 
         public string GetVolumeInfo(Volume volume, Type type)
         {
+            if (!volume.enabled)
+                return "Volume Disabled";
+            if (!volume.gameObject.activeInHierarchy)
+                return "GameObject Inactive";
             if (!volume.profileRef.TryGet(type, out VolumeComponent component))
                 return "Component Removed";
 
