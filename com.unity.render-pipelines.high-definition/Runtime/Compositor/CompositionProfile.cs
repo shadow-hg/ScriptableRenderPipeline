@@ -78,15 +78,47 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             }
         }
 
-        public void ValidateLayerList(int oldIndex)
+        public void ValidateLayerList(int oldIndex, int newIndex)
         {
             if (m_InputLayers.Count > 1)
             {
                 if (m_InputLayers[0].GetOutputTarget() == CompositorLayer.OutputTarget.CameraStack)
                 {
-                    var tmp = m_InputLayers[0];
-                    m_InputLayers.RemoveAt(0);
+                    var tmp = m_InputLayers[newIndex];
+                    m_InputLayers.RemoveAt(newIndex);
                     m_InputLayers.Insert(oldIndex, tmp);
+                }
+            }
+        }
+
+        public void ReorderChildren(int oldIndex, int newIndex)
+        {
+            if (m_InputLayers[newIndex].GetOutputTarget() == CompositorLayer.OutputTarget.CompositorLayer)
+            {
+                if (oldIndex > newIndex)
+                {
+                    for (int i = 1; oldIndex + i < m_InputLayers.Count; ++i)
+                    {
+                        if (m_InputLayers[oldIndex + i].GetOutputTarget() == CompositorLayer.OutputTarget.CameraStack)
+                        {
+                            var tmp = m_InputLayers[oldIndex + i];
+                            m_InputLayers.RemoveAt(oldIndex + i);
+                            m_InputLayers.Insert(newIndex + i, tmp);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    while (m_InputLayers[oldIndex].GetOutputTarget() == CompositorLayer.OutputTarget.CameraStack)
+                    {
+                        var tmp = m_InputLayers[oldIndex];
+                        m_InputLayers.RemoveAt(oldIndex);
+                        m_InputLayers.Insert(newIndex, tmp);
+                    }
                 }
             }
         }

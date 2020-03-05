@@ -177,10 +177,8 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                     layerListChange = true;
                     m_IsEditorDirty = true;
 
-                    if (newIndex == 0)
-                    {
-                        m_compositionManager.profile.ValidateLayerList(oldIndex);
-                    }
+                    m_compositionManager.profile.ReorderChildren(oldIndex, newIndex);
+                    m_compositionManager.profile.ValidateLayerList(oldIndex, newIndex);
                 };
 
                 m_layerList.elementHeightCallback = (index) =>
