@@ -293,7 +293,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 var rightSlot = context.edge.input.GetSlot();
 
                 // Valuetype gets the type should be the type for input and output
-                switch(rightSlot.valueType)
+                switch(leftSlot.valueType)
                 {
                     case SlotValueType.Boolean:
                         nodeData.AddSlot(new BooleanMaterialSlot(0, "", "", SlotType.Input, false));
@@ -786,8 +786,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     var nodeView = (IShaderNodeView)edgeView.input.node;
                     if (nodeView?.node != null)
                     {
-                        // MT need to look into doing things around here for fixing missing input on Redirect node after deleting the edge going into the redirect node
-                        Debug.Log(nodeView.node.name);
+                        Debug.Log(nodeView.node);
                         nodesToUpdate.Add(nodeView);
                     }
 
@@ -867,7 +866,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void AddNode(AbstractMaterialNode node)
         {
-            var materialNode = (AbstractMaterialNode)node;
+            var materialNode = node;
             Node nodeView;
             if (node is PropertyNode propertyNode)
             {

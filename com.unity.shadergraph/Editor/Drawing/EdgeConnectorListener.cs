@@ -22,7 +22,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             var draggedPort = (edge.output != null ? edge.output.edgeConnector.edgeDragHelper.draggedPort : null) ?? (edge.input != null ? edge.input.edgeConnector.edgeDragHelper.draggedPort : null);
             m_SearchWindowProvider.connectedPort = (ShaderPort)draggedPort;
-            SearcherWindow.Show(m_editorWindow, (m_SearchWindowProvider as SearcherProvider).LoadSearchWindow(), 
+            SearcherWindow.Show(m_editorWindow, (m_SearchWindowProvider as SearcherProvider).LoadSearchWindow(),
                 item => (m_SearchWindowProvider as SearcherProvider).OnSearcherSelectEntry(item, position),
                 position, null);
         }
@@ -34,6 +34,12 @@ namespace UnityEditor.ShaderGraph.Drawing
             if (leftSlot != null && rightSlot != null)
             {
                 m_Graph.owner.RegisterCompleteObjectUndo("Connect Edge");
+
+                if (rightSlot.owner is RedirectNodeData)
+                {
+                    
+                }
+
                 m_Graph.Connect(leftSlot.slotReference, rightSlot.slotReference);
             }
         }

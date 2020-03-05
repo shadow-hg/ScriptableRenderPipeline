@@ -56,8 +56,8 @@ namespace UnityEditor.ShaderGraph.Drawing
             foreach (var candidateAnchor in ports.ToList())
             {
                 var candidateSlot = candidateAnchor.GetSlot();
-                if (candidateSlot.owner is RedirectNodeData)
-                    continue;
+                // if (candidateSlot.owner is RedirectNodeData)
+                //     continue;
 
                 if (!startSlot.IsCompatibleWith(candidateSlot))
                     continue;

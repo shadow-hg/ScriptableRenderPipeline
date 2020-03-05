@@ -52,6 +52,28 @@ namespace UnityEditor.ShaderGraph
             InitializeFromEdge(nodeData.m_Edge, m_GraphView);
         }
 
+        public void UpdateSlots(IEnumerable<MaterialSlot> slots)
+        {
+            foreach (var slot in slots)
+            {
+                if (slot.hidden)
+                    continue;
+
+                var port = ShaderPort.Create(slot, m_ConnectorListener);
+
+
+                // Clear first to remove old slots
+                // Need to get the Edges to reconnect edges.
+                outputContainer.Clear();
+                inputContainer.Clear();
+
+                if (slot.isOutputSlot)
+                    outputContainer.Add(port);
+                else
+                    inputContainer.Add(port);
+            }
+        }
+
         public void AddSlots(IEnumerable<MaterialSlot> slots)
         {
             foreach (var slot in slots)
@@ -59,8 +81,8 @@ namespace UnityEditor.ShaderGraph
                 if (slot.hidden)
                     continue;
 
-                //var port = ShaderPort.Create(slot, m_ConnectorListener, false);
-                var port = ShaderPort.CreateWithNoEdgeConnector(slot);
+                var port = ShaderPort.Create(slot, m_ConnectorListener);
+                //var port = ShaderPort.CreateWithNoEdgeConnector(slot);
 
                 if (slot.isOutputSlot)
                     outputContainer.Add(port);

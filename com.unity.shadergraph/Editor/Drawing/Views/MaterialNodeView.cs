@@ -610,15 +610,15 @@ namespace UnityEditor.ShaderGraph.Drawing
                 if (slot.hidden)
                     continue;
 
-                if (slot.owner is RedirectNodeData)
-                {
-                    // Need to create a port without the connector so we do not drag out any new edges from the port.
-                    port = ShaderPort.CreateWithNoEdgeConnector(slot);
-                }
-                else
-                {
+                // if (slot.owner is RedirectNodeData)
+                // {
+                //     // Need to create a port without the connector so we do not drag out any new edges from the port.
+                //     port = ShaderPort.CreateWithNoEdgeConnector(slot);
+                // }
+                // else
+                // {
                     port = ShaderPort.Create(slot, m_ConnectorListener);
-                }
+                //}
 
                 if (slot.isOutputSlot)
                     outputContainer.Add(port);
@@ -652,7 +652,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             var port = (ShaderPort)evt.target;
             var inputViews = m_PortInputContainer.Children().OfType<PortInputView>().Where(x => Equals(x.slot, port.slot));
-            
+
             // Ensure PortInputViews are initialized correctly
             // Dynamic port lists require one update to validate before init
             if(inputViews.Count() != 0)
@@ -660,7 +660,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 var inputView = inputViews.First();
                 SetPortInputPosition(port, inputView);
             }
-            
+
             port.UnregisterCallback<GeometryChangedEvent>(UpdatePortInput);
         }
 
