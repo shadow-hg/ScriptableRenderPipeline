@@ -203,6 +203,8 @@ namespace UnityEngine.Rendering.Universal
             if (!camera.TryGetCullingParameters(IsStereoEnabled(camera), out var cullingParameters))
                 return;
 
+            ScriptableRenderer.current = renderer;
+
             ProfilingSampler sampler = (asset.debugLevel >= PipelineDebugLevel.Profiling) ? new ProfilingSampler(camera.name): _CameraProfilingSampler;
             CommandBuffer cmd = CommandBufferPool.Get(sampler.name);
             using (new ProfilingScope(cmd, sampler))
@@ -231,6 +233,8 @@ namespace UnityEngine.Rendering.Universal
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
             context.Submit();
+
+            ScriptableRenderer.current = null;
         }
 
         /// <summary>
@@ -564,8 +568,6 @@ namespace UnityEngine.Rendering.Universal
             cameraData.requiresDepthTexture |= cameraData.isSceneViewCamera || CheckPostProcessForDepth(cameraData);
             cameraData.resolveFinalTarget = resolveFinalTarget;
 
-            cameraData.requiresIntermediateRenderTexture = RenderingUtils.RequiresIntermediateRenderTexture(ref cameraData);
-            cameraData.isDeviceProjectionMatrixFlipped = SystemInfo.graphicsUVStartsAtTop && (cameraData.requiresIntermediateRenderTexture || camera.targetTexture != null);
             Matrix4x4 projectionMatrix = camera.projectionMatrix;
 
             // Overlay cameras inherit viewport from base.

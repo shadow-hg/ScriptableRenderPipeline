@@ -37,6 +37,13 @@ namespace UnityEngine.Rendering.Universal
         }
 
         /// <summary>
+        /// The renderer we are currently rendering with, for low-level render control only.
+        /// <c>current</c> is null outside rendering scope.
+        /// Similar to https://docs.unity3d.com/ScriptReference/Camera-current.html
+        /// </summary>
+        internal static ScriptableRenderer current = null;
+
+        /// <summary>
         /// Set camera matrices. This method will set <c>UNITY_MATRIX_V</c>, <c>UNITY_MATRIX_P</c>, <c>UNITY_MATRIX_VP</c> to camera matrices.
         /// Additionally this will also set <c>unity_CameraProjection</c> and <c>unity_CameraProjection</c>.
         /// If <c>setInverseMatrices</c> is set to true this function will also set <c>UNITY_MATRIX_I_V</c> and <c>UNITY_MATRIX_I_VP</c>.

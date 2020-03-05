@@ -74,7 +74,6 @@ namespace UnityEngine.Rendering.Universal
                 //    (deviceType == GraphicsDeviceType.Metal || deviceType == GraphicsDeviceType.Vulkan ||
                 //     deviceType == GraphicsDeviceType.PlayStation4 || deviceType == GraphicsDeviceType.XboxOne);
             }
-            
         }
 
         static Material s_ErrorMaterial;
@@ -96,41 +95,6 @@ namespace UnityEngine.Rendering.Universal
 
                 return s_ErrorMaterial;
             }
-        }
-
-        /// <summary>
-        /// Checks if the pipeline needs to create a intermediate render texture.
-        /// </summary>
-        /// <param name="cameraData">CameraData contains all relevant render target information for the camera.</param>
-        /// <seealso cref="CameraData"/>
-        /// <returns>Return true if pipeline needs to render to a intermediate render texture.</returns>
-        public static bool RequiresIntermediateRenderTexture(ref CameraData cameraData)
-        {
-            // When rendering a camera stack we always create an intermediate render texture to composite camera results.
-            // We create it upon rendering the Base camera.
-            if (cameraData.renderType == CameraRenderType.Base && !cameraData.resolveFinalTarget)
-                return true;
-
-            var cameraTargetDescriptor = cameraData.cameraTargetDescriptor;
-            int msaaSamples = cameraTargetDescriptor.msaaSamples;
-            bool isStereoEnabled = cameraData.isStereoEnabled;
-            bool isScaledRender = !Mathf.Approximately(cameraData.renderScale, 1.0f);
-            bool isCompatibleBackbufferTextureDimension = cameraTargetDescriptor.dimension == TextureDimension.Tex2D;
-            bool requiresExplicitMsaaResolve = msaaSamples > 1 && !SystemInfo.supportsMultisampleAutoResolve;
-            bool isOffscreenRender = cameraData.targetTexture != null && !cameraData.isSceneViewCamera;
-            bool isCapturing = cameraData.captureActions != null;
-
-#if ENABLE_VR && ENABLE_VR_MODULE
-            if (isStereoEnabled)
-                isCompatibleBackbufferTextureDimension = UnityEngine.XR.XRSettings.deviceEyeTextureDimension == cameraTargetDescriptor.dimension;
-#endif
-
-            bool requiresBlitForOffscreenCamera = cameraData.postProcessEnabled || cameraData.requiresOpaqueTexture || requiresExplicitMsaaResolve;
-            if (isOffscreenRender)
-                return requiresBlitForOffscreenCamera;
-
-            return requiresBlitForOffscreenCamera || cameraData.isSceneViewCamera || isScaledRender || cameraData.isHdrEnabled ||
-                   !isCompatibleBackbufferTextureDimension || !cameraData.isDefaultViewport || isCapturing || Display.main.requiresBlitToBackbuffer;
         }
 
         /// <summary>
@@ -157,17 +121,6 @@ namespace UnityEngine.Rendering.Universal
                 cmd.SetGlobalMatrix(ShaderPropertyId.inverseViewMatrix, inverseMatrix);
                 cmd.SetGlobalMatrix(ShaderPropertyId.inverseViewAndProjectionMatrix, inverseViewProjection);
             }
-        }
-
-        /// <summary>
-        /// Returns true if the projection matrix is y-flipped.
-        /// Unity renders with a flip projection matrix if rendering to a render texture in non OpengGL platforms.
-        /// </summary>
-        /// <param name="projectionMatrix">The projection matrix.</param>
-        /// <returns>True if the projection matrix if y-flipped.</returns>
-        public static float GetProjectionFlipSign(Matrix4x4 projectionMatrix)
-        {
-            return Mathf.Sign(projectionMatrix.GetColumn(1).y);
         }
 
         // This is used to render materials that contain built-in shader passes not compatible with URP. 

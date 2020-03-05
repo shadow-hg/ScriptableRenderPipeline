@@ -169,7 +169,7 @@ namespace UnityEngine.Rendering.Universal
             if (isStereoEnabled && requiresDepthTexture)
                 requiresDepthPrepass = true;
 
-            bool createColorTexture = cameraData.requiresIntermediateRenderTexture;
+            bool createColorTexture = RequiresIntermediateColorTexture(ref cameraData);
 
             // If camera requires depth and there's no depth pre-pass we create a depth texture that can be read later by effect requiring it.
             bool createDepthTexture = cameraData.requiresDepthTexture && !requiresDepthPrepass;
@@ -434,6 +434,41 @@ namespace UnityEngine.Rendering.Universal
 #else
             QualitySettings.antiAliasing = msaaSamples;
 #endif
+        }
+
+        /// <summary>
+        /// Checks if the pipeline needs to create a intermediate render texture.
+        /// </summary>
+        /// <param name="cameraData">CameraData contains all relevant render target information for the camera.</param>
+        /// <seealso cref="CameraData"/>
+        /// <returns>Return true if pipeline needs to render to a intermediate render texture.</returns>
+        bool RequiresIntermediateColorTexture(ref CameraData cameraData)
+        {
+            // When rendering a camera stack we always create an intermediate render texture to composite camera results.
+            // We create it upon rendering the Base camera.
+            if (cameraData.renderType == CameraRenderType.Base && !cameraData.resolveFinalTarget)
+                return true;
+
+            var cameraTargetDescriptor = cameraData.cameraTargetDescriptor;
+            int msaaSamples = cameraTargetDescriptor.msaaSamples;
+            bool isStereoEnabled = cameraData.isStereoEnabled;
+            bool isScaledRender = !Mathf.Approximately(cameraData.renderScale, 1.0f);
+            bool isCompatibleBackbufferTextureDimension = cameraTargetDescriptor.dimension == TextureDimension.Tex2D;
+            bool requiresExplicitMsaaResolve = msaaSamples > 1 && !SystemInfo.supportsMultisampleAutoResolve;
+            bool isOffscreenRender = cameraData.targetTexture != null && !cameraData.isSceneViewCamera;
+            bool isCapturing = cameraData.captureActions != null;
+
+#if ENABLE_VR && ENABLE_VR_MODULE
+            if (isStereoEnabled)
+                isCompatibleBackbufferTextureDimension = UnityEngine.XR.XRSettings.deviceEyeTextureDimension == cameraTargetDescriptor.dimension;
+#endif
+
+            bool requiresBlitForOffscreenCamera = cameraData.postProcessEnabled || cameraData.requiresOpaqueTexture || requiresExplicitMsaaResolve;
+            if (isOffscreenRender)
+                return requiresBlitForOffscreenCamera;
+
+            return requiresBlitForOffscreenCamera || cameraData.isSceneViewCamera || isScaledRender || cameraData.isHdrEnabled ||
+                   !isCompatibleBackbufferTextureDimension || !cameraData.isDefaultViewport || isCapturing || Display.main.requiresBlitToBackbuffer;
         }
 
         bool CanCopyDepth(ref CameraData cameraData)

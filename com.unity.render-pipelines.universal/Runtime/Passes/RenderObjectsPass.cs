@@ -96,7 +96,7 @@ namespace UnityEngine.Experimental.Rendering.Universal
                 {
                     Matrix4x4 projectionMatrix = Matrix4x4.Perspective(m_CameraSettings.cameraFieldOfView, cameraAspect,
                         camera.nearClipPlane, camera.farClipPlane);
-                    projectionMatrix = GL.GetGPUProjectionMatrix(projectionMatrix, cameraData.isDeviceProjectionMatrixFlipped);
+                    projectionMatrix = GL.GetGPUProjectionMatrix(projectionMatrix, cameraData.IsCameraProjectionMatrixFlipped());
 
                     Matrix4x4 viewMatrix = cameraData.GetViewMatrix();
                     Vector4 cameraTranslation = viewMatrix.GetColumn(3);
@@ -113,7 +113,7 @@ namespace UnityEngine.Experimental.Rendering.Universal
 
                 if (m_CameraSettings.overrideCamera && m_CameraSettings.restoreCamera && !cameraData.isStereoEnabled)
                 {
-                    RenderingUtils.SetViewAndProjectionMatrices(cmd, cameraData.GetViewMatrix(), cameraData.GetDeviceProjectionMatrix(), false);
+                    RenderingUtils.SetViewAndProjectionMatrices(cmd, cameraData.GetViewMatrix(), cameraData.GetGPUProjectionMatrix(), false);
                 }
             }
             context.ExecuteCommandBuffer(cmd);

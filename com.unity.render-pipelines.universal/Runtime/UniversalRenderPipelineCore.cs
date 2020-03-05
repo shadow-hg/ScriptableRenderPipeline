@@ -73,13 +73,15 @@ namespace UnityEngine.Rendering.Universal
         }
 
         /// <summary>
-        /// Return the camera device projection matrix. This contains platform specific changes to handle y-flip and reverse z.
-        /// For more info on platform differences check: https://docs.unity3d.com/Manual/SL-PlatformDifferences.html
+        /// Returns the camera GPU projection matrix. This contains platform specific changes to handle y-flip and reverse z.
+        /// Similar to <c>GL.GetGPUProjectionMatrix</c> but queries URP internal state to know if the pipeline is rendering to render texture. 
+        /// For more info on platform differences regarding camera projection check: https://docs.unity3d.com/Manual/SL-PlatformDifferences.html
         /// </summary>
+        /// <seealso cref="GL.GetGPUProjectionMatrix(Matrix4x4, bool)"/>
         /// <returns></returns>
-        public Matrix4x4 GetDeviceProjectionMatrix()
+        public Matrix4x4 GetGPUProjectionMatrix()
         {
-            return GL.GetGPUProjectionMatrix(m_ProjectionMatrix, isDeviceProjectionMatrixFlipped);
+            return GL.GetGPUProjectionMatrix(m_ProjectionMatrix, IsCameraProjectionMatrixFlipped());
         }
 
         public Camera camera;
@@ -99,19 +101,25 @@ namespace UnityEngine.Rendering.Universal
         public bool requiresOpaqueTexture;
 
         /// <summary>
-        /// True if the pipeline requires to create an intermediate render texture.
-        /// If you are implementing a custom renderer for URP you should listen to this setting to create
-        /// temporary camera textures and then perform a blit to camera target at then end.
-        /// </summary>
-        public bool requiresIntermediateRenderTexture;
-
-        /// <summary>
         /// True if the camera device projection matrix is flipped. This happens when the pipeline is rendering
         /// to a render texture in non OpenGL platforms. If you are doing a custom Blit pass to copy camera textures
         /// (_CameraColorTexture, _CameraDepthAttachment) you need to check this flag to know if you should flip the
         /// matrix when rendering with for cmd.Draw* and reading from camera textures.
         /// </summary>
-        public bool isDeviceProjectionMatrixFlipped;
+        public bool IsCameraProjectionMatrixFlipped()
+        {
+            // Users only have access to CameraData on URP rendering scope. The current renderer should never be null.
+            var renderer = ScriptableRenderer.current;
+            Debug.Assert(renderer != null, "IsCameraProjectionMatrixFlipped is being called outside camera rendering scope.");
+
+            if (renderer != null)
+            {
+                bool renderingToTexture = renderer.cameraColorTarget != BuiltinRenderTextureType.CameraTarget || targetTexture != null;
+                return SystemInfo.graphicsUVStartsAtTop && renderingToTexture;
+            }
+
+            return true;
+        }
 
         public SortingCriteria defaultOpaqueSortFlags;
 
