@@ -4,7 +4,6 @@
 
 // Lit Material Data:
 //
-// bsdfCount    4
 // bsdfWeight0  Diffuse BRDF
 // bsdfWeight1  Coat GGX BRDF
 // bsdfWeight2  Spec GGX BRDF
@@ -130,12 +129,6 @@ bool CreateMaterialData(PathIntersection pathIntersection, BuiltinData builtinDa
 #endif
 
     return true;
-}
-
-// Little helper to get the specular compensation term
-float3 GetSpecularCompensation(BSDFData bsdfData)
-{
-    return 1.0 + bsdfData.specularOcclusion * bsdfData.fresnel0;
 }
 
 // Little helper to get the specular compensation term
