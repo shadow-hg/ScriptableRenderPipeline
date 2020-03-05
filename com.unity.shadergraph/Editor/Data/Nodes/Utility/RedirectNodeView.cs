@@ -59,7 +59,9 @@ namespace UnityEditor.ShaderGraph
                 if (slot.hidden)
                     continue;
 
-                var port = ShaderPort.Create(slot, m_ConnectorListener);
+                //var port = ShaderPort.Create(slot, m_ConnectorListener, false);
+                var port = ShaderPort.CreateWithNoEdgeConnector(slot);
+
                 if (slot.isOutputSlot)
                     outputContainer.Add(port);
                 else
@@ -113,7 +115,7 @@ namespace UnityEditor.ShaderGraph
 
         public void OnModified(ModificationScope scope)
         {
-            
+
         }
 
         public void UpdatePortInputTypes()

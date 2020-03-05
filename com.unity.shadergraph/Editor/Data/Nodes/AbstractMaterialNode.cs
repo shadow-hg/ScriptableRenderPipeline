@@ -279,6 +279,11 @@ namespace UnityEditor.ShaderGraph
                 if (fromNode == null)
                     return string.Empty;
 
+                if (fromNode is RedirectNodeData)
+                {
+                    return fromNode.GetSlotValue(0, generationMode);
+                }
+
                 var slot = fromNode.FindOutputSlot<MaterialSlot>(fromSocketRef.slotId);
                 if (slot == null)
                     return string.Empty;
