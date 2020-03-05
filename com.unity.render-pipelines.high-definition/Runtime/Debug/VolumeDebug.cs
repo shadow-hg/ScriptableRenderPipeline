@@ -148,7 +148,10 @@ namespace UnityEngine.Rendering.HighDefinition
         {
             if (!volume.profileRef.TryGet(type, out VolumeComponent component))
                 return null;
-            return GetParameter(component, field);
+            var param = GetParameter(component, field);
+            if (!param.overrideState)
+                return null;
+            return param;
         }
 
         public string GetVolumeInfo(Volume volume, Type type)
