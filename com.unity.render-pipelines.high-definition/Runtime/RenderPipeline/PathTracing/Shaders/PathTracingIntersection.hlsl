@@ -7,15 +7,15 @@
 struct PathIntersection
 {
 	float t;
-	// Value that holds the color of the ray
-	float3 color;
+	// Resulting value (often color) of the ray
+	float3 value;
 	// Cone representation of the ray
 	RayCone cone;
 	// The remaining available depth for the current Ray
 	uint remainingDepth;
 	// Pixel coordinate from which the initial ray was launched
 	uint2 pixelCoord;
-	// Max roughness (encountered along the path, used in path tracing)
+	// Max roughness encountered along the path
 	float maxRoughness;
 };
 

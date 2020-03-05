@@ -1,3 +1,6 @@
+#ifndef UNITY_SUB_SURFACE_INCLUDED
+#define UNITY_SUB_SURFACE_INCLUDED
+
 #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/Raytracing/Shaders/SubSurface/RayTracingIntersectionSubSurface.hlsl"
 
 // Data for the sub-surface walk
@@ -81,8 +84,7 @@ void ScatteringWalk(float3 normalWS, float3 diffuseColor, float3 subSurfaceColor
 
         // Normalize our weights
         float channelSum = weights.x + weights.y + weights.z;
-        float3 channelWeight;
-        channelWeight = SafeDivide(weights, channelSum);
+        float3 channelWeight = SafeDivide(weights, channelSum);
 
         // Evaluate what channel we should be using for this sample
         int channelIdx = GetChannel(channelSelection, channelWeight);
@@ -111,7 +113,8 @@ void ScatteringWalk(float3 normalWS, float3 diffuseColor, float3 subSurfaceColor
 
         // Do the next step
         // TODO: Maybe include only the subsurface meshes.
-        TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_FORCE_OPAQUE, RAYTRACINGRENDERERFLAG_OPAQUE, 0, 1, 0, internalRayDesc, internalRayIntersection);
+        TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_CULL_FRONT_FACING_TRIANGLES,
+                 RAYTRACINGRENDERERFLAG_OPAQUE, 0, 1, 0, internalRayDesc, internalRayIntersection);
 
         // Define if we did a hit
         scatteringResult.hit = internalRayIntersection.t > 0.0;
@@ -128,7 +131,9 @@ void ScatteringWalk(float3 normalWS, float3 diffuseColor, float3 subSurfaceColor
         // Contribute to the throughput
         scatteringResult.outputThroughput *= SafeDivide(scatteringResult.hit ? transmittance : sigmaS * transmittance, pdf);
 
-        // FIXME: Very fishy! This should never be done, or alternatively all the time, but definitely not on select path lengths.
+        // FIXME: The following multiplication by diffuseColor looks rather fishy...
+        // This should probably not be done at all, and definitely not on select path lengths.
+
         // If we exit right away, the diffuse color is the throughput value
         if (scatteringResult.hit && walkIdx == 0)
             scatteringResult.outputThroughput *= diffuseColor;
@@ -148,3 +153,5 @@ void ScatteringWalk(float3 normalWS, float3 diffuseColor, float3 subSurfaceColor
         scatteringResult.outputPosition = currentPathPosition;
         scatteringResult.outputDiffuse = internalRayIntersection.outIndirectDiffuse;
 }
+
+#endif // UNITY_SUB_SURFACE_INCLUDED

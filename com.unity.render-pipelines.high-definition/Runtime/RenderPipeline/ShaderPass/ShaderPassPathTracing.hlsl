@@ -11,21 +11,6 @@
 #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/LitPathTracing.hlsl"
 #endif
 
-bool RussianRouletteTest(float value, float rand, inout float factor, bool skip = false)
-{
-    // FIXME: to be tested and tuned further
-    const float dynamicThreshold = 0.2 + 0.1 * _RaytracingMaxRecursion;
-
-    if (skip || value >= dynamicThreshold)
-        return true;
-
-    if (rand * dynamicThreshold >= value)
-        return false;
-
-    factor = dynamicThreshold / value;
-    return true;
-}
-
 float PowerHeuristic(float f, float b)
 {
     return Sq(f) / (Sq(f) + Sq(b));
@@ -46,7 +31,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
     // If the max depth has been reached, bail out
     if (!pathIntersection.remainingDepth)
     {
-        pathIntersection.color = 0.0;
+        pathIntersection.value = 0.0;
         return;
     }
 
@@ -61,7 +46,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
     // Such an invalid remainingDepth value means we are called from a subsurface computation
     if (pathIntersection.remainingDepth > _RaytracingMaxRecursion)
     {
-        pathIntersection.color = fragInput.tangentToWorld[2];
+        pathIntersection.value = fragInput.tangentToWorld[2]; // Returns normal
         return;
     }
 
@@ -87,12 +72,12 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
     bool isVisible;
     GetSurfaceAndBuiltinData(fragInput, -WorldRayDirection(), posInput, surfaceData, builtinData, currentVertex, pathIntersection.cone, isVisible);
 
-    if (!isVisible)
-    {
-        // This should never happen, return magenta just in case
-        pathIntersection.color = float3(1.0, 0.0, 0.5);
-        return;
-    }
+    // if (!isVisible)
+    // {
+    //     // This should never happen, return magenta just in case
+    //     pathIntersection.value = float3(1.0, 0.0, 0.5);
+    //     return;
+    // }
 
     // Check if we want to compute direct and emissive lighting for current depth
     bool computeDirect = currentDepth >= _RaytracingMinRecursion - 1;
@@ -112,10 +97,10 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
     inputSample.z = GetSample(pathIntersection.pixelCoord, _RaytracingFrameIndex, 4 * currentDepth + 2);
 
     // Get current path throughput
-    float3 pathThroughput = pathIntersection.color;
+    float3 pathThroughput = pathIntersection.value;
 
     // And reset the ray intersection color, which will store our final result
-    pathIntersection.color = computeDirect ? builtinData.emissiveColor : 0.0;
+    pathIntersection.value = computeDirect ? builtinData.emissiveColor : 0.0;
 
     // Initialize our material data (this will alter the bsdfData to suit path tracing, and choose between BSDF or SSS evaluation)
     MaterialData mtlData;
@@ -149,14 +134,14 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
                 // Shoot a transmission ray (to mark it as such, purposedly set remaining depth to an invalid value)
                 nextPathIntersection.remainingDepth = _RaytracingMaxRecursion + 1;
                 rayDescriptor.TMax -= _RaytracingRayBias;
-                nextPathIntersection.color = 1.0;
+                nextPathIntersection.value = 1.0;
 
                 // FIXME: For the time being, we choose not to apply any back/front-face culling for shadows, will possibly change in the future
                 TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_FORCE_NON_OPAQUE | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
                          RAYTRACINGRENDERERFLAG_CAST_SHADOW, 0, 1, 1, rayDescriptor, nextPathIntersection);
 
                 float misWeight = PowerHeuristic(pdf, mtlResult.diffPdf + mtlResult.specPdf);
-                pathIntersection.color += value * nextPathIntersection.color * misWeight;
+                pathIntersection.value += value * nextPathIntersection.value * misWeight;
             }
         }
     }
@@ -168,13 +153,14 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
         pdf = mtlResult.diffPdf + mtlResult.specPdf;
         value = (mtlResult.diffValue + mtlResult.specValue) / pdf;
 
-        // Apply Russian roulette to our path
         pathThroughput *= value;
-        float russianRouletteValue = Luminance(pathThroughput);
-        float russianRouletteFactor = 1.0;
 
-        float rand = GetSample(pathIntersection.pixelCoord, _RaytracingFrameIndex, 4 * currentDepth + 3);
-        if (RussianRouletteTest(russianRouletteValue, rand, russianRouletteFactor, !currentDepth))
+        // Apply Russian roulette to our path
+        const float rrThreshold = 0.2 + 0.1 * _RaytracingMaxRecursion;
+        float rrFactor, rrValue = Luminance(pathThroughput);
+        float rrSample = GetSample(pathIntersection.pixelCoord, _RaytracingFrameIndex, 4 * currentDepth + 3);
+
+        if (RussianRouletteTest(rrThreshold, rrValue, rrSample, rrFactor, !currentDepth))
         {
             bool isSampleBelow = IsBelow(mtlData, rayDescriptor.Direction);
 
@@ -186,7 +172,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
             nextPathIntersection.cone.width = pathIntersection.cone.width;
 
             // Complete PathIntersection structure for this sample
-            nextPathIntersection.color = pathThroughput * russianRouletteFactor;
+            nextPathIntersection.value = pathThroughput * rrFactor;
             nextPathIntersection.remainingDepth = pathIntersection.remainingDepth - 1;
             nextPathIntersection.t = rayDescriptor.TMax;
 
@@ -214,7 +200,7 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
                 EvaluateLights(lightList, rayDescriptor, lightValue, lightPdf);
 
                 float misWeight = PowerHeuristic(pdf, lightPdf);
-                nextPathIntersection.color += lightValue * misWeight;
+                nextPathIntersection.value += lightValue * misWeight;
             }
 
 #if defined(_SURFACE_TYPE_TRANSPARENT) && HAS_REFRACTION
@@ -222,29 +208,29 @@ void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, Attribu
             if (isSampleBelow)
             {
     #ifdef _REFRACTION_THIN
-                nextPathIntersection.color *= exp(-mtlData.bsdfData.absorptionCoefficient * REFRACTION_THIN_DISTANCE);
+                nextPathIntersection.value *= exp(-mtlData.bsdfData.absorptionCoefficient * REFRACTION_THIN_DISTANCE);
     #else
                 // FIXME: maxDist might need some more tweaking
                 float maxDist = surfaceData.atDistance * 10.0;
-                nextPathIntersection.color *= exp(-mtlData.bsdfData.absorptionCoefficient * min(nextPathIntersection.t, maxDist));
+                nextPathIntersection.value *= exp(-mtlData.bsdfData.absorptionCoefficient * min(nextPathIntersection.t, maxDist));
     #endif
             }
 #endif
 
-            pathIntersection.color += value * russianRouletteFactor * nextPathIntersection.color;
+            pathIntersection.value += value * rrFactor * nextPathIntersection.value;
         }
     }
 
 #else // HAS_LIGHTLOOP
-    pathIntersection.color = (!currentDepth || computeDirect) ? bsdfData.color * GetInverseCurrentExposureMultiplier() + builtinData.emissiveColor : 0.0;
+    pathIntersection.value = (!currentDepth || computeDirect) ? bsdfData.color * GetInverseCurrentExposureMultiplier() + builtinData.emissiveColor : 0.0;
 #endif
 
     if (currentDepth)
     {
         // Bias the result (making it too dark), but reduces fireflies a lot
-        float intensity = Luminance(pathIntersection.color) * GetCurrentExposureMultiplier();
+        float intensity = Luminance(pathIntersection.value) * GetCurrentExposureMultiplier();
         if (intensity > _RaytracingIntensityClamp)
-            pathIntersection.color *= _RaytracingIntensityClamp / intensity;
+            pathIntersection.value *= _RaytracingIntensityClamp / intensity;
     }
 }
 
@@ -278,17 +264,17 @@ void AnyHit(inout PathIntersection pathIntersection : SV_RayPayload, AttributeDa
     {
 #ifdef _SURFACE_TYPE_TRANSPARENT
     #if HAS_REFRACTION
-        pathIntersection.color *= surfaceData.transmittanceMask * surfaceData.transmittanceColor;
+        pathIntersection.value *= surfaceData.transmittanceMask * surfaceData.transmittanceColor;
     #else
-        pathIntersection.color *= 1.0 - builtinData.opacity;
+        pathIntersection.value *= 1.0 - builtinData.opacity;
     #endif
-        if (Luminance(pathIntersection.color) < 0.001)
+        if (Luminance(pathIntersection.value) < 0.001)
             AcceptHitAndEndSearch();
         else
             IgnoreHit();
 #else
         // Opaque surface
-        pathIntersection.color = 0.0;
+        pathIntersection.value = 0.0;
         AcceptHitAndEndSearch();
 #endif
     }

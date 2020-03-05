@@ -54,7 +54,7 @@ void AddConvergenceCue(uint2 pixelCoord, uint sampleCount, inout float3 color)
 void MissCamera(inout PathIntersection pathIntersection : SV_RayPayload)
 {
     // If the _RaytracingCameraClearColor content is positive, we override the camera sky display with a bg color
-    pathIntersection.color = _EnvLightSkyEnabled && _RaytracingCameraSkyEnabled ?
+    pathIntersection.value = _EnvLightSkyEnabled && _RaytracingCameraSkyEnabled ?
         SAMPLE_TEXTURECUBE_ARRAY_LOD(_SkyTexture, s_trilinear_clamp_sampler, WorldRayDirection(), 0.0, 0) : _RaytracingCameraClearColor * GetInverseCurrentExposureMultiplier();
 }
 
@@ -66,7 +66,7 @@ void MissLight(inout PathIntersection pathIntersection : SV_RayPayload)
 [shader("miss")]
 void MissMaterial(inout PathIntersection pathIntersection : SV_RayPayload)
 {
-    pathIntersection.color = _EnvLightSkyEnabled && (_RaytracingMaxRecursion - pathIntersection.remainingDepth) >= _RaytracingMinRecursion ?
+    pathIntersection.value = _EnvLightSkyEnabled && (_RaytracingMaxRecursion - pathIntersection.remainingDepth) >= _RaytracingMinRecursion ?
         SAMPLE_TEXTURECUBE_ARRAY_LOD(_SkyTexture, s_trilinear_clamp_sampler, WorldRayDirection(), 0.0, 0) : 0.0;
 }
 
@@ -103,7 +103,7 @@ void RayGen()
 
     // Create and init the PathIntersection structure for this
     PathIntersection pathIntersection;
-    pathIntersection.color = 1.0;
+    pathIntersection.value = 1.0;
     pathIntersection.remainingDepth = _RaytracingMaxRecursion;
     pathIntersection.pixelCoord = currentPixelCoord;
     pathIntersection.maxRoughness = 0.001;
@@ -117,21 +117,21 @@ void RayGen()
 
     // Accumulate the result
     if (sampleCount++)
-        pathIntersection.color = (_AccumulatedFrameTexture[currentPixelCoord].xyz * (sampleCount - 1) + pathIntersection.color) / sampleCount;
-    _AccumulatedFrameTexture[currentPixelCoord] = float4(pathIntersection.color, 1.0);
+        pathIntersection.value = (_AccumulatedFrameTexture[currentPixelCoord].xyz * (sampleCount - 1) + pathIntersection.value) / sampleCount;
+    _AccumulatedFrameTexture[currentPixelCoord] = float4(pathIntersection.value, 1.0);
 
     // Apply exposure modifier
-    pathIntersection.color *= GetCurrentExposureMultiplier();
+    pathIntersection.value *= GetCurrentExposureMultiplier();
 
     // Add a little convergence cue to our result
-    AddConvergenceCue(currentPixelCoord, sampleCount, pathIntersection.color);
+    AddConvergenceCue(currentPixelCoord, sampleCount, pathIntersection.value);
 
-    _CameraColorTextureRW[currentPixelCoord] = float4(pathIntersection.color, 1.0);
+    _CameraColorTextureRW[currentPixelCoord] = float4(pathIntersection.value, 1.0);
 }
 
 // This should never be called, return magenta just in case
 [shader("closesthit")]
 void ClosestHit(inout PathIntersection pathIntersection : SV_RayPayload, AttributeData attributeData : SV_IntersectionAttributes)
 {
-    pathIntersection.color = float3(1.0, 0.0, 0.5);
+    pathIntersection.value = float3(1.0, 0.0, 0.5);
 }

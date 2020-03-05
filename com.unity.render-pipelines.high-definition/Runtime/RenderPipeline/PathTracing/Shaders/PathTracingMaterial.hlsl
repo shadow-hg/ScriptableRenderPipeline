@@ -1,3 +1,6 @@
+#ifndef UNITY_PATH_TRACING_MATERIAL_INCLUDED
+#define UNITY_PATH_TRACING_MATERIAL_INCLUDED
+
 #define BSDF_WEIGHT_EPSILON 0.001
 
 struct MaterialData
@@ -78,3 +81,5 @@ float3x3 GetTangentFrame(MaterialData mtlData)
         float3x3(mtlData.bsdfData.tangentWS, mtlData.bsdfData.bitangentWS, mtlData.bsdfData.normalWS) :
         GetLocalFrame(mtlData.bsdfData.normalWS);
 }
+
+#endif // UNITY_PATH_TRACING_MATERIAL_INCLUDED

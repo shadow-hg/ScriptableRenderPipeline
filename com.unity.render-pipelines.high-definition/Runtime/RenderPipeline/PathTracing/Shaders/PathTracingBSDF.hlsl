@@ -1,3 +1,6 @@
+#ifndef UNITY_PATH_TRACING_BSDF_INCLUDED
+#define UNITY_PATH_TRACING_BSDF_INCLUDED
+
 #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/Raytracing/Shaders/SubSurface.hlsl"
 
 #define DELTA_PDF 1000000.0
@@ -7,13 +10,13 @@
 // Adapted from: "Sampling the GGX Distribution of Visible Normals", by E. Heitz
 // http://jcgt.org/published/0007/04/01/paper.pdf
 void SampleAnisoGGXVisibleNormal(float2 u,
-                                float3 V,
-                                float3x3 localToWorld,
-                                float roughnessX,
-                                float roughnessY,
-                            out float3 localV,
-                            out float3 localH,
-                            out float  VdotH)
+                                 float3 V,
+                                 float3x3 localToWorld,
+                                 float roughnessX,
+                                 float roughnessY,
+                             out float3 localV,
+                             out float3 localH,
+                             out float  VdotH)
 {
     localV = mul(V, transpose(localToWorld));
 
@@ -436,9 +439,6 @@ struct Result
 
 bool RandomWalk(float3 position, float3 normal, float3 diffuseColor, float3 meanFreePath, uint2 pixelCoord, out Result result)
 {
-    result.throughput = 1.0;
-    result.exitPosition = position;
-
     // Remap from our user-friendly parameters to and sigmaS and sigmaT
     float3 sigmaS, sigmaT;
     RemapSubSurfaceScatteringParameters(diffuseColor, meanFreePath, sigmaS, sigmaT);
@@ -455,44 +455,39 @@ bool RandomWalk(float3 position, float3 normal, float3 diffuseColor, float3 mean
     bool hit;
     uint walkIdx = 0;
 
+    result.throughput = 1.0;
+
     do // Start our random walk
     {
-        // Samples the random numbers for the direction
-        float dir0Rnd = GetSample(pixelCoord, _RaytracingFrameIndex,  DIM_OFFSET + 4 * walkIdx + 0);
-        float dir1Rnd = GetSample(pixelCoord, _RaytracingFrameIndex,  DIM_OFFSET + 4 * walkIdx + 1);
-
-        // Samples the random numbers for the distance
-        float dstRndSample = GetSample(pixelCoord, _RaytracingFrameIndex, DIM_OFFSET + 4 * walkIdx + 2);
-
-        // Random number used to do channel selection
-        float channelSelection = GetSample(pixelCoord, _RaytracingFrameIndex, DIM_OFFSET + 4 * walkIdx + 3);
+        // Samples for direction, distance and channel selection
+        float dirSample0 = GetSample(pixelCoord, _RaytracingFrameIndex, DIM_OFFSET + 4 * walkIdx + 0);
+        float dirSample1 = GetSample(pixelCoord, _RaytracingFrameIndex, DIM_OFFSET + 4 * walkIdx + 1);
+        float distSample = GetSample(pixelCoord, _RaytracingFrameIndex, DIM_OFFSET + 4 * walkIdx + 2);
+        float channelSample = GetSample(pixelCoord, _RaytracingFrameIndex, DIM_OFFSET + 4 * walkIdx + 3);
 
         // Compute the per-channel weight
         float3 weights = result.throughput * SafeDivide(sigmaS, sigmaT);
 
         // Normalize our weights
-        float channelSum = weights.x + weights.y + weights.z;
-        float3 channelWeight;
-        channelWeight = SafeDivide(weights, channelSum);
+        float wSum = weights.x + weights.y + weights.z;
+        float3 channelWeights = SafeDivide(weights, wSum);
 
         // Evaluate what channel we should be using for this sample
-        int channelIdx = GetChannel(channelSelection, channelWeight);
-
-        // Fetch sigmaT
-        float currentSigmaT = sigmaT[channelIdx];
+        uint channelIdx = GetChannel(channelSample, channelWeights);
 
         // Evaluate the length of our steps
-        rayDesc.TMax = -log(1.0 - dstRndSample) / currentSigmaT;
+        rayDesc.TMax = -log(1.0 - distSample) / sigmaT[channelIdx];
 
         // Sample our next sepath segment direction
         rayDesc.Direction = walkIdx ?
-            SampleSphereUniform(dir0Rnd, dir1Rnd) : SampleHemisphereCosine(dir0Rnd, dir1Rnd, -normal);
+            SampleSphereUniform(dirSample0, dirSample1) : SampleHemisphereCosine(dirSample0, dirSample1, -normal);
 
         // Initialize the intersection data
         intersection.t = -1.0;
 
         // Do the next step
-        TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_CULL_FRONT_FACING_TRIANGLES, RAYTRACINGRENDERERFLAG_PATH_TRACING, 0, 1, 1, rayDesc, intersection);
+        TraceRay(_RaytracingAccelerationStructure, RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_CULL_FRONT_FACING_TRIANGLES,
+                 RAYTRACINGRENDERERFLAG_PATH_TRACING, 0, 1, 1, rayDesc, intersection);
 
         // Define if we did a hit
         hit = intersection.t > 0.0;
@@ -504,7 +499,7 @@ bool RandomWalk(float3 position, float3 normal, float3 diffuseColor, float3 mean
         float3 transmittance = exp(-t * sigmaT);
 
         // Evaluate the pdf for the current segment
-        float pdf = dot((hit ? transmittance : sigmaT * transmittance), channelWeight);
+        float pdf = dot((hit ? transmittance : sigmaT * transmittance), channelWeights);
 
         // Contribute to the throughput
         result.throughput *= SafeDivide(hit ? transmittance : sigmaS * transmittance, pdf);
@@ -519,9 +514,11 @@ bool RandomWalk(float3 position, float3 normal, float3 diffuseColor, float3 mean
 
     // Set the exit intersection position and normal
     result.exitPosition = rayDesc.Origin;
-    result.exitNormal = intersection.color;
+    result.exitNormal = intersection.value;
 
     return hit;
 }
 
 } // namespace SSS
+
+#endif // UNITY_PATH_TRACING_BSDF_INCLUDED
