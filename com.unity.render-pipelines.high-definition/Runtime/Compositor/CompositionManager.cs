@@ -33,6 +33,13 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             Display8
         }
 
+        public enum AlphaChannelSupport
+        {
+            None = 0,
+            Rendering,
+            RenderingAndPostProcessing
+        }
+
         [SerializeField]
         Shader m_Shader;
 
@@ -56,6 +63,11 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
 
         internal bool m_ShaderPropertiesAreDirty = false;
 
+        public AlphaChannelSupport alphaSupport
+        {
+            get => m_AlphaSupport;
+        }
+        internal AlphaChannelSupport m_AlphaSupport;
         static private CompositionManager s_CompositorInstance;
 
         public bool enableOutput
@@ -153,13 +165,14 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
             var hdPipeline = RenderPipelineManager.currentPipeline as HDRenderPipeline;
             if (hdPipeline != null)
             {
+                m_AlphaSupport = AlphaChannelSupport.RenderingAndPostProcessing;
                 if (hdPipeline.asset.currentPlatformRenderPipelineSettings.colorBufferFormat == RenderPipelineSettings.ColorBufferFormat.R11G11B10)
                 {
-                    Debug.LogWarning("The rendering pipeline was not configured to output an alpha channel. It is recommended to set the color buffer format for rendering and post-processing to a format that supports an alpha channel.");
+                    m_AlphaSupport = AlphaChannelSupport.None;
                 }
                 else if (hdPipeline.asset.currentPlatformRenderPipelineSettings.postProcessSettings.bufferFormat == PostProcessBufferFormat.R11G11B10)
                 {
-                    Debug.LogWarning("The post processing system is not configured to process the alpha channel. It is recommended to set the color buffer format for rendering and post-processing to a format that supports an alpha channel.");
+                    m_AlphaSupport = AlphaChannelSupport.Rendering;
                 }
 
                 int indx = hdPipeline.asset.beforePostProcessCustomPostProcesses.FindIndex(x => x == typeof(ChromaKeying).AssemblyQualifiedName);
@@ -461,7 +474,7 @@ namespace UnityEngine.Rendering.HighDefinition.Compositor
         // Update is called once per frame
         void Update()
         {
-            if (ValidateAndFixRuntime() == false || ValidatePipeline() == false)
+            if (ValidatePipeline() == false || ValidateAndFixRuntime() == false)
             {
                 return;
             }

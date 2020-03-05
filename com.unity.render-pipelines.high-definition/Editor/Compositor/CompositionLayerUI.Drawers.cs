@@ -32,7 +32,7 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
             static public readonly GUIContent VolumeMask = EditorGUIUtility.TrTextContent("Volume Mask", "To override the volume mask, activate the option by clicking on the check-box and then select the desired value.");
         }
 
-        public static void DrawItemInList(Rect rect, SerializedCompositionLayer serialized, RenderTexture thumbnail = null, float aspectRatio = 1.0f)
+        public static void DrawItemInList(Rect rect, SerializedCompositionLayer serialized, RenderTexture thumbnail, float aspectRatio, bool isAlphaEnbaled)
         {
             bool isCameraStack = serialized.OutTarget.intValue == (int)CompositorLayer.OutputTarget.CameraStack;
 
@@ -55,9 +55,19 @@ namespace UnityEditor.Rendering.HighDefinition.Compositor
                 previewRect.height = CompositorStyle.k_ThumbnailSize;
                 EditorGUI.DrawPreviewTexture(previewRect, thumbnail);
                 previewRect.x += previewRect.width + 5;
-                EditorGUI.DrawTextureAlpha(previewRect, thumbnail);
-                rect.x += previewRect.width * 2 + 12;
-                rect.width -= (CompositorStyle.k_ThumbnailSize * 2 + 30);
+                rect.x += previewRect.width + 12;
+                rect.width -= previewRect.width + 12;
+
+                if (isAlphaEnbaled
+                    && (thumbnail.format == RenderTextureFormat.ARGBHalf
+                    || thumbnail.format == RenderTextureFormat.ARGBFloat
+                    || thumbnail.format == RenderTextureFormat.ARGB64))
+                {
+                    EditorGUI.DrawTextureAlpha(previewRect, thumbnail);
+                    rect.x += previewRect.width + 12;
+                    rect.width -= previewRect.width + 12;
+                }
+
                 rect.y += 6;
                 EditorGUI.LabelField(rect, serialized.LayerName.stringValue);
             }
