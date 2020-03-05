@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Linq;
 
 namespace UnityEngine.Rendering.HighDefinition
 {
@@ -62,29 +63,23 @@ namespace UnityEngine.Rendering.HighDefinition
         /// <summary>Type of the current component to debug.</summary>
         public Type     selectedComponentType
         {
-            get
-            {
-                int value = selectedComponent;
-                foreach (var t in VolumeManager.instance.baseComponentTypes)
-                {
-                    if (--value == 0)
-                        return t;
-                }
-                return null;
-            }
+            get { return componentTypes[selectedComponent - 1]; }
             set
             {
-                int i = 0;
-                foreach (var t in VolumeManager.instance.baseComponentTypes)
-                {
-                    i++;
-                    if (t == value)
-                    {
-                        selectedComponent = i;
-                        selectedComponentType = t;
-                        return;
-                    }
-                }
+                var index = componentTypes.FindIndex(t => t == value);
+                if (index != -1)
+                    selectedComponent = index + 1;
+            }
+        }
+
+        static public List<Type> componentTypes
+        {
+            get
+            {
+                return VolumeManager.instance.baseComponentTypes
+                    .Where(t => !t.IsDefined(typeof(VolumeComponentDeprecated), false))
+                    .OrderBy(t => t.Name)
+                    .ToList();
             }
         }
 
@@ -153,10 +148,7 @@ namespace UnityEngine.Rendering.HighDefinition
         {
             if (!volume.profileRef.TryGet(type, out VolumeComponent component))
                 return null;
-            var param = GetParameter(component, field);
-            if (!param.overrideState)
-                return null;
-            return param;
+            return GetParameter(component, field);
         }
 
         public string GetVolumeInfo(Volume volume, Type type)

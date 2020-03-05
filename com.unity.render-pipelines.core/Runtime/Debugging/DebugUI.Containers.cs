@@ -275,7 +275,7 @@ namespace UnityEngine.Rendering
                         cols[i] = CreateColumn(((Container)children[0]).children[i - 1].displayName);
 
                     var state = new UnityEditor.IMGUI.Controls.MultiColumnHeaderState(cols);
-                    m_Header = new UnityEditor.IMGUI.Controls.MultiColumnHeader(state);
+                    m_Header = new UnityEditor.IMGUI.Controls.MultiColumnHeader(state) { height = 23 };
                     m_Header.ResizeToFit();
                     return m_Header;
                 }

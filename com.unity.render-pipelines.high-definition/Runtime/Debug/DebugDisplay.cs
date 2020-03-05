@@ -1119,7 +1119,7 @@ namespace UnityEngine.Rendering.HighDefinition
             var componentNames = new List<GUIContent>() { new GUIContent("None") };
             var componentValues = new List<int>() { componentIndex++ };
 
-            foreach (var type in VolumeManager.instance.baseComponentTypes)
+            foreach (var type in VolumeDebugSettings.componentTypes)
             {
                 componentNames.Add(new GUIContent() { text = type.Name });
                 componentValues.Add(componentIndex++);
@@ -1168,7 +1168,7 @@ namespace UnityEngine.Rendering.HighDefinition
                     var fields = type
                         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                         .Where(t => t.FieldType.IsSubclassOf(typeof(VolumeParameter)))
-                        .OrderBy(t => t.MetadataToken);
+                        .OrderBy(t => t.Name);
 
                     var volumes = data.volumeDebugSettings.GetVolumes();
                     var table = new DebugUI.Table() { displayName = "Parameter", isReadOnly = true };
