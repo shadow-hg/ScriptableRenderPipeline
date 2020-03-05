@@ -688,8 +688,8 @@ CTYPE GetClippedHistory(CTYPE filteredColor, CTYPE history, CTYPE minimum, CTYPE
 // TODO: This is not great and sub optimal since it really needs to be in linear and the data is already in perceptive space
 CTYPE SharpenColor(NeighbourhoodSamples samples, CTYPE color, float sharpenStrength)
 {
-    float3 linearC = color * PerceptualInvWeight(color);
-    float3 linearAvg = samples.avgNeighbour * PerceptualInvWeight(samples.avgNeighbour);
+    CTYPE linearC = color * PerceptualInvWeight(color);
+    CTYPE linearAvg = samples.avgNeighbour * PerceptualInvWeight(samples.avgNeighbour);
     linearC = linearC + (linearC - linearAvg) * sharpenStrength * 3;
 
 #if YCOCG
