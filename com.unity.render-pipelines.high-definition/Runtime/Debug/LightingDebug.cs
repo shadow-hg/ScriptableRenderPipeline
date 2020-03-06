@@ -21,7 +21,7 @@ namespace UnityEngine.Rendering.HighDefinition
         /// <summary>Disable scene lightings and replaces it with a pre-computed lighting environment.</summary>
         MatcapView,
         /// <summary>Display Directional Shadow Cascades splits.</summary>
-        VisualizeCascades,
+        VisualizeCascade,
         /// <summary>Display Shadow Masks.</summary>
         VisualizeShadowMasks,
         /// <summary>Display indirect diffuse occlusion.</summary>
