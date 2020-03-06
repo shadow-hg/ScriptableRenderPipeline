@@ -196,16 +196,9 @@ namespace UnityEngine.Rendering.HighDefinition
                 ret = true;
             }
 
-            float total = 0f;
             weights = new float[volumes.Length];
             for (int i = 0; i < volumes.Length; i++)
-            {
-                float weight = ComputeWeight(volumes[i]);
-                if (i != 0)
-                    weight *= 1f - total;
-                weights[i] = Mathf.Clamp01(weight);
-                total += weight;
-            }
+                weights[i] = ComputeWeight(volumes[i]);
 
             return ret;
         }
@@ -218,11 +211,30 @@ namespace UnityEngine.Rendering.HighDefinition
             if (weights == null)
                 return 0;
 
+            float total = 0f, weight = 0f;
+            for (int i = 0; i < volumes.Length; i++)
+            {
+                weight = weights[i];
+                weight *= 1f - total;
+                total += weight;
+
+                if (volumes[i] == volume)
+                    return weight;
+            }
+
+            return 0f;
+        }
+
+        public bool VolumeHasInfluence(Volume volume)
+        {
+            if (weights == null)
+                return false;
+
             int index = Array.IndexOf(volumes, volume);
             if (index == -1)
-                return 0;
+                return false;
 
-            return weights[index];
+            return weights[index] != 0f;
         }
     }
 }

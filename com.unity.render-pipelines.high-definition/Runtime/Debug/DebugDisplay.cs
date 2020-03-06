@@ -1227,8 +1227,8 @@ namespace UnityEngine.Rendering.HighDefinition
                                 {
                                     for (int i = 0; i < newVolumes.Length; i++)
                                     {
-                                        var weight = data.volumeDebugSettings.GetVolumeWeight(newVolumes[i]);
-                                        table.SetColumnVisibility(i + 1, weight > 0f);
+                                        var visible = data.volumeDebugSettings.VolumeHasInfluence(newVolumes[i]);
+                                        table.SetColumnVisibility(i + 1, visible);
                                     }
                                 }
                                 return "";
