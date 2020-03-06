@@ -50,36 +50,10 @@ namespace UnityEditor.Rendering.HighDefinition.ShaderGraph
             { Pragma.InstancingOptions(InstancingOptions.NoLodFade) },
             { Pragma.InstancingOptions(InstancingOptions.RenderingLayer) },
             #else
-            { Pragma.InstancingOptions(InstancingOptions.NoLightProbe), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, true),
-                new FieldCondition(HDFields.DotsProperties, true),
-            } },
-            { Pragma.InstancingOptions(InstancingOptions.NoLightProbe), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, true),
-                new FieldCondition(HDFields.DotsProperties, false),
-            } },
-            { Pragma.InstancingOptions(InstancingOptions.NoLightProbe), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, false),
-                new FieldCondition(HDFields.DotsProperties, true),
-            } },
-            { Pragma.InstancingOptions(InstancingOptions.NoLodFade), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, true),
-                new FieldCondition(HDFields.DotsProperties, true),
-            } },
-            { Pragma.InstancingOptions(InstancingOptions.NoLodFade), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, true),
-                new FieldCondition(HDFields.DotsProperties, false),
-            } },
-            { Pragma.InstancingOptions(InstancingOptions.NoLodFade), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, false),
-                new FieldCondition(HDFields.DotsProperties, true),
-            } },
+            { Pragma.InstancingOptions(InstancingOptions.NoLightProbe), new FieldCondition(HDFields.DotsInstancing, true) },
+            { Pragma.InstancingOptions(InstancingOptions.NoLightProbe), new FieldCondition(HDFields.DotsProperties, true) },
+            { Pragma.InstancingOptions(InstancingOptions.NoLodFade),    new FieldCondition(HDFields.DotsInstancing, true) },
+            { Pragma.InstancingOptions(InstancingOptions.NoLodFade),    new FieldCondition(HDFields.DotsProperties, true) },
             { Pragma.InstancingOptions(InstancingOptions.RenderingLayer), new FieldCondition[]
             {
                 new FieldCondition(HDFields.DotsInstancing, false),
@@ -99,36 +73,10 @@ namespace UnityEditor.Rendering.HighDefinition.ShaderGraph
             { Pragma.InstancingOptions(InstancingOptions.NoLodFade) },
             { Pragma.InstancingOptions(InstancingOptions.RenderingLayer) },
             #else
-            { Pragma.InstancingOptions(InstancingOptions.NoLightProbe), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, true),
-                new FieldCondition(HDFields.DotsProperties, true),
-            } },
-            { Pragma.InstancingOptions(InstancingOptions.NoLightProbe), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, true),
-                new FieldCondition(HDFields.DotsProperties, false),
-            } },
-            { Pragma.InstancingOptions(InstancingOptions.NoLightProbe), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, false),
-                new FieldCondition(HDFields.DotsProperties, true),
-            } },
-            { Pragma.InstancingOptions(InstancingOptions.NoLodFade), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, true),
-                new FieldCondition(HDFields.DotsProperties, true),
-            } },
-            { Pragma.InstancingOptions(InstancingOptions.NoLodFade), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, true),
-                new FieldCondition(HDFields.DotsProperties, false),
-            } },
-            { Pragma.InstancingOptions(InstancingOptions.NoLodFade), new FieldCondition[]
-            {
-                new FieldCondition(HDFields.DotsInstancing, false),
-                new FieldCondition(HDFields.DotsProperties, true),
-            } },
+            { Pragma.InstancingOptions(InstancingOptions.NoLightProbe), new FieldCondition(HDFields.DotsInstancing, true) },
+            { Pragma.InstancingOptions(InstancingOptions.NoLightProbe), new FieldCondition(HDFields.DotsProperties, true) },
+            { Pragma.InstancingOptions(InstancingOptions.NoLodFade),    new FieldCondition(HDFields.DotsInstancing, true) },
+            { Pragma.InstancingOptions(InstancingOptions.NoLodFade),    new FieldCondition(HDFields.DotsProperties, true) },
             { Pragma.InstancingOptions(InstancingOptions.RenderingLayer), new FieldCondition[]
             {
                 new FieldCondition(HDFields.DotsInstancing, false),
