@@ -61,7 +61,7 @@ void BILATERAL_FILTER(uint3 dispatchThreadId : SV_DispatchThreadID, uint2 groupT
     UNITY_XR_ASSIGN_VIEW_INDEX(dispatchThreadId.z);
 
     // Fetch the current pixel coordinate
-    uint2 centerCoord = groupId * SHADOW_DENOISER_TILE_SIZE + groupThreadId;
+    int2 centerCoord = groupId * SHADOW_DENOISER_TILE_SIZE + groupThreadId;
 
     // Read the center pixel0
     const BilateralData center = TapBilateralData(centerCoord);
@@ -109,15 +109,19 @@ void BILATERAL_FILTER(uint3 dispatchThreadId : SV_DispatchThreadID, uint2 groupT
 
     // Based on if we are horizontal of vertical, define our increment direction
     #if FINAL_PASS
-        const uint2 passIncr = uint2(1, 0);
+        const int2 passIncr = uint2(1, 0);
     #else
-        const uint2 passIncr = uint2(0, 1);
+        const int2 passIncr = uint2(0, 1);
     #endif
 
     // Evaluate the filter
-    uint2 tapCoord = centerCoord - radius * passIncr;
+    int2 tapCoord = centerCoord - radius * passIncr;
     for (int r = -radius; r <= radius; ++r, tapCoord += passIncr)
     {
+        // We should not tap outside of the screen (given that its a unit, if we go below zero we wrap around)
+        if (tapCoord.x > _ScreenSize.x || tapCoord.y > _ScreenSize.y || tapCoord.x < 0 || tapCoord.y < 0)
+            continue;
+
         // Compute the weight (skip computation for the center)
         const float w = r ? gaussian(r, sigma) * ComputeBilateralWeight(center, TapBilateralData(tapCoord)) : 1.0;
 
