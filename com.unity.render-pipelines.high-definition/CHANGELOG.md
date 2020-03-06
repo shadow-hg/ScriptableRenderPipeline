@@ -81,6 +81,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added support for background color in path tracing.
 - Added a path tracing test to the test suite.
 - Added support for subsurface scattering in path tracing.
+- Added API to enable proper recording of path traced scenes (with the Unity recorder or other tools).
 
 ### Fixed
 - Update documentation of HDRISky-Backplate, precise how to have Ambient Occlusion on the Backplate
