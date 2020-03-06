@@ -234,10 +234,10 @@ namespace UnityEngine.Rendering
             public void SetColumnVisibility(int index, bool visible)
             {
 #if UNITY_EDITOR
+                var header = Header;
                 if (index < 0 || index >= m_ColumnCount)
                     return;
 
-                var header = Header;
                 index++;
                 if (header.IsColumnVisible(index) != visible)
                 {
