@@ -233,10 +233,10 @@ namespace UnityEngine.Rendering
             /// <param name="visible">True if the column should be visible.</param>
             public void SetColumnVisibility(int index, bool visible)
             {
+#if UNITY_EDITOR
                 if (index < 0 || index >= m_ColumnCount)
                     return;
 
-#if UNITY_EDITOR
                 var header = Header;
                 index++;
                 if (header.IsColumnVisible(index) != visible)
