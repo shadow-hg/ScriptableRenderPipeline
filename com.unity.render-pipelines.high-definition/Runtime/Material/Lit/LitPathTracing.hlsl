@@ -43,7 +43,7 @@ void ProcessBSDFData(PathIntersection pathIntersection, BuiltinData builtinData,
 #endif
 }
 
-bool CreateMaterialData(PathIntersection pathIntersection, BuiltinData builtinData, BSDFData bsdfData, inout float3 shadingPosition, inout float inputSample, out MaterialData mtlData)
+bool CreateMaterialData(PathIntersection pathIntersection, BuiltinData builtinData, BSDFData bsdfData, inout float3 shadingPosition, inout float sample, out MaterialData mtlData)
 {
     // Alter values in the material's bsdfData struct, to better suit path tracing
     mtlData.bsdfData = bsdfData;
@@ -55,24 +55,24 @@ bool CreateMaterialData(PathIntersection pathIntersection, BuiltinData builtinDa
     float coatingTransmission = 1.0;
 
     // First determine if our incoming direction V is above (exterior) or below (interior) the surface
-    if (IsAbove(bsdfData.geomNormalWS, mtlData.V))
+    if (IsAbove(mtlData.bsdfData.geomNormalWS, mtlData.V))
     {
-        float NdotV = dot(bsdfData.normalWS, mtlData.V);
-        float Fcoat = F_Schlick(CLEAR_COAT_F0, NdotV) * bsdfData.coatMask;
-        float Fspec = Luminance(F_Schlick(bsdfData.fresnel0, NdotV));
+        float NdotV = dot(mtlData.bsdfData.normalWS, mtlData.V);
+        float Fcoat = F_Schlick(CLEAR_COAT_F0, NdotV) * mtlData.bsdfData.coatMask;
+        float Fspec = Luminance(F_Schlick(mtlData.bsdfData.fresnel0, NdotV));
 
         // If N.V < 0 (can happen with normal mapping) we want to avoid spec sampling
         bool consistentNormal = (NdotV > 0.001);
         mtlData.bsdfWeight[1] = consistentNormal ? Fcoat : 0.0;
         coatingTransmission = 1.0 - mtlData.bsdfWeight[1];
-        mtlData.bsdfWeight[2] = consistentNormal ? coatingTransmission * lerp(Fspec, 0.5, 0.5 * (bsdfData.roughnessT + bsdfData.roughnessB)) * (1.0 + Fspec * bsdfData.specularOcclusion) : 0.0;
-        mtlData.bsdfWeight[3] = consistentNormal ? (coatingTransmission - mtlData.bsdfWeight[2]) * bsdfData.transmittanceMask : 0.0;
-        mtlData.bsdfWeight[0] = coatingTransmission * (1.0 - bsdfData.transmittanceMask) * Luminance(bsdfData.diffuseColor) * bsdfData.ambientOcclusion;
+        mtlData.bsdfWeight[2] = consistentNormal ? coatingTransmission * lerp(Fspec, 0.5, 0.5 * (mtlData.bsdfData.roughnessT + mtlData.bsdfData.roughnessB)) * (1.0 + Fspec * mtlData.bsdfData.specularOcclusion) : 0.0;
+        mtlData.bsdfWeight[3] = consistentNormal ? (coatingTransmission - mtlData.bsdfWeight[2]) * mtlData.bsdfData.transmittanceMask : 0.0;
+        mtlData.bsdfWeight[0] = coatingTransmission * (1.0 - mtlData.bsdfData.transmittanceMask) * Luminance(mtlData.bsdfData.diffuseColor) * mtlData.bsdfData.ambientOcclusion;
     }
 #ifdef _SURFACE_TYPE_TRANSPARENT
     else // Below
     {
-        float NdotV = -dot(bsdfData.normalWS, mtlData.V);
+        float NdotV = -dot(mtlData.bsdfData.normalWS, mtlData.V);
         float F = F_FresnelDielectric(1.0 / mtlData.bsdfData.ior, NdotV);
 
         // If N.V < 0 (can happen with normal mapping) we want to avoid spec sampling
@@ -80,7 +80,7 @@ bool CreateMaterialData(PathIntersection pathIntersection, BuiltinData builtinDa
         mtlData.bsdfWeight[0] = 0.0;
         mtlData.bsdfWeight[1] = 0.0;
         mtlData.bsdfWeight[2] = consistentNormal ? F : 0.0;
-        mtlData.bsdfWeight[3] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1]) * bsdfData.transmittanceMask : 0.0;
+        mtlData.bsdfWeight[3] = consistentNormal ? (1.0 - mtlData.bsdfWeight[1]) * mtlData.bsdfData.transmittanceMask : 0.0;
     }
 #endif
 
@@ -93,9 +93,9 @@ bool CreateMaterialData(PathIntersection pathIntersection, BuiltinData builtinDa
     mtlData.bsdfWeight /= wSum;
 
 #ifdef _MATERIAL_FEATURE_SUBSURFACE_SCATTERING
-    float subsurfaceWeight = mtlData.bsdfWeight[0] * bsdfData.subsurfaceMask * (1.0 - pathIntersection.maxRoughness);
+    float subsurfaceWeight = mtlData.bsdfWeight[0] * mtlData.bsdfData.subsurfaceMask * (1.0 - pathIntersection.maxRoughness);
 
-    mtlData.isSubsurface = inputSample < subsurfaceWeight;
+    mtlData.isSubsurface = sample < subsurfaceWeight;
     if (mtlData.isSubsurface)
     {
         // We do a full, ray-traced subsurface scattering computation here:
@@ -121,11 +121,11 @@ bool CreateMaterialData(PathIntersection pathIntersection, BuiltinData builtinDa
         mtlData.bsdfWeight[0] -= subsurfaceWeight;
         mtlData.bsdfWeight /= mtlData.subsurfaceWeightFactor;
 
-        inputSample -= subsurfaceWeight;
+        sample -= subsurfaceWeight;
     }
 
-    // Rescale the input sample we used for the SSS selection test
-    inputSample /= mtlData.subsurfaceWeightFactor;
+    // Rescale the sample we used for the SSS selection test
+    sample /= mtlData.subsurfaceWeightFactor;
 #endif
 
     return true;
