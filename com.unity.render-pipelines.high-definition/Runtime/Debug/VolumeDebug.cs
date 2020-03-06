@@ -183,6 +183,38 @@ namespace UnityEngine.Rendering.HighDefinition
             return VolumeManager.instance.GetVolumes(selectedCameraLayerMask).Reverse().ToArray();
         }
 
+        VolumeParameter[,] savedStates = null;
+        VolumeParameter[,] GetStates()
+        {
+            var fields = selectedComponentType
+                .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .Where(t => t.FieldType.IsSubclassOf(typeof(VolumeParameter)))
+                .ToArray();
+
+            VolumeParameter[,] states = new VolumeParameter[volumes.Length, fields.Length];
+            for (int i = 0; i < volumes.Length; i++)
+            {
+                for (int j = 0; j < fields.Length; j++)
+                {
+                    states[i, j] = GetParameter(volumes[i], fields[j]);
+                }
+            }
+            return states;
+        }
+
+        bool ChangedStates(VolumeParameter[,] newStates)
+        {
+            for (int i = 0; i < savedStates.GetLength(0); i++)
+            {
+                for (int j = 0; j < savedStates.GetLength(1); j++)
+                {
+                    if ((savedStates[i, j] == null) != (newStates[i, j] == null))
+                        return true;
+                }
+            }
+            return false;
+        }
+
         /// <summary>Updates the list of volumes and recomputes volume weights</summary>
         /// <param name="newVolumes">The new list of volumes.</param>
         /// <returns>True if the volume list have been updated.</returns>
@@ -192,8 +224,17 @@ namespace UnityEngine.Rendering.HighDefinition
             if (volumes == null || !newVolumes.SequenceEqual(volumes))
             {
                 volumes = (Volume[])newVolumes.Clone();
-                weights = null;
+                savedStates = GetStates();
                 ret = true;
+            }
+            else
+            {
+                var newStates = GetStates();
+                if (savedStates == null || ChangedStates(newStates))
+                {
+                    savedStates = (VolumeParameter[,])newStates.Clone();
+                    ret = true;
+                }
             }
 
             weights = new float[volumes.Length];

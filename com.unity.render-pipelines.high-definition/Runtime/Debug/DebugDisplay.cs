@@ -1268,6 +1268,9 @@ namespace UnityEngine.Rendering.HighDefinition
                         table.children.Add(row);
                     }
 
+                    data.volumeDebugSettings.RefreshVolumes(volumes);
+                    for (int i = 0; i < volumes.Length; i++)
+                        table.SetColumnVisibility(i + 1, data.volumeDebugSettings.VolumeHasInfluence(volumes[i]));
                     list.Add(table);
                 }
             }
