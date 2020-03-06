@@ -121,7 +121,7 @@ namespace UnityEngine.Rendering.HighDefinition
         public VolumeParameter GetParameter(FieldInfo field)
         {
             VolumeStack stack = selectedCameraVolumeStack;
-            return GetParameter(stack.GetComponent(selectedComponentType), field);
+            return stack == null ? null : GetParameter(stack.GetComponent(selectedComponentType), field);
         }
 
         /// <summary>Get a VolumeParameter from a component of a volume</summary>
