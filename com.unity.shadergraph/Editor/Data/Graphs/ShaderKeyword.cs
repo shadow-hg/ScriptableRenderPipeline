@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor.ShaderGraph.Internal;
+using UnityEngine.Serialization;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -43,7 +44,6 @@ namespace UnityEditor.ShaderGraph
 
             return new ShaderKeyword()
             {
-                m_IsExposable = false,
                 m_IsBuiltIn = true,
                 displayName = descriptor.displayName,
                 overrideReferenceName = descriptor.referenceName,
@@ -100,7 +100,7 @@ namespace UnityEditor.ShaderGraph
             set => m_Value = value;
         }
 
-        [SerializeField]
+        [FormerlySerializedAs("m_IsEditable")] [SerializeField]
         private bool m_IsBuiltIn = false;
 
         public bool isBuiltIn
@@ -109,10 +109,7 @@ namespace UnityEditor.ShaderGraph
             set => m_IsBuiltIn = value;
         }
 
-        [SerializeField]
-        private bool m_IsExposable = true;
-
-        internal override bool isExposable => m_IsExposable
+        internal override bool isExposable => !m_IsBuiltIn
             && (keywordType == KeywordType.Enum || referenceName.EndsWith("_ON"));
 
         internal override bool isRenamable => !isBuiltIn;
@@ -195,7 +192,6 @@ namespace UnityEditor.ShaderGraph
                 displayName = displayName,
                 overrideReferenceName = overrideReferenceName,
                 generatePropertyBlock = generatePropertyBlock,
-                m_IsExposable = isExposable,
                 isBuiltIn = isBuiltIn,
                 keywordType = keywordType,
                 keywordDefinition = keywordDefinition,
