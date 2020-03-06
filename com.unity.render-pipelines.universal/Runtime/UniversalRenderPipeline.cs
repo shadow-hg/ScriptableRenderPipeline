@@ -238,7 +238,7 @@ namespace UnityEngine.Rendering.Universal
                 }
 #endif
 
-                var cullResults = context.Cull(ref cullingParameters);
+                CullingResults cullResults = context.Cull(ref cullingParameters);
                 InitializeRenderingData(asset, ref cameraData, ref cullResults, requiresBlitToBackbuffer, anyPostProcessingEnabled, out var renderingData);
 
                 renderer.Setup(context, ref renderingData);
