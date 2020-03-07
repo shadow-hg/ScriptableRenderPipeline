@@ -86,6 +86,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Convert inline to exposed property / Quick expose property sets correct default value in parent
 - Handle correctly direction, position & vector types in AppendVector operator [Case 1111867](https://issuetracker.unity3d.com/product/unity/issues/guid/1111867/)
 - Fix various bugs in Position (Cone) block [Case 1111053](https://issuetracker.unity3d.com/product/unity/issues/guid/1111053/)
+- Fix space issues with blocks and operators taking a camera as input
 
 ## [7.1.1] - 2019-09-05
 ### Added
