@@ -262,8 +262,6 @@ namespace UnityEditor.VFX.Test
             Assert.AreEqual(timeMode.expectedUpdateCount, VFXCustomSpawnerUpdateCounterTest.s_UpdateCount);
             Assert.AreEqual(timeMode.expectedDeltaTime, VFXCustomSpawnerUpdateCounterTest.s_LastDeltaTime);
 
-            UnityEngine.Object.DestroyImmediate(gameObj);
-            UnityEngine.Object.DestroyImmediate(cameraObj);
 
             Time.captureFramerate = previousCaptureFrameRate;
             UnityEngine.VFX.VFXManager.fixedTimeStep = previousFixedTimeStep;
